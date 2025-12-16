@@ -1,59 +1,59 @@
-<div
-  class="min-h-[70vh] flex items-center justify-center bg-base-200 py-2 px-4"
->
-  <div class="card w-full max-w-sm bg-base-100 shadow-md">
-    <div class="card-body">
-      <!-- Título -->
-      <h2 class="text-2xl font-bold text-center text-base-content">
-        Datos del Rol
-      </h2>
+<div class="bg-gray-900 text-gray-100 min-h-screen p-6">
+  <div class="flex items-center justify-center min-h-[70vh]">
+    <div class="bg-gray-800 rounded-xl shadow-lg border border-gray-700 w-full max-w-sm">
+      <div class="p-6">
+        <!-- Título -->
+        <h2 class="text-2xl font-bold text-center text-orange-500 mb-6">
+          👤 Datos del Rol
+        </h2>
 
-      <!-- Formulario -->
-      <form class="mt-4 space-y-4" [formGroup]="form" (ngSubmit)="onSubmit()">
-        <!-- Nombre -->
-        <div class="form-control">
-          <label class="label" for="name">
-            <span class="label-text">Nombre</span>
-          </label>
-          <input
-            type="text"
-            placeholder="supervisor"
-            class="input input-bordered w-full"
-            formControlName="name"
-          />
-        </div>
-
-        <!-- Descripcion -->
-        <div class="form-control">
-          <label class="label" for="description">
-            <span class="label-text">Descripción</span>
-          </label>
-          <input
-            type="text"
-            class="input input-bordered w-full"
-            formControlName="description"
-            placeholder="Editor de contenidos"
-          />
-        </div>
-
-        <!-- Botón Submit -->
-        <div class="flex justify-around gap-1 mt-4">
+        <!-- Formulario -->
+        <form class="space-y-4" [formGroup]="form" (ngSubmit)="onSubmit()">
+          <!-- Nombre -->
           <div>
-            <button class="btn btn-primary w-full" type="submit">
-              {{ roleId() === null ? "Crear" : "Actualizar" }}
-            </button>
+            <label class="block text-sm font-bold text-orange-400 mb-2" for="name">
+              Nombre
+            </label>
+            <input
+              type="text"
+              placeholder="supervisor"
+              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              formControlName="name"
+            />
           </div>
+
+          <!-- Descripcion -->
           <div>
-            <button
-              class="btn btn-soft btn-primary w-full"
-              type="button"
-              (click)="onCleanForm()"
-            >
-              Limpiar
-            </button>
+            <label class="block text-sm font-bold text-orange-400 mb-2" for="description">
+              Descripción
+            </label>
+            <input
+              type="text"
+              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              formControlName="description"
+              placeholder="Editor de contenidos"
+            />
           </div>
-        </div>
-      </form>
+
+          <!-- Botón Submit -->
+          <div class="flex justify-around gap-1 mt-6">
+            <div class="w-full">
+              <button class="btn bg-orange-500 hover:bg-orange-600 text-white w-full" type="submit">
+                {{ roleId() === null ? '➕ Crear' : '💾 Actualizar' }}
+              </button>
+            </div>
+            <div class="w-full">
+              <button
+                class="btn bg-gray-600 hover:bg-gray-700 text-white w-full"
+                type="button"
+                (click)="onCleanForm()"
+              >
+                🧹 Limpiar
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </div>

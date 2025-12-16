@@ -1,197 +1,280 @@
-# BasicNgFullStack
+# Restausync Oficial
 
-Proyecto full-stack educativo desarrollado con **Node.js**, **TypeScript**, **MySQL** y **Angular**. Incluye funcionalidades básicas de autenticación, gestión de usuarios y roles, y estructura escalable tanto para el backend como el frontend.
+Sistema completo de gestión para restaurantes con control de asistencia, inventario, pedidos y más.
 
-## 📦 Pre-requisitos
+## 🚀 Características Principales
 
-Asegúrate de tener instaladas las siguientes herramientas antes de iniciar:
+- **Control de Asistencia**: Registro de entrada/salida de empleados mediante QR
+- **Escaneo QR**: Integración con Capacitor ML Kit para escaneo nativo
+- **Cámara**: Captura de fotos para diferentes funcionalidades
+- **Gestión de Inventario**: Control de productos y existencias
+- **Sistema de Pedidos**: Gestión completa de pedidos del restaurante
+- **Roles de Usuario**: Admin, Mesero, Cliente
+- **Interfaz Moderna**: Angular con Tailwind CSS
 
-### Node.js
-https://nodejs.org/en/download
+## 🛠️ Tecnologías Utilizadas
 
-### TypeScript (instalación global)
+### Frontend
+- **Angular 19**: Framework principal
+- **Capacitor**: Desarrollo de aplicaciones móviles híbridas
+- **Tailwind CSS**: Framework de estilos
+- **Capacitor ML Kit Barcode Scanning**: Escaneo QR nativo
+- **Capacitor Camera**: Captura de fotos
+- **QRCode.js**: Generación de códigos QR
+
+### Backend
+- **Node.js**: Runtime de JavaScript
+- **Express.js**: Framework web
+- **TypeScript**: Tipado estático
+- **TypeORM**: ORM para bases de datos
+- **MySQL**: Base de datos relacional
+- **JWT**: Autenticación
+- **Bcrypt**: Encriptación de contraseñas
+
+## 📦 Instalación
+
+### Requisitos Previos
+- Node.js (versión 18 o superior)
+- npm o yarn
+- MySQL
+- Android Studio (para desarrollo Android)
+- Xcode (para desarrollo iOS, solo en macOS)
+
+### Instalación Automática (Recomendado)
+
+1. **Clona el repositorio**
+   ```bash
+   git clone <url-del-repositorio>
+   cd restausync-oficcial
+   ```
+
+2. **Ejecuta el instalador automático**
+   ```bash
+   # En Windows
+   setup.bat
+
+   # En Linux/Mac
+   chmod +x setup.sh && ./setup.sh
+   ```
+
+   Esto instalará dependencias, construirá el proyecto y verificará la configuración.
+
+### Instalación Manual
+
+Si prefieres instalar manualmente:
+
+1. **Instala todas las dependencias**
+   ```bash
+   npm run install:all
+   ```
+
+2. **Configura las variables de entorno**
+   ```bash
+   cp .env.example backend/.env
+   # Edita backend/.env con tus configuraciones
+   ```
+
+3. **Construye el proyecto**
+   ```bash
+   npm run build
+   ```
+
+### Instalación Manual
+
+Si prefieres instalar manualmente:
+
+1. **Instalar dependencias del frontend**
+   ```bash
+   npm run install:frontend
+   ```
+
+2. **Instalar dependencias del backend**
+   ```bash
+   npm run install:backend
+   ```
+
+## 🚀 Ejecución
+
+### Inicio Automático (Recomendado)
+
 ```bash
-npm install -g typescript
+# En Windows
+start.bat
+
+# En Linux/Mac
+./start.sh
 ```
 
-### MySQL
-- Página oficial: https://www.mysql.com/downloads/
-- Alternativa rápida para Windows (Laragon):  
-  https://github.com/leokhoa/laragon/releases/download/8.1.0/laragon-wamp.exe
+Esto iniciará tanto el backend como el frontend automáticamente.
 
-### Angular CLI (última versión)
-```bash
-npm install -g @angular/cli@latest
-```
+### Inicio Manual
 
----
+#### Desarrollo
 
-## ✅ Herramientas Recomendadas
+1. **Iniciar el backend**
+   ```bash
+   npm run dev:backend
+   ```
 
-- **Visual Studio Code**: https://code.visualstudio.com/download  
-- **Warp Terminal**: https://www.warp.dev/download  
-- **REST Client (extensión de VSCode)**:  
-  https://marketplace.visualstudio.com/items/?itemName=humao.rest-client
+2. **Iniciar el frontend** (en otra terminal)
+   ```bash
+   npm run dev:frontend
+   ```
 
----
+### Producción
 
-## 🚀 Clonar el Repositorio
+1. **Construir el proyecto**
+   ```bash
+   npm run build
+   ```
 
-```bash
-git clone https://github.com/jebcdev/BasicNgFullStack.git
-```
+2. **Iniciar en producción**
+   ```bash
+   npm run start
+   ```
 
-Dentro del repositorio encontrarás dos carpetas principales:
+## 📱 Desarrollo Móvil
 
-- `backend`: Contiene el servidor con conexión a base de datos y toda la lógica del backend.
-- `frontend`: Contiene la aplicación web desarrollada en Angular.
+### Android
 
----
+1. **Agregar plataforma Android**
+   ```bash
+   cd frontend
+   npx cap add android
+   ```
 
-## 🛠️ Instalación de Dependencias
+2. **Sincronizar cambios**
+   ```bash
+   npx cap sync android
+   ```
 
-Desde la raíz del proyecto, abre una terminal para cada carpeta y ejecuta:
+3. **Abrir en Android Studio**
+   ```bash
+   npx cap open android
+   ```
 
-```bash
-cd backend
-npm install --force
+### iOS
 
-cd ../frontend
-npm install --force
-```
+1. **Agregar plataforma iOS**
+   ```bash
+   cd frontend
+   npx cap add ios
+   ```
 
-Esto instalará todas las dependencias necesarias para ambos entornos.
+2. **Sincronizar cambios**
+   ```bash
+   npx cap sync ios
+   ```
 
----
+3. **Abrir en Xcode**
+   ```bash
+   npx cap open ios
+   ```
 
-## ⚙️ Configuración del Entorno
+## 🔧 Configuración
 
-1. Abre la carpeta principal del proyecto con tu editor preferido (recomendado: VSCode).
-2. Ubica el archivo `.env` dentro de la carpeta `backend`. **Este archivo ya está incluido en el repositorio** para facilitar la experiencia educativa.
+### Variables de Entorno
 
-Contenido base del archivo `.env`:
+Crea un archivo `.env` en la carpeta `backend` con:
 
 ```env
-API_PREFIX="/api/v1"
-PORT=4000
-
-DB_TYPE=mysql
 DB_HOST=localhost
 DB_PORT=3306
-DB_USERNAME=root
-DB_PASSWORD=
-DB_NAME=angular-basic-auth-management
+DB_USERNAME=tu_usuario
+DB_PASSWORD=tu_contraseña
+DB_DATABASE=restausync
 
-BCRYPT_SALT=10
-JWT_SECRET="aVerySecretString"
+JWT_SECRET=tu_jwt_secret
+
+PORT=3000
 ```
 
-⚠️ Asegúrate de que los datos de conexión coincidan con tu entorno local.
+### Base de Datos
 
----
+1. **Crear la base de datos**
+   ```sql
+   CREATE DATABASE restausync;
+   ```
 
-## 🧪 Compilación del Backend
+2. **Ejecutar seeders** (desde el backend)
+   ```bash
+   # Los seeders se ejecutan automáticamente al iniciar la aplicación
+   # O puedes crear un endpoint para ejecutarlos manualmente
+   ```
 
-Una vez configurado el entorno, transpila TypeScript a JavaScript ejecutando:
+## 📋 Scripts Disponibles
 
-```bash
-cd backend
-tsc
-```
+### Raíz del proyecto
+- `npm run install:all` - Instala dependencias de frontend y backend
+- `npm run dev` - Inicia el frontend en modo desarrollo
+- `npm run build` - Construye frontend y backend
+- `npm run start` - Inicia el backend en producción
 
-Esto generará una carpeta `dist/` con el código transpilado.
+### Frontend
+- `npm run dev` - Inicia servidor de desarrollo
+- `npm run build` - Construye la aplicación
+- `npm run test` - Ejecuta tests
+- `npm run lint` - Ejecuta linter
+- `npm run format` - Formatea el código
 
----
+### Backend
+- `npm run dev` - Inicia servidor en modo desarrollo con recarga automática
+- `npm run build` - Compila TypeScript
+- `npm run start` - Inicia servidor en producción
 
-## 🖥️ Inicializar la Base de Datos
+## 🔐 Funcionalidades de Seguridad
 
-1. Verifica que el servidor de MySQL esté corriendo.
-2. Crea una base de datos con el mismo nombre que configuraste en `.env` (`DB_NAME`).
+- Autenticación JWT
+- Encriptación de contraseñas con bcrypt
+- Validación de datos con class-validator
+- Sanitización de entradas
+- CORS configurado
+- Helmet para headers de seguridad
 
----
+## 📊 API Endpoints
 
-## ▶️ Levantar el Backend
+### Autenticación
+- `POST /auth/login` - Iniciar sesión
+- `POST /auth/register` - Registrar usuario
 
-Desde la carpeta `backend`, ejecuta:
+### Usuarios
+- `GET /users` - Obtener todos los usuarios
+- `POST /users` - Crear usuario
+- `PUT /users/:id` - Actualizar usuario
+- `DELETE /users/:id` - Eliminar usuario
 
-```bash
-npm run dev
-```
+### Asistencia
+- `GET /asistencia` - Obtener registros de asistencia
+- `POST /asistencia` - Crear registro de asistencia
+- `PUT /asistencia/:id` - Actualizar asistencia
+- `DELETE /asistencia/:id` - Eliminar asistencia
 
-Si todo sale bien, deberías ver algo como:
+### Inventario
+- `GET /inventario` - Obtener productos
+- `POST /inventario` - Crear producto
+- `PUT /inventario/:id` - Actualizar producto
+- `DELETE /inventario/:id` - Eliminar producto
 
-```
-Database Connected
-Server Running on: http://localhost:4000/api/v1
-```
+## 🐛 Solución de Problemas
 
----
+### Problemas Comunes
 
-## 🌱 Ejecutar Seeders (Roles y Usuarios por Defecto)
+1. **Error de dependencias**: Ejecuta `npm run install:all` para reinstalar todas las dependencias
 
-Si instalaste la extensión **REST Client** en VSCode, puedes ejecutar las peticiones HTTP fácilmente.
+2. **Error de base de datos**: Verifica que MySQL esté corriendo y las credenciales sean correctas
 
-1. Ve a:  
-   `backend/src/utils/requests/http/01-seed.http`
+3. **Error de permisos de cámara**: En aplicaciones móviles, asegúrate de que los permisos estén configurados en el manifiesto
 
-2. Haz clic en `Send Request` sobre:
+4. **Error de QR**: Verifica que el formato del QR sea `user-id:{numero}`
 
-```
-POST {{baseUrl}}/rolesusers HTTP/1.1
-```
+## 📄 Licencia
 
-Esto te devolverá los roles y usuarios por defecto.
+Este proyecto está bajo la Licencia ISC.
 
-Puedes editar los datos por defecto desde:  
-`backend/src/modules/seeder/controllers/seeder.controller.ts`
+## 👥 Contribuidores
 
-**Importante:**  
-Verifica que la variable `@baseUrl` esté correctamente configurada:
+- JEBC-DeV - Desarrollador principal
 
-```http
-@baseUrl = http://localhost:4000/api/v1/seed
-```
+## 📞 Soporte
 
----
-
-## 🌐 Levantar el Frontend
-
-Desde la carpeta `frontend`, ejecuta:
-
-```bash
-ng serve -o
-```
-
-Esto abrirá automáticamente el navegador en:
-
-```
-http://localhost:4200/
-```
-
----
-
-## 📽️ Video Tutorial
-
-Para más detalles y demostraciones prácticas, te dejo todo lo demás en el video del repositorio.
-Youtube: [Video](https://youtu.be/m2FH4zoFQUY)  
----
-
-## 🤝 Contribuciones
-
-Este proyecto es educativo y open source. Si quieres aportar mejoras, correcciones o nuevas funcionalidades, ¡eres bienvenido!
-
----
-
-## 🧠 Autor
-
-**Juan Esteban Benjumea Correa** – *JEBC-Dev*  
-GitHub: [@jebcdev](https://github.com/jebcdev)  
-YouTube: [@jebcdev](https://www.youtube.com/@jebcdev)  
-WhatsApp: [+57 3052850514](https://wa.me/573052850514)
-
----
-
-## 🧩 Licencia
-
-Este proyecto es libre y abierto para fines educativos y/o comerciales.  
-Haz buen uso del código y si puedes, ¡déjale una estrella al repo! ⭐
+Para soporte técnico, por favor contacta al equipo de desarrollo.

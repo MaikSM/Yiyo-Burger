@@ -4,19 +4,19 @@ export const appRoutes: Routes = [
   {
     path: '',
     title: 'Auth',
-    loadComponent: () => import('@auth/_layout/auth-layout.component'),
+    loadComponent: () => import('../_layout/auth-layout.component').then(m => m.AuthLayoutComponent),
     children: [
       {
         path: 'login',
         title: 'Login',
         loadComponent: () =>
-          import('@auth/pages/login/auth-login-page.component'),
+          import('../pages/login/auth-login-page.component').then(m => m.AuthLoginPageComponent),
       },
       {
         path: 'register',
         title: 'Register',
         loadComponent: () =>
-          import('@auth/pages/register/auth-register-page.component'),
+          import('../pages/register/auth-register-page.component').then(m => m.AuthRegisterPageComponent),
       },
       {
         path: '',

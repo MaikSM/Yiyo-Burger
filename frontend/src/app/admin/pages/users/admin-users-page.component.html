@@ -1,29 +1,94 @@
-<div>
-  <!-- Encabezado -->
-  <div
-    class="navbar flex justify-between border-b-accent border-b-2 p-1 bg-base-100 shadow-sm mb-4"
-  >
-    <div>
-      <h1
-        class="px-4 py-1 rounded-full bg-accent text-base-100 text-lg font-bold shadow-md"
+<div class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-6 overflow-x-hidden">
+  <!-- Encabezado responsivo -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b-2 border-orange-500 p-4 bg-gray-800 shadow-md mb-6 rounded-lg">
+    <h1 class="text-center sm:text-left text-2xl sm:text-3xl font-bold text-white">
+      👥 Usuarios
+    </h1>
+    <div class="w-full sm:w-auto">
+      <a
+        class="btn btn-sm sm:btn-md bg-orange-500 hover:bg-orange-600 text-white w-full sm:w-auto whitespace-nowrap"
+        routerLink="/admin/users/create"
       >
-        Usuarios
-      </h1>
-    </div>
-    <div>
-      <a class="btn btn-accent" routerLink="/admin/users/create">Crear</a>
+        ➕ Crear Usuario
+      </a>
     </div>
   </div>
-  <!-- Encabezado -->
+
   <!-- Tabla -->
   @if (usersResource.error()) {
     <is-error />
   } @else if (usersResource.isLoading()) {
     <is-loading />
   } @else if (usersResource.hasValue()) {
-    <admin-users-table [users]="usersResource.value()" />
+    <!-- Vista móvil: tarjetas (oculta en md+) -->
+    <div class="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+      @for (user of usersResource.value(); track user.id) {
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <h2 class="text-lg font-semibold text-orange-400 break-words">
+                {{ user.name }} {{ user.surname }}
+              </h2>
+              <p class="mt-1 text-sm text-gray-300 break-words">
+                {{ user.email }}
+              </p>
+            </div>
+            <span class="text-xs px-2 py-1 bg-gray-700 text-gray-200 rounded">
+              ID: {{ user.id }}
+            </span>
+          </div>
+
+          <div class="mt-3 flex items-center justify-between text-sm">
+            <span class="text-gray-300">
+              Rol: <span class="font-semibold">{{ user.role?.name || 'N/A' }}</span>
+            </span>
+            <span
+              class="text-[11px] px-2 py-1 rounded-full"
+              [class.bg-green-600]="user.role?.name"
+              [class.text-white]="user.role?.name"
+              [class.bg-gray-700]="!user.role?.name"
+              [class.text-gray-200]="!user.role?.name"
+            >
+              {{ user.role?.name ? 'Activo' : 'Sin rol' }}
+            </span>
+          </div>
+
+          <div class="mt-3 flex gap-2">
+            <button
+              class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded text-sm transition w-full"
+              (click)="onEditUser(user.id!)"
+              [disabled]="isForbidden(user.id!)"
+              [class.opacity-70]="isForbidden(user.id!)"
+              title="Editar usuario"
+            >
+              ✏️ Editar
+            </button>
+            <button
+              class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-sm transition w-full"
+              (click)="onGenerateQR(user.id!, user.name + ' ' + user.surname)"
+              title="Generar QR"
+            >
+              📱 QR
+            </button>
+            <button
+              class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-sm transition w-full"
+              (click)="onDeleteUser(user.id!)"
+              [disabled]="isForbidden(user.id!)"
+              [class.opacity-70]="isForbidden(user.id!)"
+              title="Eliminar usuario"
+            >
+              🗑️ Eliminar
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Tabla en escritorio (oculta en móvil) -->
+    <div class="hidden md:block">
+      <admin-users-table [users]="usersResource.value()" />
+    </div>
   } @else if (!usersResource.hasValue()) {
     <is-empty />
   }
-  <!-- Tabla -->
 </div>

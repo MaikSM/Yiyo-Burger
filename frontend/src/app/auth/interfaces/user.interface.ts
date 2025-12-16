@@ -8,6 +8,8 @@ export interface iUser {
   email: string;
   password?: string;
   role?: iRole;
+  hora_entrada?: string;
+  hora_salida?: string;
   created_at?: Date;
   updated_at?: Date;
   deleted_at?: Date;

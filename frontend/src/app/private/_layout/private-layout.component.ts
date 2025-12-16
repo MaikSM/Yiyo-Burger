@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChatComponent } from '../../pages/chat/chat.component';
 import {
   PrivateLayoutHeaderComponent,
   PrivateLayoutContentComponent,
@@ -8,6 +9,7 @@ import {
   // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'private-layout',
   imports: [
+    ChatComponent,
     PrivateLayoutHeaderComponent,
     PrivateLayoutContentComponent,
     PrivateLayoutFooterComponent,
@@ -16,5 +18,15 @@ import {
   styles: ``,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PrivateLayoutComponent {}
+export class PrivateLayoutComponent {
+  showChatModal = signal(false);
+
+  openChat() {
+    this.showChatModal.set(true);
+  }
+
+  closeChat() {
+    this.showChatModal.set(false);
+  }
+}
 export default PrivateLayoutComponent;

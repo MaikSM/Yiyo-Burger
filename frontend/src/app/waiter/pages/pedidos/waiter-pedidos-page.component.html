@@ -1,0 +1,208 @@
+<div class="bg-gray-900 text-gray-100 flex flex-col min-h-screen">
+  <!-- Header -->
+  <header class="bg-gray-800 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-orange-500">📋 Pedidos</h1>
+    </div>
+  </header>
+
+  <!-- Contenido -->
+  <main class="flex-1 max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-8">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-xl font-semibold text-gray-200">Gestión de Pedidos</h2>
+      <a
+        routerLink="/waiter/nuevo-pedido"
+        class="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 px-3 py-2 sm:px-4 sm:py-2 rounded shadow transition transform hover:scale-105"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5 text-gray-900"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+        Nuevo Pedido
+      </a>
+    </div>
+
+    <div class="bg-gray-800 rounded-xl shadow-md overflow-x-auto">
+      <table class="w-full text-left text-gray-300 text-sm sm:text-base">
+        <thead class="bg-gray-700 text-gray-200">
+          <tr>
+            <th class="py-2 px-2 sm:px-3"># Pedido</th>
+            <th class="py-2 px-2 sm:px-3">Mesa</th>
+            <th class="py-2 px-2 sm:px-3">Cliente</th>
+            <th class="py-2 px-2 sm:px-3">Total</th>
+            <th class="py-2 px-2 sm:px-3">Estado</th>
+            <th class="py-2 px-2 sm:px-3">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="!orders.length" class="hover:bg-gray-700 transition">
+            <td class="py-4 px-3 text-center text-gray-400" colspan="6">No hay pedidos registrados</td>
+          </tr>
+          <tr *ngFor="let order of orders" class="hover:bg-gray-700 transition">
+            <td class="py-2 px-2 sm:px-3">{{ order.id }}</td>
+            <td class="py-2 px-2 sm:px-3">{{ order.mesa }}</td>
+            <td class="py-2 px-2 sm:px-3">{{ order.cliente || '-' }}</td>
+            <td class="py-2 px-2 sm:px-3">{{ order.total | currency:'COP':'symbol':'1.0-0' }}</td>
+            <td class="py-2 px-2 sm:px-3">
+              <span [class]="order.estado === 'Listo' ? 'text-green-400' : 'text-orange-400'">
+                {{ order.estado }}
+              </span>
+            </td>
+            <td class="py-2 px-2 sm:px-3 flex gap-2">
+              <button (click)="viewOrder(order)" class="bg-orange-500 hover:bg-orange-600 px-2 py-1 rounded text-sm">
+                Ver
+              </button>
+              <button (click)="editOrder(order)" class="bg-blue-500 hover:bg-blue-600 px-2 py-1 rounded text-sm">
+                Editar
+              </button>
+              <button (click)="deleteOrder(order.id)" class="bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-sm">
+                Eliminar
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 py-4 mt-6">
+    <div class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-gray-400">
+      <span>© 2025 RestauSync. Todos los derechos reservados.</span>
+      <span>Desarrollado con ❤️ y TailwindCSS</span>
+    </div>
+  </footer>
+
+  <!-- Modal para ver detalles del pedido -->
+  <div *ngIf="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeModal()">
+    <div class="bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
+      <div class="p-6" *ngIf="selectedOrder">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold text-orange-400">Detalles del Pedido {{ selectedOrder.id }}</h3>
+          <button (click)="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <p class="text-gray-300"><strong>Mesa:</strong> {{ selectedOrder.mesa }}</p>
+            <p class="text-gray-300"><strong>Cliente:</strong> {{ selectedOrder.cliente || 'N/A' }}</p>
+            <p class="text-gray-300"><strong>Estado:</strong>
+              <span [class]="selectedOrder.estado === 'Listo' ? 'text-green-400' : 'text-orange-400'">
+                {{ selectedOrder.estado }}
+              </span>
+            </p>
+            <p class="text-gray-300"><strong>Fecha:</strong> {{ selectedOrder.fecha | date:'short' }}</p>
+          </div>
+          <div>
+            <p class="text-gray-300"><strong>Subtotal:</strong> {{ selectedOrder.subtotal | currency:'COP':'symbol':'1.0-0' }}</p>
+            <p class="text-gray-300"><strong>Impuesto (10%):</strong> {{ selectedOrder.tax | currency:'COP':'symbol':'1.0-0' }}</p>
+            <p class="text-orange-400 font-bold text-lg"><strong>Total:</strong> {{ selectedOrder.total | currency:'COP':'symbol':'1.0-0' }}</p>
+          </div>
+        </div>
+
+        <h4 class="text-lg font-semibold text-gray-200 mb-3">Artículos del Pedido</h4>
+        <div class="bg-gray-700 rounded-lg p-4">
+          <div *ngFor="let item of selectedOrder.items" class="flex justify-between items-center py-2 border-b border-gray-600 last:border-b-0">
+            <div>
+              <p class="text-gray-100 font-medium">{{ item.nombre }}</p>
+              <p class="text-gray-400 text-sm">Cantidad: {{ item.qty }}</p>
+            </div>
+            <p class="text-orange-400 font-semibold">{{ (item.precio * item.qty) | currency:'COP':'symbol':'1.0-0' }}</p>
+          </div>
+        </div>
+
+        <div class="flex justify-between mt-6">
+          <button (click)="printReceipt(selectedOrder)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm">
+            Generar Comprobante
+          </button>
+          <button (click)="closeModal()" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-sm">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para editar pedido -->
+  <div *ngIf="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeEditModal()">
+    <div class="bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
+      <div class="p-6" *ngIf="editingOrder">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold text-blue-400">Editar Pedido {{ editingOrder.id }}</h3>
+          <button (click)="closeEditModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <p class="text-gray-300"><strong>Mesa:</strong> {{ editingOrder.mesa }}</p>
+            <p class="text-gray-300"><strong>Cliente:</strong> {{ editingOrder.cliente || 'N/A' }}</p>
+            <p class="text-gray-300"><strong>Estado:</strong>
+              <span [class]="editingOrder.estado === 'Listo' ? 'text-green-400' : 'text-orange-400'">
+                {{ editingOrder.estado }}
+              </span>
+            </p>
+          </div>
+          <div>
+            <p class="text-gray-300"><strong>Subtotal:</strong> {{ editingOrder.subtotal | currency:'COP':'symbol':'1.0-0' }}</p>
+            <p class="text-gray-300"><strong>Impuesto (10%):</strong> {{ editingOrder.tax | currency:'COP':'symbol':'1.0-0' }}</p>
+            <p class="text-blue-400 font-bold text-lg"><strong>Total:</strong> {{ editingOrder.total | currency:'COP':'symbol':'1.0-0' }}</p>
+          </div>
+        </div>
+
+        <h4 class="text-lg font-semibold text-gray-200 mb-3">Artículos del Pedido</h4>
+        <div class="bg-gray-700 rounded-lg p-4 mb-4">
+          <div *ngFor="let item of editingOrder.items; let i = index" class="flex justify-between items-center py-2 border-b border-gray-600 last:border-b-0">
+            <div class="flex-1">
+              <p class="text-gray-100 font-medium">{{ item.nombre }}</p>
+              <p class="text-gray-400 text-sm">Precio unitario: {{ item.precio | currency:'COP':'symbol':'1.0-0' }}</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2">
+                <button (click)="decreaseItemQty(i)" class="bg-red-600 hover:bg-red-700 w-8 h-8 rounded flex items-center justify-center text-sm">-</button>
+                <span class="text-white min-w-[2rem] text-center">{{ item.qty }}</span>
+                <button (click)="increaseItemQty(i)" class="bg-green-600 hover:bg-green-700 w-8 h-8 rounded flex items-center justify-center text-sm">+</button>
+              </div>
+              <p class="text-blue-400 font-semibold min-w-[4rem] text-right">{{ (item.precio * item.qty) | currency:'COP':'symbol':'1.0-0' }}</p>
+              <button (click)="removeItem(i)" class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-xs">
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <h4 class="text-lg font-semibold text-gray-200 mb-3">Agregar Platos</h4>
+        <div class="bg-gray-700 rounded-lg p-4 mb-4 max-h-60 overflow-y-auto">
+          <div *ngFor="let plato of menu" class="flex justify-between items-center py-2 border-b border-gray-600 last:border-b-0">
+            <div class="flex-1">
+              <p class="text-gray-100 font-medium">{{ plato.nombre }}</p>
+              <p class="text-gray-400 text-sm">{{ plato.descripcion }}</p>
+              <p class="text-orange-400 font-semibold">{{ plato.precio | currency:'COP':'symbol':'1.0-0' }}</p>
+            </div>
+            <button (click)="addDishToOrder(plato)" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm">
+              Agregar
+            </button>
+          </div>
+        </div>
+
+        <div class="flex justify-between mt-6">
+          <button (click)="closeEditModal()" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-sm">
+            Cancelar
+          </button>
+          <button (click)="saveOrderChanges()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm">
+            Guardar Cambios
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

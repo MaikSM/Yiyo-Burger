@@ -1,7 +1,15 @@
-<div class="navbar bg-base-100 shadow-sm">
+<div
+  class="navbar bg-gray-800 text-gray-100 px-4 sm:px-8 shadow-lg min-h-[56px]"
+>
+  <!-- INICIO (lado izquierdo) -->
   <div class="navbar-start">
+    <!-- Dropdown para móviles -->
     <div class="dropdown">
-      <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
+      <div
+        tabindex="0"
+        role="button"
+        class="btn btn-sm btn-ghost text-gray-100 hover:bg-gray-700 lg:hidden"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           class="h-5 w-5"
@@ -17,38 +25,112 @@
           />
         </svg>
       </div>
-      <!--       <ul
-          tabindex="0"
-          class="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
-        >
-          <li><a>Item 1</a></li>
-        </ul> -->
-    </div>
-    <a class="btn btn-ghost text-xl" routerLink="/">{{ appName() }}</a>
-  </div>
-  <div class="navbar-center hidden lg:flex">
-    <!--     <ul class="menu menu-horizontal px-1">
-        <li><a>Item 1</a></li>
-      </ul> -->
-  </div>
-  <div class="navbar-end gap-2">
-    @if (authStatus() === "authenticated") {
-      <a class="btn btn-sm btn-outline btn-primary" routerLink="/private">
-        {{ userName() }}
-      </a>
-      <button class="btn btn-sm btn-outline btn-accent" (click)="logout()">
-        Salir
-      </button>
-    }
-    <!--  -->
-    @else if (authStatus() === "not-authenticated") {
-      <a class="btn btn-sm btn-outline btn-accent" routerLink="/auth/login"
-        >Iniciar</a
+      <ul
+        tabindex="0"
+        class="menu menu-sm dropdown-content bg-gray-800 text-gray-100 rounded-box z-[1] mt-3 w-52 p-2 shadow-lg border border-gray-700"
       >
-    }
-    <!--  -->
-    @else {
-      <button class="btn btn-sm btn-outline btn-primary">. . .</button>
+        <li>
+          <a
+            routerLink="/"
+            class="text-gray-100 hover:bg-gray-700 hover:text-orange-400"
+            >Inicio</a
+          >
+        </li>
+        <li>
+          <a
+            routerLink="/menu"
+            class="text-gray-100 hover:bg-gray-700 hover:text-orange-400"
+            >Menú</a
+          >
+        </li>
+        <li>
+          <a
+            [routerLink]="authStatus() === 'authenticated' ? '/private/reservas' : '/auth/login'"
+            class="text-gray-100 hover:bg-gray-700 hover:text-orange-400"
+            >Reservas</a
+          >
+        </li>
+        <li>
+          <a
+            routerLink="/contacto"
+            class="text-gray-100 hover:bg-gray-700 hover:text-orange-400"
+            >Contacto</a
+          >
+        </li>
+      </ul>
+    </div>
+    <!-- Nombre de la app -->
+    <a
+      class="btn btn-ghost normal-case text-base sm:text-xl text-orange-500 hover:bg-gray-700 px-2"
+      routerLink="/"
+    >
+      🍽️ {{ appName() }}
+    </a>
+  </div>
+
+  <!-- CENTRO (links para pantallas grandes) -->
+  <div class="navbar-center hidden lg:flex">
+    <ul class="menu menu-horizontal px-1">
+      <li>
+        <a
+          routerLink="/"
+          class="text-gray-100 hover:text-orange-400 transition-colors"
+          >Inicio</a
+        >
+      </li>
+      <li>
+        <a
+          routerLink="/menu"
+          class="text-gray-100 hover:text-orange-400 transition-colors"
+          >Menú</a
+        >
+      </li>
+      <li>
+        <a
+          [routerLink]="authStatus() === 'authenticated' ? '/private/reservas' : '/auth/login'"
+          class="text-gray-100 hover:text-orange-400 transition-colors"
+          >Reservas</a
+        >
+      </li>
+      <li>
+        <a
+          routerLink="/contacto"
+          class="text-gray-100 hover:text-orange-400 transition-colors"
+          >Contacto</a
+        >
+      </li>
+    </ul>
+  </div>
+
+  <!-- DERECHA (estado de sesión) -->
+  <div class="navbar-end gap-1 sm:gap-2 md:gap-3 flex-wrap">
+    @if (authStatus() === 'authenticated') {
+      <a
+        class="px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 md:text-base bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl max-w-[100px] sm:max-w-[120px] md:max-w-[140px] truncate"
+        [routerLink]="isAdmin() ? ['/admin'] : isWaiter() ? ['/waiter'] : ['/']"
+      >
+        {{ displayName() }}
+      </a>
+      <button
+        class="px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 md:text-base bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+        (click)="logout()"
+      >
+        <span class="hidden sm:inline">Salir De la Cuenta</span>
+        <span class="sm:hidden">Salir</span>
+      </button>
+    } @else if (authStatus() === 'not-authenticated') {
+      <a
+        class="px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 md:text-base bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+        routerLink="/auth/login"
+      >
+        Iniciar
+      </a>
+    } @else {
+      <button
+        class="px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 md:text-base bg-gray-700 text-gray-300 font-medium rounded-lg border border-gray-600 hover:bg-gray-600 transition-all duración-300"
+      >
+        . . .
+      </button>
     }
   </div>
 </div>

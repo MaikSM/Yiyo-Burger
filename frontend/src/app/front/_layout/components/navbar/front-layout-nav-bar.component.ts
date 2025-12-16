@@ -23,7 +23,28 @@ export class FrontLayoutNavBarComponent {
   appName = computed<string>(() => environment.appName);
 
   public authStatus = computed(() => this._authService.authStatus());
-  public userName = computed(() => this._authService.user()?.name);
+  public userName = computed(() => {
+    const name = this._authService.user()?.name;
+    return name === 'Administrator' ? 'Administracion' : name;
+  });
+
+  public displayName = computed(() => {
+    const user = this._authService.user();
+    if (!user || !user.role) return this.userName();
+
+    const roleName = user.role.name.toLowerCase();
+    return roleName === 'mesero' ? 'Panel de Mesero' : this.userName();
+  });
+
+  public isWaiter = computed(() => {
+    const user = this._authService.user();
+    return user?.role_id === 4;
+  });
+
+  public isAdmin = computed(() => {
+    const user = this._authService.user();
+    return user?.role_id === 1;
+  });
 
   logout() {
     this._authService.logout();

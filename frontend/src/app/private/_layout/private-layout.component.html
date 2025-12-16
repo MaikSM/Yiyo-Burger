@@ -2,4 +2,27 @@
   <private-layout-header class="w-full shadow-sm" />
   <private-layout-content class="flex-grow w-full" />
   <private-layout-footer class="w-full bg-gray-100 py-1" />
+
+  <!-- Floating Chat Bot Button -->
+  <div class="fixed bottom-6 right-6 z-50">
+    <button (click)="openChat()"
+            class="bg-orange-500 hover:bg-orange-600 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-2xl hover:shadow-orange-500/50 transition-all duration-300 transform hover:scale-110 hover:-translate-y-1">
+      <i class="fas fa-robot text-2xl"></i>
+    </button>
+  </div>
+
+  <!-- Chat Modal -->
+  @if (showChatModal()) {
+    <div class="fixed bottom-20 right-20 z-[1000]">
+      <div class="bg-white rounded-lg shadow-2xl w-80 h-96 relative">
+        <button (click)="closeChat()"
+                class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl z-10">
+          &times;
+        </button>
+        <div class="p-2 h-full">
+          <app-chat></app-chat>
+        </div>
+      </div>
+    </div>
+  }
 </div>

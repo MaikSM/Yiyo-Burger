@@ -1,0 +1,330 @@
+<div class="bg-gray-900 text-gray-100 flex flex-col min-h-screen">
+  <header class="bg-gray-800 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-orange-500">👨‍🍳 Dashboard Mesero</h1>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl mx-auto px-6 py-8">
+    <!-- Métricas -->
+    <section class="grid md:grid-cols-4 gap-6 mb-8">
+      <div class="bg-gradient-to-br from-gray-800 to-gray-700 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-blue-500">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-bold text-blue-400">Pedidos Activos</h2>
+            <p class="text-3xl font-bold mt-2 text-white">{{ metrics.activeOrders }}</p>
+          </div>
+          <div class="text-blue-400 text-4xl">📋</div>
+        </div>
+      </div>
+
+      <div class="bg-gradient-to-br from-gray-800 to-gray-700 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-red-500">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-bold text-red-400">Mesas Ocupadas</h2>
+            <p class="text-3xl font-bold mt-2 text-white">{{ metrics.occupiedTables }}</p>
+          </div>
+          <div class="text-red-400 text-4xl">🍽️</div>
+        </div>
+      </div>
+
+      <div class="bg-gradient-to-br from-gray-800 to-gray-700 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-green-500">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-bold text-green-400">Pedidos Completados</h2>
+            <p class="text-3xl font-bold mt-2 text-white">{{ metrics.completedOrders }}</p>
+          </div>
+          <div class="text-green-400 text-4xl">✅</div>
+        </div>
+      </div>
+
+      <div class="bg-gradient-to-br from-gray-800 to-gray-700 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-orange-500">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-bold text-orange-400">Ingresos del Día</h2>
+            <p class="text-3xl font-bold mt-2 text-white">{{ metrics.dailyRevenue | currency:'COP':'symbol':'1.0-0' }}</p>
+          </div>
+          <div class="text-orange-400 text-4xl">💰</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Estado de Mesas Rápido -->
+    <section class="mb-8">
+      <h2 class="text-xl font-semibold text-gray-200 mb-4">Estado de Mesas</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div
+          *ngFor="let mesa of mesas.slice(0, 12)"
+          class="bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-all duration-200"
+          [class]="getMesaStatusClass(mesa)"
+        >
+          <div class="text-center">
+            <div class="text-lg font-bold text-white">Mesa {{ mesa.numero }}</div>
+            <div class="text-sm" [class]="getMesaStatusTextClass(mesa)">{{ getMesaStatusText(mesa) }}</div>
+            <div *ngIf="getOrderForTable(mesa.numero)" class="text-xs text-orange-400 mt-1">
+              Pedido activo
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Últimos pedidos -->
+    <section>
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-200">Últimos Pedidos</h2>
+        <button (click)="refreshData()" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-sm">
+          Actualizar
+        </button>
+      </div>
+
+      <div class="bg-gray-800 rounded-xl shadow-md overflow-hidden">
+        <table class="w-full text-left text-gray-300">
+          <thead class="bg-gray-700 text-gray-200">
+            <tr>
+              <th class="py-3 px-4"># Pedido</th>
+              <th class="py-3 px-4">Mesa</th>
+              <th class="py-3 px-4">Cliente</th>
+              <th class="py-3 px-4">Total</th>
+              <th class="py-3 px-4">Estado</th>
+              <th class="py-3 px-4">Hora</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let order of recentOrders" class="hover:bg-gray-700 transition">
+              <td class="py-3 px-4 font-medium">{{ order.id }}</td>
+              <td class="py-3 px-4">{{ order.mesa }}</td>
+              <td class="py-3 px-4">{{ order.cliente || '-' }}</td>
+              <td class="py-3 px-4 font-semibold">{{ order.total | currency:'COP':'symbol':'1.0-0' }}</td>
+              <td class="py-3 px-4">
+                <span [class]="getOrderStatusClass(order.estado)">
+                  {{ order.estado }}
+                </span>
+              </td>
+              <td class="py-3 px-4 text-sm text-gray-400">
+                {{ order.fecha | date:'shortTime' }}
+              </td>
+            </tr>
+            <tr *ngIf="!recentOrders.length">
+              <td colspan="6" class="py-8 px-4 text-center text-gray-400">
+                No hay pedidos recientes
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-6 flex gap-4">
+        <a
+          routerLink="/waiter/pedidos"
+          class="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded shadow transition"
+        >
+          Ver todos los pedidos
+        </a>
+        <a
+          routerLink="/waiter/nuevo-pedido"
+          class="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded shadow transition transform hover:scale-105"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          Nuevo Pedido
+        </a>
+      </div>
+    </section>
+
+    <!-- Historial de Pedidos -->
+    <section class="mt-8">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-200">📊 Historial de Pedidos</h2>
+        <button (click)="refreshData()" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-sm">
+          Actualizar
+        </button>
+      </div>
+
+      <!-- Filtros -->
+      <div class="bg-gray-800 p-4 rounded-xl shadow-md mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label class="block text-sm text-gray-300 mb-2">Filtrar por Fecha</label>
+            <input
+              [(ngModel)]="dateFilter"
+              type="date"
+              class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-300 mb-2">Mesa</label>
+            <select
+              [(ngModel)]="tableFilter"
+              class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+            >
+              <option value="">Todas las mesas</option>
+              <option *ngFor="let mesa of mesas" [value]="mesa.numero">Mesa {{ mesa.numero }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-300 mb-2">Cliente</label>
+            <input
+              [(ngModel)]="customerFilter"
+              type="text"
+              placeholder="Buscar cliente..."
+              class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-300 mb-2">Estado</label>
+            <select
+              [(ngModel)]="statusFilter"
+              class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+            >
+              <option value="">Todos los estados</option>
+              <option value="Recibido">Recibido</option>
+              <option value="Preparando">Preparando</option>
+              <option value="Listo">Listo</option>
+              <option value="Entregado">Entregado</option>
+              <option value="Cancelado">Cancelado</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <button (click)="clearFilters()" class="bg-gray-600 hover:bg-gray-500 px-3 py-1 rounded text-sm">
+            Limpiar Filtros
+          </button>
+          <button (click)="applyFilters()" class="bg-orange-600 hover:bg-orange-700 px-3 py-1 rounded text-sm">
+            Aplicar Filtros
+          </button>
+        </div>
+      </div>
+
+      <!-- Lista de Pedidos Históricos -->
+      <div class="space-y-4">
+        <div
+          *ngFor="let order of filteredOrderHistory"
+          class="bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden"
+        >
+          <!-- Header del Pedido -->
+          <div class="p-4 border-b border-gray-700">
+            <div class="flex justify-between items-start">
+              <div class="flex-1">
+                <div class="flex items-center gap-4 mb-2">
+                  <h3 class="text-lg font-bold text-orange-400">Pedido {{ order.id }}</h3>
+                  <span [class]="getOrderStatusClass(order.estado)" class="px-2 py-1 rounded-full text-xs font-medium">
+                    {{ order.estado }}
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span class="text-gray-400">Mesa:</span>
+                    <span class="text-white ml-2">{{ order.mesa }}</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-400">Cliente:</span>
+                    <span class="text-white ml-2">{{ order.cliente || 'N/A' }}</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-400">Fecha:</span>
+                    <span class="text-white ml-2">{{ order.fecha | date:'short' }}</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-400">Total:</span>
+                    <span class="text-orange-400 font-semibold ml-2">{{ order.total | currency:'COP':'symbol':'1.0-0' }}</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                (click)="toggleOrderDetails(order)"
+                class="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-gray-700 transition"
+              >
+                <svg
+                  [class.rotate-180]="order.showDetails"
+                  class="w-5 h-5 transition-transform duration-200"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Detalles del Pedido (Expandible) -->
+          <div *ngIf="order.showDetails" class="p-4 bg-gray-750">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <!-- Items del Pedido -->
+              <div>
+                <h4 class="text-md font-semibold text-gray-200 mb-3">🍽️ Platillos Ordenados</h4>
+                <div class="space-y-2">
+                  <div
+                    *ngFor="let item of order.items"
+                    class="flex justify-between items-center p-3 bg-gray-700 rounded-lg"
+                  >
+                    <div class="flex-1">
+                      <div class="font-medium text-white">{{ item.nombre }}</div>
+                      <div class="text-sm text-gray-400">Cantidad: {{ item.qty }}</div>
+                    </div>
+                    <div class="text-orange-400 font-semibold">
+                      {{ (item.precio * item.qty) | currency:'COP':'symbol':'1.0-0' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Resumen -->
+              <div>
+                <h4 class="text-md font-semibold text-gray-200 mb-3">📋 Resumen</h4>
+                <div class="bg-gray-700 p-4 rounded-lg space-y-2">
+                  <div class="flex justify-between">
+                    <span class="text-gray-300">Subtotal:</span>
+                    <span class="text-white">{{ order.subtotal | currency:'COP':'symbol':'1.0-0' }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-300">Impuesto (10%):</span>
+                    <span class="text-white">{{ order.tax | currency:'COP':'symbol':'1.0-0' }}</span>
+                  </div>
+                  <div class="border-t border-gray-600 pt-2 flex justify-between">
+                    <span class="text-gray-200 font-semibold">Total:</span>
+                    <span class="text-orange-400 font-bold">{{ order.total | currency:'COP':'symbol':'1.0-0' }}</span>
+                  </div>
+                </div>
+
+                <div class="mt-4">
+                  <h5 class="text-sm font-semibold text-gray-200 mb-2">📝 Notas</h5>
+                  <p class="text-gray-400 text-sm">{{ order.notas || 'Sin notas adicionales' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="!filteredOrderHistory.length" class="text-center py-12">
+          <div class="text-gray-400">
+            <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <p>No se encontraron pedidos con los filtros aplicados</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="bg-gray-800 py-4 mt-6">
+    <div class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-gray-400">
+      <span>© 2025 RestauSync. Todos los derechos reservados.</span>
+      <span>Desarrollado con ❤️ y TailwindCSS</span>
+    </div>
+  </footer>
+</div>

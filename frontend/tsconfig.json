@@ -11,6 +11,7 @@
       "@front/*": ["app/front/*"],
       "@private/*": ["app/private/*"],
       "@shared/*": ["app/shared/*"],
+      "@waiter/*": ["app/waiter/*"]
     },
     "outDir": "./dist/out-tsc",
     "strict": true,

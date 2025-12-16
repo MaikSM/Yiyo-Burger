@@ -14,6 +14,13 @@ export const privateRoutes: Routes = [
           import('@private/pages/profile/private-profile-page.component'),
         children: [],
       },
+      {
+        path: 'reservas',
+        title: 'Mis Reservas',
+        loadComponent: () =>
+          import('@private/pages/reservas/private-reservas-page.component'),
+        children: [],
+      },
     ],
   },
 

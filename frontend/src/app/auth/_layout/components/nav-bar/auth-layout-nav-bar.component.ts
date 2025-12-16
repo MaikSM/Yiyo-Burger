@@ -10,5 +10,5 @@ import { RouterLink } from '@angular/router';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuthLayoutNavBarComponent {
-  title = computed(() => 'Autenticación ');
+  title = computed(() => 'Inicio de Sesión');
 }

@@ -1,8 +1,9 @@
 import { Routes } from '@angular/router';
 import {
   NotAuthenticatedGuard,
-  IsAuthenticatedGuard,
   IsAdminGuard,
+  IsWaiterGuard,
+  IsAuthenticatedGuard,
 } from '@shared/guards/';
 
 export const appRoutes: Routes = [
@@ -12,16 +13,20 @@ export const appRoutes: Routes = [
     loadChildren: () => import('@auth/routes/auth.routes'),
   },
   {
+    canMatch: [IsAuthenticatedGuard],
+    path: 'private',
+    loadChildren: () => import('@private/routes/private.routes'),
+  },
+  {
     canMatch: [IsAdminGuard],
     path: 'admin',
     loadChildren: () => import('@admin/routes/admin.routes'),
   },
   {
-    canMatch: [IsAuthenticatedGuard],
-    path: 'private',
-    loadChildren: () => import('@private/routes/private.routes'),
+    canMatch: [IsWaiterGuard],
+    path: 'waiter',
+    loadChildren: () => import('@waiter/routes/waiter.routes'),
   },
-
   { path: '', loadChildren: () => import('@front/routes/front.routes') },
   {
     path: '**',

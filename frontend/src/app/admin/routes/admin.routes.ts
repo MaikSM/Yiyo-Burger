@@ -49,7 +49,78 @@ export const adminRoutes: Routes = [
         loadComponent: () =>
           import('@admin/pages/users/edit/admin-users-edit-page.component'),
       },
-
+      {
+        path: 'inventario',
+        title: 'Inventario',
+        loadComponent: () =>
+          import('@admin/pages/inventario/admin-inventario-page.component'),
+      },
+      {
+        path: 'inventario/create',
+        title: 'Create Inventario',
+        loadComponent: () =>
+          import(
+            '@admin/pages/inventario/create/admin-inventario-create-page.component'
+          ),
+      },
+      {
+        path: 'inventario/edit/:movimiento_id',
+        title: 'Edit Inventario',
+        loadComponent: () =>
+          import(
+            '@admin/pages/inventario/edit/admin-inventario-edit-page.component'
+          ),
+      },
+      {
+        path: 'reservas-mesas',
+        title: 'Reservas de Mesas',
+        loadComponent: () =>
+          import('@admin/pages/reservas/admin-reservas-page.component'),
+      },
+      {
+        path: 'reservas-mesas/create-mesa',
+        title: 'Crear Mesa',
+        loadComponent: () =>
+          import(
+            '@admin/pages/reservas/create/admin-reservas-create-mesa-page.component'
+          ),
+      },
+      {
+        path: 'reservas-mesas/create-reserva',
+        title: 'Crear Reserva',
+        loadComponent: () =>
+          import(
+            '@admin/pages/reservas/create/admin-reservas-create-reserva-page.component'
+          ),
+      },
+      {
+        path: 'reservas-mesas/edit-mesa/:id',
+        title: 'Editar Mesa',
+        loadComponent: () =>
+          import(
+            '@admin/pages/reservas/edit/admin-reservas-edit-mesa-page.component'
+          ),
+      },
+      {
+        path: 'reservas-mesas/edit-reserva/:id',
+        title: 'Editar Reserva',
+        loadComponent: () =>
+          import(
+            '@admin/pages/reservas/edit/admin-reservas-edit-page.component'
+          ),
+      },
+      {
+        path: 'asistencia',
+        title: 'Asistencia',
+        loadComponent: () =>
+          import('@admin/pages/asistencia/admin-asistencia-page.component'),
+      },
+      {
+        path: 'asistencia/historial',
+        title: 'Historial de Asistencia',
+        loadComponent: () =>
+          import('@admin/pages/asistencia/admin-asistencia-historial-page.component').then(m => m.AdminAsistenciaHistorialPageComponent),
+      },
       {
         path: '**',
         title: 'Redirecting ... ',

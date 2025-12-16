@@ -6,7 +6,9 @@ import { environment } from '@env/environment';
 import { catchError, map, Observable, of } from 'rxjs';
 
 //
-const AUTH_API_URL = `${environment.apiUrl}/auth`;
+const RESOLVED_API_URL = environment.apiUrl;
+
+const AUTH_API_URL = `${RESOLVED_API_URL}/auth`;
 type AuthStatus = 'checking' | 'authenticated' | 'not-authenticated';
 @Injectable({
   providedIn: 'root',
@@ -40,14 +42,43 @@ export class AuthService {
   public token = computed<string | null>(() => this._token());
 
   login(data: iLoginRequest): Observable<boolean> {
-    return this._http
-      .post<iUser>(`${AUTH_API_URL}/login`, data)
+    console.log('🔐 AuthService Login - Datos recibidos:', {
+      email: data.email,
+      password: data.password,
+      emailLength: data.email?.length,
+      passwordLength: data.password?.length,
+      apiUrl: `${AUTH_API_URL}/login`,
+    });
 
-      .pipe(
-        map((res) => this.handleAuthSuccess(res)),
-
-        catchError((error: unknown) => this.handleAuthError(error)),
-      );
+    return this._http.post<iUser>(`${AUTH_API_URL}/login`, data).pipe(
+      map((res) => {
+        console.log('✅ AuthService Login - Respuesta exitosa:', {
+          id: res.id,
+          email: res.email,
+          role: res.role,
+          hasToken: !!res.token,
+          tokenLength: res.token?.length,
+        });
+        return this.handleAuthSuccess(res);
+      }),
+      catchError((error: unknown) => {
+        const httpError = (error ?? {}) as {
+          status?: number;
+          statusText?: string;
+          message?: string;
+          url?: string;
+          error?: unknown;
+        };
+        console.error('❌ AuthService Login - Error:', {
+          status: httpError.status,
+          statusText: httpError.statusText,
+          message: httpError.message,
+          url: httpError.url,
+          data: httpError.error,
+        });
+        return this.handleAuthError(error);
+      }),
+    );
   }
 
   register(data: iRegisterRequest): Observable<boolean> {
@@ -102,13 +133,22 @@ export class AuthService {
   }
 
   private handleAuthSuccess(res: iUser) {
-    this._user.set(res);
-    // this._token.set(res?.token!);
+    // Normalizar role_id desde role.id si no viene presente en la respuesta
+    const normalizedUser: iUser = {
+      ...res,
+      role_id: (res.role_id ?? res.role?.id) as number | undefined,
+    };
+
+    this._user.set(normalizedUser);
     this._token.set(res.token ?? null);
     this._authStatus.set('authenticated');
 
-    // localStorage.setItem('token', res?.token!);
-    localStorage.setItem('token', res.token ?? '');
+    // Persistencia del token: guarda sólo si existe; si no, limpia
+    if (res.token) {
+      localStorage.setItem('token', res.token);
+    } else {
+      localStorage.removeItem('token');
+    }
 
     return true;
   }

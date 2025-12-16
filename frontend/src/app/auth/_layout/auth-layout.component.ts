@@ -4,9 +4,11 @@ import {
   AuthLayoutContentComponent,
   AuthLayoutFooterComponent,
 } from '@auth/_layout/components';
+
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'auth-layout',
+  standalone: true,
   imports: [
     AuthLayoutHeaderComponent,
     AuthLayoutContentComponent,

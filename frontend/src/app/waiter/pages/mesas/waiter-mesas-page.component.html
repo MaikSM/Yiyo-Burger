@@ -1,0 +1,97 @@
+<div class="bg-gray-900 text-gray-100 flex flex-col min-h-screen">
+  <header class="bg-gray-800 shadow-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-orange-500">🍽️ Mesas</h1>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl mx-auto px-6 py-8">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-xl font-semibold text-gray-200">Estado de Mesas</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div
+        *ngFor="let mesa of mesas"
+        class="bg-gray-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group"
+        [class]="getMesaCardClasses(mesa)"
+      >
+        <div class="flex justify-between items-start mb-4">
+          <h3 class="text-lg font-bold text-orange-400">Mesa {{ mesa.numero }}</h3>
+          <span [class]="getStatusClasses(mesa.estado)" class="px-2 py-1 rounded-full text-xs font-medium">
+            {{ getStatusLabel(mesa.estado) }}
+          </span>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm text-gray-300 mb-1">Cliente (opcional)</label>
+            <input
+              [(ngModel)]="mesa.cliente"
+              (blur)="updateMesaCliente(mesa)"
+              type="text"
+              placeholder="Nombre del cliente"
+              class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm text-gray-300 mb-2">Cambiar Estado</label>
+            <select
+              [(ngModel)]="mesa.estado"
+              (change)="updateMesaEstado(mesa)"
+              class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+            >
+              <option value="libre">Disponible</option>
+              <option value="ocupada">Ocupada</option>
+              <option value="reservada">Reservada</option>
+              <option value="mantenimiento">Mantenimiento</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Order Information -->
+        <div *ngIf="getOrderForTable(mesa.numero) as order" class="mt-4 pt-4 border-t border-gray-700">
+          <h4 class="text-sm font-semibold text-orange-400 mb-2">Pedido Activo</h4>
+          <div class="bg-gray-700/50 rounded-lg p-3 space-y-2">
+            <p class="text-xs text-gray-300">
+              <strong>ID:</strong> {{ order.id }}
+            </p>
+            <p class="text-xs text-gray-300">
+              <strong>Cliente:</strong> {{ order.cliente || 'N/A' }}
+            </p>
+            <p class="text-xs text-gray-300">
+              <strong>Items:</strong> {{ order.items.length }}
+            </p>
+            <p class="text-xs text-orange-400 font-semibold">
+              <strong>Total:</strong> {{ order.total | currency:'COP':'symbol':'1.0-0' }}
+            </p>
+            <p class="text-xs text-gray-300">
+              <strong>Estado:</strong>
+              <span [class]="order.estado === 'Recibido' ? 'text-yellow-400' : order.estado === 'Listo' ? 'text-green-400' : 'text-blue-400'">
+                {{ order.estado }}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-gray-700">
+          <p class="text-xs text-gray-400">
+            Capacidad: {{ mesa.capacidad || 4 }} personas
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="!mesas.length" class="text-center py-12">
+      <p class="text-gray-400">No hay mesas disponibles</p>
+    </div>
+  </main>
+
+  <footer class="bg-gray-800 py-4 mt-6">
+    <div class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-gray-400">
+      <span>© 2025 RestauSync. Todos los derechos reservados.</span>
+      <span>Desarrollado con ❤️ y TailwindCSS</span>
+    </div>
+  </footer>
+</div>

@@ -1,0 +1,230 @@
+<div class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
+  <!-- Header -->
+  <header class="bg-gray-800 shadow">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-orange-400">➕ Nuevo Pedido</h1>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="flex-1 max-w-6xl mx-auto px-6 py-8">
+    <div class="grid lg:grid-cols-3 gap-6">
+      <!-- Left: Mesa / Cliente / Notas -->
+      <section class="lg:col-span-1 bg-gray-800 p-6 rounded-xl shadow">
+        <h2 class="text-lg font-semibold text-gray-200 mb-4">Información</h2>
+        <form [formGroup]="form">
+          <label class="block text-sm text-gray-300 mb-1">Mesa</label>
+          <select
+            formControlName="mesa"
+            class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 mb-4"
+          >
+            <option value="">-- Selecciona mesa --</option>
+            <option
+              *ngFor="let mesa of mesas"
+              [value]="mesa.mesa_id"
+              [disabled]="hasActiveOrderForTable(mesa.mesa_id.toString())"
+              [class.text-gray-500]="hasActiveOrderForTable(mesa.mesa_id.toString())"
+            >
+              Mesa {{ mesa.numero }} ({{ mesa.estado }})
+              <span *ngIf="hasActiveOrderForTable(mesa.mesa_id.toString())" class="text-red-400">- PEDIDO ACTIVO</span>
+            </option>
+          </select>
+
+          <label class="block text-sm text-gray-300 mb-1">Cliente (opcional)</label>
+          <input
+            formControlName="cliente"
+            type="text"
+            placeholder="Nombre del cliente"
+            class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 mb-4"
+          />
+
+          <label class="block text-sm text-gray-300 mb-1">Notas</label>
+          <textarea
+            formControlName="notas"
+            rows="4"
+            class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 mb-4"
+            placeholder="Ej. Sin picante, poco sal..."
+          ></textarea>
+        </form>
+
+        <button
+          (click)="saveDraft()"
+          class="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded mb-2 transition"
+        >
+          Guardar borrador
+        </button>
+        <button
+          (click)="clearDraft()"
+          class="w-full bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition"
+        >
+          Limpiar
+        </button>
+      </section>
+
+      <!-- Center: Menu -->
+      <section class="lg:col-span-1 bg-gray-800 p-6 rounded-xl shadow overflow-hidden flex flex-col h-[calc(100vh-8rem)]">
+        <div class="flex flex-col gap-4 mb-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-200">Menú</h2>
+            <input
+              [(ngModel)]="searchTerm"
+              (input)="onSearch()"
+              type="search"
+              placeholder="Buscar platillo..."
+              class="bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm w-48 focus:w-64 transition-all"
+            />
+          </div>
+
+          <!-- Category Filters -->
+          <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+            <button
+              *ngFor="let cat of categories"
+              (click)="selectCategory(cat)"
+              [class.bg-orange-500]="selectedCategory === cat"
+              [class.text-white]="selectedCategory === cat"
+              [class.bg-gray-700]="selectedCategory !== cat"
+              [class.text-gray-300]="selectedCategory !== cat"
+              class="px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap hover:bg-orange-600 hover:text-white transition-colors"
+            >
+              {{ cat }}
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1">
+          <div
+            *ngFor="let plato of filteredMenu"
+            class="bg-gradient-to-r from-gray-700/70 to-gray-800/70 border border-gray-600 p-4 rounded-2xl shadow-lg hover:shadow-2xl hover:border-orange-500/50 transition-all duration-300 group overflow-hidden flex items-center gap-4 transform hover:scale-102"
+          >
+            <!-- Image placeholder or actual image if available -->
+            <div class="w-20 h-20 bg-gray-800 rounded-xl relative overflow-hidden flex-shrink-0">
+               <img
+                *ngIf="plato.imagen_url"
+                [src]="plato.imagen_url"
+                alt="{{ plato.nombre }}"
+                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                onerror="this.style.display='none'"
+              >
+              <div *ngIf="!plato.imagen_url" class="w-full h-full flex items-center justify-center text-gray-600">
+                <span class="text-2xl">🍽️</span>
+              </div>
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between mb-2">
+                <h3 class="font-bold text-gray-100 text-lg leading-tight truncate">{{ plato.nombre }}</h3>
+                <span class="font-bold text-orange-400 text-lg ml-2 flex-shrink-0">{{ plato.precio | copCurrency }}</span>
+              </div>
+              <p class="text-sm text-gray-400 mb-3 line-clamp-2">{{ plato.descripcion }}</p>
+
+              <div class="flex items-center gap-3">
+                <input
+                  [value]="quantities.get(plato.plato_id) || 1"
+                  (input)="onQtyChange(plato.plato_id, $event)"
+                  type="number"
+                  min="1"
+                  class="w-16 bg-gray-900 border border-gray-600 rounded-lg px-2 py-1.5 text-center text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
+                />
+                <button
+                  (click)="addItem(plato, quantities.get(plato.plato_id) || 1)"
+                  class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95 flex-1"
+                >
+                  Agregar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Resumen pedido -->
+      <aside class="lg:col-span-1 bg-gray-800 p-6 rounded-xl shadow flex flex-col">
+        <h2 class="text-lg font-semibold text-gray-200 mb-4">Resumen del pedido</h2>
+        <div class="flex-1 overflow-auto">
+          <table class="w-full text-sm text-gray-300">
+            <thead class="text-gray-400">
+              <tr>
+                <th class="text-left py-2">Item</th>
+                <th class="text-right py-2">Cant</th>
+                <th class="text-right py-2">Subtotal</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="!order.items.length">
+                <td class="py-4 px-2 text-gray-400" colspan="4">No hay artículos en el pedido</td>
+              </tr>
+              <tr *ngFor="let item of order.items">
+                <td class="py-2 px-2">{{ item.nombre }}</td>
+                <td class="py-2 px-2 text-right">
+                  <input
+                    [value]="item.qty"
+                    (change)="onQtyChangeOrder(item.id, $event)"
+                    class="qtyField w-14 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-right text-sm"
+                    type="number"
+                    min="1"
+                  />
+                </td>
+                <td class="py-2 px-2 text-right">{{ (item.precio * item.qty) | copCurrency }}</td>
+                <td class="py-2 px-2 text-right">
+                  <button
+                    (click)="removeItem(item.id)"
+                    class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-sm"
+                  >
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-4 border-t border-gray-700 pt-4">
+          <div class="flex justify-between text-gray-300 mb-2">
+            <span>Subtotal</span>
+            <span>{{ order.subtotal | copCurrency }}</span>
+          </div>
+          <div class="flex justify-between text-gray-300 mb-4">
+            <span>Impuesto (10%)</span>
+            <span>{{ order.tax | copCurrency }}</span>
+          </div>
+          <div class="flex justify-between text-orange-400 text-lg font-bold mb-4">
+            <span>Total</span>
+            <span>{{ order.total | copCurrency }}</span>
+          </div>
+
+          <div class="flex gap-3 mb-4">
+            <button
+              (click)="printReceipt()"
+              class="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded transition"
+            >
+              Imprimir Comprobante
+            </button>
+          </div>
+          <div class="flex gap-3">
+            <button
+              (click)="registerOrder()"
+              class="flex-1 bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded transition transform hover:scale-105"
+            >
+              Registrar Pedido
+            </button>
+            <a
+              routerLink="/waiter/pedidos"
+              class="flex-1 text-center bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded transition"
+            >
+              Volver
+            </a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 py-4">
+    <div class="max-w-6xl mx-auto px-6 flex justify-between items-center text-sm text-gray-400">
+      <span>© 2025 RestauSync</span>
+      <span>Hecho con ❤️ y TailwindCSS</span>
+    </div>
+  </footer>
+</div>

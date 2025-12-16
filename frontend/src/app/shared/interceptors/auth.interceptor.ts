@@ -30,16 +30,24 @@ export function authInterceptor(
   const authService = inject(AuthService);
   const token = authService.token();
 
-  // Skip token for authentication endpoints
+  // Skip token for authentication endpoints and public menu
   if (
     req.url.includes(`${environment.apiUrl}/auth/login`) ||
-    req.url.includes(`${environment.apiUrl}/auth/check-token`)
+    req.url.includes(`${environment.apiUrl}/auth/check-token`) ||
+    req.url.includes(`${environment.apiUrl}/platos-public`)
   ) {
+    console.log(
+      '🔐 AuthInterceptor: Skipping token for auth or public endpoint:',
+      req.url,
+    );
     return next(req);
   }
 
   if (!token) {
-    // console.log('AuthInterceptor: No token available');
+    console.warn(
+      '⚠️ AuthInterceptor: No token available for request:',
+      req.url,
+    );
     return next(req);
   }
 
@@ -47,6 +55,7 @@ export function authInterceptor(
     headers: req.headers.set('Authorization', `Bearer ${token}`),
   });
 
-  // console.log('AuthInterceptor: Adding token to request');
+  console.log('🔐 AuthInterceptor: Adding token to request:', req.url);
+  console.log('🔑 Token length:', token.length);
   return next(newReq);
 }

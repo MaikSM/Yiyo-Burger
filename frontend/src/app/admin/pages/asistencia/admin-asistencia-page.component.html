@@ -1,0 +1,324 @@
+<div class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-6 overflow-x-hidden">
+  <!-- Encabezado responsivo -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b-2 border-orange-500 p-4 bg-gray-800 shadow-md mb-6 rounded-lg">
+    <h1 class="text-center sm:text-left text-2xl sm:text-3xl font-bold text-white">
+      ⏰ Control de Asistencia
+    </h1>
+    <div class="flex flex-col sm:flex-row gap-2">
+      <button
+        class="btn btn-sm sm:btn-md bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
+        (click)="abrirEscanerEntrada()"
+      >
+        📱 Registrar Entrada
+      </button>
+      <button
+        class="btn btn-sm sm:btn-md bg-blue-500 hover:bg-blue-600 text-white w-full sm:w-auto"
+        (click)="abrirEscanerSalida()"
+      >
+        📱 Registrar Salida
+      </button>
+      <button
+        class="btn btn-sm sm:btn-md bg-gray-500 hover:bg-gray-600 text-white w-full sm:w-auto"
+        (click)="mostrarHistorial()"
+      >
+        📊 Historial
+      </button>
+    </div>
+  </div>
+
+  <!-- Información del día -->
+  <div class="bg-gray-800 rounded-lg p-4 mb-6">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+      <div>
+        <h2 class="text-lg font-semibold text-orange-400">Empleados del Día</h2>
+        <p class="text-gray-300 text-sm">Fecha: {{ getCurrentDate() }}</p>
+      </div>
+      <div class="text-right">
+        <p class="text-gray-400 text-sm">Total empleados: {{ getEmpleadosConAsistencia().length }}</p>
+        <p class="text-green-400 text-sm">Presentes: {{ getEmpleadosPresentes() }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selector de Fecha -->
+  <div class="bg-gray-800 rounded-lg p-4 mb-6">
+    <h2 class="text-lg font-semibold text-orange-400 mb-4">📅 Seleccionar Fecha</h2>
+    <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+      <div class="flex-1">
+        <label class="block text-sm font-medium text-gray-300 mb-2">Fecha de Asistencia</label>
+        <input
+          type="date"
+          class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          [(ngModel)]="fechaSeleccionada"
+          (change)="onFechaChange()"
+        >
+      </div>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <button
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md font-medium transition w-full sm:w-auto"
+          (click)="fechaAnterior()"
+          title="Día anterior"
+        >
+          ← Anterior
+        </button>
+        <button
+          class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md font-medium transition w-full sm:w-auto"
+          (click)="fechaHoy()"
+        >
+          Hoy
+        </button>
+        <button
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md font-medium transition w-full sm:w-auto"
+          (click)="fechaSiguiente()"
+          title="Día siguiente"
+        >
+          Siguiente →
+        </button>
+      </div>
+    </div>
+    <p class="text-sm text-gray-400 mt-2">Selecciona la fecha para registrar o consultar asistencias de empleados.</p>
+  </div>
+
+  <!-- Configuración de Horarios -->
+  <div class="bg-gray-800 rounded-lg p-4 mb-6">
+    <h2 class="text-lg font-semibold text-orange-400 mb-4">⏰ Configuración de Horarios</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Hora de Entrada Global</label>
+        <input
+          type="time"
+          class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          [(ngModel)]="horaEntradaGlobal"
+          (change)="actualizarHorariosGlobales()"
+        >
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Hora de Salida Global</label>
+        <input
+          type="time"
+          class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          [(ngModel)]="horaSalidaGlobal"
+          (change)="actualizarHorariosGlobales()"
+        >
+      </div>
+    </div>
+    <p class="text-sm text-gray-400 mt-2">Estos horarios se aplicarán a todos los empleados que no tengan horarios personalizados.</p>
+  </div>
+
+  <!-- Tabla de asistencia -->
+  @if (usersResource.isLoading() || rolesResource.isLoading()) {
+    <is-loading />
+  } @else if (usersResource.hasValue() && rolesResource.hasValue()) {
+    <div class="bg-gray-800 rounded-lg overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-orange-500/10">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Nombre</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Rol</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Hora Entrada</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Hora Salida</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Estado</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-600">
+            @for (empleado of getEmpleadosConAsistencia(); track empleado.id) {
+              <tr class="hover:bg-gray-700 transition-colors">
+                <td class="px-4 py-3 text-sm text-white font-medium">
+                  {{ empleado.name }} {{ empleado.surname }}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-300">
+                  {{ getRolDisplay(empleado.rol) }}
+                </td>
+                <td class="px-4 py-3 text-sm text-white">
+                  @if (empleado.asistencia.hora_entrada) {
+                    <span class="text-green-400">{{ empleado.asistencia.hora_entrada }}</span>
+                  } @else {
+                    <span class="text-gray-500">-</span>
+                  }
+                </td>
+                <td class="px-4 py-3 text-sm text-white">
+                  @if (empleado.asistencia.hora_salida) {
+                    <span class="text-blue-400">{{ empleado.asistencia.hora_salida }}</span>
+                  } @else {
+                    <span class="text-gray-500">-</span>
+                  }
+                </td>
+                <td class="px-4 py-3 text-sm">
+                  <div class="flex flex-col gap-1">
+                    <button
+                      class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition-all w-full"
+                      (click)="registrarEntrada(empleado)"
+                      title="Registrar Entrada"
+                    >
+                      ⏰ Registrar Entrada
+                    </button>
+                    <button
+                      class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-all w-full"
+                      (click)="registrarSalida(empleado)"
+                      title="Registrar Salida"
+                    >
+                      ⏰ Registrar Salida
+                    </button>
+                    <button
+                      class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-all w-full"
+                      (click)="registrarFalta(empleado)"
+                      title="Registrar Falta"
+                    >
+                      ❌ Registrar Falta
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  } @else if (usersResource.error() || rolesResource.error()) {
+    <is-error />
+  } @else {
+    <is-empty />
+  }
+</div>
+
+<!-- Modal de Historial -->
+@if (showHistorialModal()) {
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-white">📊 Historial de Asistencia</h2>
+        <button
+          class="text-gray-400 hover:text-white text-2xl"
+          (click)="closeHistorialModal()"
+        >
+          ×
+        </button>
+      </div>
+
+      @if (historialLoading()) {
+        <div class="text-center py-8">
+          <is-loading />
+          <p class="text-gray-300 mt-2">Cargando historial...</p>
+        </div>
+      } @else if (historialData().length > 0) {
+        <div class="space-y-4">
+          @for (empleado of historialData(); track empleado.id) {
+            <div class="bg-gray-700 rounded-lg p-4">
+              <h3 class="text-lg font-semibold text-orange-400 mb-2">
+                {{ empleado.name }} {{ empleado.surname }}
+              </h3>
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-blue-400">{{ empleado.stats.totalDias }}</div>
+                  <div class="text-gray-300">Total Días</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-green-400">{{ empleado.stats.presentes }}</div>
+                  <div class="text-gray-300">Presentes</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-red-400">{{ empleado.stats.ausentes }}</div>
+                  <div class="text-gray-300">Ausentes</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-yellow-400">{{ empleado.stats.retrasos }}</div>
+                  <div class="text-gray-300">Retrasos</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-orange-400">{{ empleado.stats.salidasTempranas }}</div>
+                  <div class="text-gray-300">Salidas Tempranas</div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="text-center py-8">
+          <p class="text-gray-300">No hay datos de historial disponibles</p>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Modal del Escáner QR -->
+@if (showScannerModal()) {
+  <div class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-white">
+          📱 Escanear QR - {{ scannerType() === 'entrada' ? 'Registrar Entrada' : 'Registrar Salida' }}
+        </h2>
+        <button
+          class="text-gray-400 hover:text-white text-2xl"
+          (click)="cerrarScannerModal()"
+        >
+          ×
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div class="text-center">
+          <p class="text-gray-300 mb-4">
+            Apunta la cámara al código QR del empleado para {{ scannerType() === 'entrada' ? 'registrar su entrada' : 'registrar su salida' }}
+          </p>
+        </div>
+
+        @if (scannerEnabled()) {
+          <div class="bg-black rounded-lg overflow-hidden p-4">
+            <div class="mb-4 text-center">
+              <p class="text-gray-300 text-sm mb-2">
+                Apunta la cámara al código QR del empleado
+              </p>
+              <div class="bg-yellow-900 border border-yellow-600 rounded p-2 mb-4">
+                <p class="text-yellow-200 text-xs">
+                  ⚠️ Asegúrate de que el navegador tenga permisos para acceder a la cámara
+                </p>
+                <p class="text-yellow-300 text-xs mt-1">
+                  💡 El código QR debe contener el formato: user-id:123
+                </p>
+                <p class="text-blue-300 text-xs mt-1">
+                  📱 Si usas la app móvil, los permisos se solicitan automáticamente
+                </p>
+                <p class="text-green-300 text-xs mt-1">
+                  🔧 Para desarrollo: Si no funciona, intenta desde la app nativa
+                </p>
+              </div>
+            </div>
+            <video #videoElement class="w-full rounded" autoplay playsinline muted></video>
+            <canvas #canvasElement class="hidden"></canvas>
+            <div class="mt-4 text-center">
+              <button
+                class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md font-medium transition mr-2"
+                (click)="startScanning()"
+              >
+                Iniciar Escaneo
+              </button>
+              <button
+                class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md font-medium transition"
+                (click)="stopScanning()"
+              >
+                Detener
+              </button>
+            </div>
+          </div>
+        }
+
+        <div class="text-center">
+          <button
+            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md font-medium transition"
+            (click)="cerrarScannerModal()"
+          >
+            Cancelar
+          </button>
+        </div>
+
+        <div class="text-sm text-gray-400 text-center">
+          <p>⚠️ Asegúrate de que el navegador tenga permisos para acceder a la cámara</p>
+          <p>💡 El código QR debe contener el formato: user-id:123</p>
+        </div>
+      </div>
+    </div>
+  </div>
+}

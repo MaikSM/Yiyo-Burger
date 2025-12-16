@@ -4,9 +4,11 @@ import {
   FrontLayoutContentComponent,
   FrontLayoutFooterComponent,
 } from '@front/_layout/components';
+
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'front-layout',
+  standalone: true,
   imports: [
     FrontLayoutHeaderComponent,
     FrontLayoutContentComponent,

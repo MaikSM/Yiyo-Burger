@@ -1,0 +1,941 @@
+<div class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-6 overflow-x-hidden">
+  <!-- Encabezado responsivo -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b-2 border-orange-500 p-4 bg-gray-800 shadow-md mb-6 rounded-lg">
+    <h1 class="text-center sm:text-left text-2xl sm:text-3xl font-bold text-white">
+      📦 Inventario
+    </h1>
+  </div>
+
+  <!-- Pestañas para web -->
+  <div class="hidden md:flex mb-6 bg-gray-800 rounded-lg p-1">
+    <button
+      class="flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all"
+      [class.bg-orange-500]="activeTab() === 'menu'"
+      [class.text-white]="activeTab() === 'menu'"
+      [class.text-gray-300]="activeTab() !== 'menu'"
+      [class.hover:bg-gray-700]="activeTab() !== 'menu'"
+      (click)="setActiveTab('menu')"
+    >
+      🍽️ Menú
+    </button>
+    <button
+      class="flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all"
+      [class.bg-orange-500]="activeTab() === 'inventario'"
+      [class.text-white]="activeTab() === 'inventario'"
+      [class.text-gray-300]="activeTab() !== 'inventario'"
+      [class.hover:bg-gray-700]="activeTab() !== 'inventario'"
+      (click)="setActiveTab('inventario')"
+    >
+      📦 Inventario
+    </button>
+  </div>
+
+  <!-- Pestañas para móvil -->
+  <div class="md:hidden mb-6">
+    <select
+      [value]="activeTab()"
+      (change)="setActiveTab($any($event.target).value)"
+      class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-orange-500"
+    >
+      <option value="menu">🍽️ Menú</option>
+      <option value="inventario">📦 Inventario</option>
+    </select>
+  </div>
+
+  <!-- Contenido de pestañas -->
+  @if (activeTab() === 'menu') {
+   <!-- Vista de Menú -->
+   <div class="space-y-6">
+     <h2 class="text-xl font-semibold text-orange-400">🍽️ Menú del Restaurante</h2>
+
+     <!-- Filtros de categoría -->
+     @if (platosResource.hasValue()) {
+       <div class="bg-gray-800 rounded-lg p-4">
+         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
+           <h3 class="text-lg font-semibold text-orange-400">Filtrar por Categoría</h3>
+           <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+             <button
+               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
+               (click)="openAddPlatoModal()"
+             >
+               🍽️ Crear Plato
+             </button>
+             <button
+               class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
+               (click)="openAddCategoriaModal('menu')"
+             >
+               ➕ Agregar Categoría
+             </button>
+             <button
+               class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
+               (click)="openDeleteCategoriaModal()"
+             >
+               🗑️ Eliminar Categoría
+             </button>
+           </div>
+         </div>
+         <div class="flex flex-wrap gap-2 overflow-x-auto">
+           <button
+             class="px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
+             [class.bg-orange-500]="selectedCategoria() === null"
+             [class.text-white]="selectedCategoria() === null"
+             [class.bg-gray-700]="selectedCategoria() !== null"
+             [class.text-gray-300]="selectedCategoria() !== null"
+             [class.hover:bg-gray-600]="selectedCategoria() !== null"
+             (click)="selectCategoria(null)"
+           >
+             📋 Todas las Categorías
+           </button>
+           @for (categoria of categoriasKeys; track categoria) {
+             <button
+               class="px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
+               [class.bg-orange-500]="selectedCategoria() === categoria"
+               [class.text-white]="selectedCategoria() === categoria"
+               [class.bg-gray-700]="selectedCategoria() !== categoria"
+               [class.text-gray-300]="selectedCategoria() !== categoria"
+               [class.hover:bg-gray-600]="selectedCategoria() !== categoria"
+               (click)="selectCategoria(categoria)"
+             >
+               {{ categoria }}
+             </button>
+           }
+         </div>
+       </div>
+     }
+
+     @if (platosResource.isLoading()) {
+       <is-loading />
+     } @else if (platosResource.hasValue()) {
+       @if (selectedCategoria()) {
+         <!-- Mostrar solo la categoría seleccionada -->
+         <div class="bg-gray-800 rounded-lg p-4">
+           <h3 class="text-lg font-semibold text-orange-400 mb-4 border-b border-gray-700 pb-2">
+             {{ selectedCategoria() }}
+           </h3>
+           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+             @for (plato of getPlatosByCategoria()[selectedCategoria()!]; track plato.plato_id) {
+               <div class="bg-gray-700 rounded-lg p-4 border border-gray-600 hover:border-orange-500 transition-colors">
+                 <div class="flex justify-between items-start mb-2">
+                   <h4 class="text-lg font-semibold text-white">{{ plato.nombre }}</h4>
+                   <span
+                     class="px-2 py-1 rounded-full text-xs font-semibold"
+                     [class.bg-green-600]="plato.disponible"
+                     [class.bg-red-600]="!plato.disponible"
+                     [class.text-white]="true"
+                   >
+                     {{ plato.disponible ? 'Disponible' : 'No disponible' }}
+                   </span>
+                 </div>
+
+                 @if (plato.imagen_url) {
+                   <img
+                     [src]="plato.imagen_url"
+                     [alt]="plato.nombre"
+                     class="w-full h-32 object-cover rounded-lg mb-2"
+                   />
+                 } @else {
+                   <div class="w-full h-32 bg-gray-600 rounded-lg mb-2 flex items-center justify-center">
+                     <span class="text-gray-400 text-sm">Sin imagen</span>
+                   </div>
+                 }
+
+                 @if (plato.descripcion) {
+                   <p class="text-gray-300 text-sm mb-2">{{ plato.descripcion }}</p>
+                 }
+
+                 <div class="flex justify-between items-center text-sm">
+                   <span class="text-gray-400">
+                     Precio: <span class="font-semibold text-orange-400">${{ plato.precio }}</span>
+                   </span>
+                   @if (plato.tiempo_preparacion_minutos) {
+                     <span class="text-gray-400">
+                       ⏱️ {{ plato.tiempo_preparacion_minutos }} min
+                     </span>
+                   }
+                 </div>
+
+                 @if (plato.alergenos && plato.alergenos.length > 0) {
+                   <div class="mt-2">
+                     <span class="text-xs text-yellow-400">⚠️ Alérgenos: {{ plato.alergenos.join(', ') }}</span>
+                   </div>
+                 }
+
+                 <!-- Botones de acción -->
+                 <div class="mt-3 flex gap-2">
+                   <button
+                     class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-xs font-medium transition-all"
+                     (click)="editPlato(plato)"
+                   >
+                     ✏️ Editar
+                   </button>
+                   <button
+                     class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-all"
+                     (click)="deletePlato(plato)"
+                   >
+                     🗑️ Eliminar
+                   </button>
+                 </div>
+               </div>
+             }
+           </div>
+         </div>
+       } @else {
+         <!-- Mostrar todas las categorías -->
+         @for (categoria of categoriasKeys; track categoria) {
+           <div class="bg-gray-800 rounded-lg p-4">
+             <h3 class="text-lg font-semibold text-orange-400 mb-4 border-b border-gray-700 pb-2">
+               {{ categoria }}
+             </h3>
+             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+               @for (plato of getPlatosByCategoria()[categoria]; track plato.plato_id) {
+                 <div class="bg-gray-700 rounded-lg p-4 border border-gray-600 hover:border-orange-500 transition-colors">
+                   <div class="flex justify-between items-start mb-2">
+                     <h4 class="text-lg font-semibold text-white">{{ plato.nombre }}</h4>
+                     <span
+                       class="px-2 py-1 rounded-full text-xs font-semibold"
+                       [class.bg-green-600]="plato.disponible"
+                       [class.bg-red-600]="!plato.disponible"
+                       [class.text-white]="true"
+                     >
+                       {{ plato.disponible ? 'Disponible' : 'No disponible' }}
+                     </span>
+                   </div>
+
+                   @if (plato.imagen_url) {
+                     <img
+                       [src]="plato.imagen_url"
+                       [alt]="plato.nombre"
+                       class="w-full h-32 object-cover rounded-lg mb-2"
+                     />
+                   } @else {
+                     <div class="w-full h-32 bg-gray-600 rounded-lg mb-2 flex items-center justify-center">
+                       <span class="text-gray-400 text-sm">Sin imagen</span>
+                     </div>
+                   }
+
+                   @if (plato.descripcion) {
+                     <p class="text-gray-300 text-sm mb-2">{{ plato.descripcion }}</p>
+                   }
+
+                   <div class="flex justify-between items-center text-sm">
+                     <span class="text-gray-400">
+                       Precio: <span class="font-semibold text-orange-400">${{ plato.precio }}</span>
+                     </span>
+                     @if (plato.tiempo_preparacion_minutos) {
+                       <span class="text-gray-400">
+                         ⏱️ {{ plato.tiempo_preparacion_minutos }} min
+                       </span>
+                     }
+                   </div>
+
+                   @if (plato.alergenos && plato.alergenos.length > 0) {
+                     <div class="mt-2">
+                       <span class="text-xs text-yellow-400">⚠️ Alérgenos: {{ plato.alergenos.join(', ') }}</span>
+                     </div>
+                   }
+ 
+                   <!-- Botones de acción -->
+                   <div class="mt-3 flex gap-2">
+                     <button
+                       class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-xs font-medium transition-all"
+                       (click)="editPlato(plato)"
+                     >
+                       ✏️ Editar
+                     </button>
+                     <button
+                       class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-all"
+                       (click)="deletePlato(plato)"
+                     >
+                       🗑️ Eliminar
+                     </button>
+                   </div>
+                 </div>
+               }
+             </div>
+           </div>
+         }
+
+
+         <!-- Modal para crear plato -->
+         @if (showAddPlatoModal()) {
+           <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+             <div class="bg-gray-800 rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+               <h3 class="text-lg font-semibold text-blue-400 mb-4">{{ editingPlatoId() ? 'Editar Plato' : 'Crear Nuevo Plato' }}</h3>
+
+               <form class="space-y-4">
+                 <div>
+                   <label class="block text-sm font-medium text-gray-300 mb-2">
+                     Nombre del Plato *
+                   </label>
+                   <input
+                     type="text"
+                     [value]="nombre()"
+                     (input)="updateNombre($event)"
+                     class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                     placeholder="Ej: Pasta Carbonara"
+                   />
+                 </div>
+
+                 <div>
+                   <label class="block text-sm font-medium text-gray-300 mb-2">
+                     Descripción
+                   </label>
+                   <textarea
+                     [value]="descripcion()"
+                     (input)="updateDescripcion($event)"
+                     class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 h-20 resize-none"
+                     placeholder="Descripción del plato..."
+                   ></textarea>
+                 </div>
+
+                 <div class="grid grid-cols-2 gap-4">
+                   <div>
+                     <label class="block text-sm font-medium text-gray-300 mb-2">
+                       Precio *
+                     </label>
+                     <input
+                       type="number"
+                       step="0.01"
+                       min="0"
+                       [value]="precio()"
+                       (input)="updatePrecio($event)"
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                       placeholder="0.00"
+                     />
+                   </div>
+
+                   @if (!editingPlatoId()) {
+                   <div>
+                     <label class="block text-sm font-medium text-gray-300 mb-2">
+                       Categoría
+                     </label>
+                     <select
+                       [value]="categoria()"
+                       (change)="updateCategoria($event)"
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                     >
+                       <option value="">Seleccionar categoría...</option>
+                       @for (categoria of (activeTab() === 'menu' ? categoriasKeys : categoriasInventarioKeys); track categoria) {
+                         <option [value]="categoria">{{ categoria }}</option>
+                       }
+                     </select>
+                   </div>
+                   }
+                 </div>
+
+                 <div>
+                   <label class="block text-sm font-medium text-gray-300 mb-2">
+                     Imagen del Plato
+                   </label>
+                   <div class="grid grid-cols-2 gap-4 mb-4">
+                     <button
+                       type="button"
+                       (click)="takePhoto()"
+                       class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                     >
+                       📷 Tomar Foto
+                     </button>
+                     <button
+                       type="button"
+                       (click)="selectFromGallery()"
+                       class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                     >
+                       🖼️ Galería
+                     </button>
+                   </div>
+
+                   @if (imagen_url()) {
+                     <div class="mb-4">
+                       <p class="text-sm text-gray-400 mb-2">Vista previa:</p>
+                       <img
+                         [src]="imagen_url()"
+                         [alt]="nombre() || 'Vista previa del plato'"
+                         class="w-full h-32 object-cover rounded-lg border border-gray-600"
+                       />
+                       <button
+                         type="button"
+                         (click)="clearImage()"
+                         class="mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-all"
+                       >
+                         ❌ Quitar Imagen
+                       </button>
+                     </div>
+                   } @else {
+                     <div class="mb-4 p-8 border-2 border-dashed border-gray-600 rounded-lg text-center text-gray-400">
+                       <p class="text-sm">No hay imagen seleccionada</p>
+                       <p class="text-xs">Usa la cámara o selecciona de la galería</p>
+                     </div>
+                   }
+                 </div>
+
+                 <div class="grid grid-cols-2 gap-4">
+                   <div>
+                     <label class="block text-sm font-medium text-gray-300 mb-2">
+                       Tiempo de Preparación (min)
+                     </label>
+                     <input
+                       type="number"
+                       min="1"
+                       [value]="tiempo_preparacion_minutos()"
+                       (input)="updateTiempoPreparacion($event)"
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                       placeholder="15"
+                     />
+                   </div>
+
+                 </div>
+
+                 <div>
+                   <label class="block text-sm font-medium text-gray-300 mb-2">
+                     Alérgenos (separados por coma)
+                   </label>
+                   <input
+                     type="text"
+                     [value]="alergenos().join(', ')"
+                     (input)="updateAlergenos($event)"
+                     class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                     placeholder="lácteos, gluten, huevos"
+                   />
+                 </div>
+
+                 <div class="flex items-center">
+                   <input
+                     type="checkbox"
+                     id="disponible"
+                     [checked]="disponible()"
+                     (change)="updateDisponible($event)"
+                     class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                   />
+                   <label for="disponible" class="ml-2 text-sm font-medium text-gray-300">
+                     Plato disponible
+                   </label>
+                 </div>
+               </form>
+
+               <div class="flex justify-end gap-3 mt-6">
+                 <button
+                   class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                   (click)="closeAddPlatoModal()"
+                 >
+                   Cancelar
+                 </button>
+                 <button
+                   class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                   (click)="createPlato()"
+                   [disabled]="!nombre().trim() || !precio()"
+                 >
+                   {{ editingPlatoId() ? 'Actualizar Plato' : 'Crear Plato' }}
+                 </button>
+               </div>
+             </div>
+           </div>
+         }
+
+       }
+     } @else {
+       <is-empty />
+     }
+
+     <!-- Modal para agregar categoría (Menú) -->
+     @if (showAddCategoriaModal() && activeTab() === 'menu') {
+       <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+         <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+           <h3 class="text-lg font-semibold text-orange-400 mb-4">Agregar Nueva Categoría (Menú)</h3>
+
+           <div class="mb-4">
+             <label class="block text-sm font-medium text-gray-300 mb-2">
+               Nombre de la Categoría
+             </label>
+             <input
+               type="text"
+               [value]="newCategoriaName()"
+               (input)="newCategoriaName.set($any($event.target).value)"
+               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-orange-500"
+               placeholder="Ej: Postres, Bebidas, etc."
+             />
+           </div>
+
+           <div class="flex justify-end gap-3">
+             <button
+               class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+               (click)="closeAddCategoriaModal()"
+             >
+               Cancelar
+             </button>
+             <button
+               class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+               (click)="addCategoria()"
+               [disabled]="!newCategoriaName().trim()"
+             >
+               Agregar
+             </button>
+           </div>
+         </div>
+       </div>
+     }
+
+     <!-- Modal para eliminar categoría (Menú) -->
+     @if (showDeleteCategoriaModal() && activeTab() === 'menu') {
+       <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+         <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+           <h3 class="text-lg font-semibold text-red-400 mb-4">Eliminar Categoría (Menú)</h3>
+
+           <div class="mb-4">
+             <label class="block text-sm font-medium text-gray-300 mb-2">
+               Seleccionar Categoría a Eliminar
+             </label>
+             <select
+               [value]="categoriaToDelete()"
+               (change)="categoriaToDelete.set($any($event.target).value)"
+               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-red-500"
+             >
+               <option value="">Seleccionar categoría...</option>
+               @for (categoria of categoriasKeys; track categoria) {
+                 <option [value]="categoria">{{ categoria }}</option>
+               }
+             </select>
+           </div>
+
+           <div class="flex justify-end gap-3">
+             <button
+               class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+               (click)="closeDeleteCategoriaModal()"
+             >
+               Cancelar
+             </button>
+             <button
+               class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+               (click)="confirmDeleteCategoria()"
+               [disabled]="!categoriaToDelete()"
+             >
+               Eliminar
+             </button>
+           </div>
+         </div>
+       </div>
+     }
+   </div>
+  } @else if (activeTab() === 'inventario') {
+    <!-- Vista de Inventario -->
+    <div class="space-y-6">
+      <h2 class="text-xl font-semibold text-orange-400">📦 Gestión de Inventario</h2>
+
+
+      <!-- Botones de acción -->
+      <div class="bg-gray-800 rounded-lg p-4">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
+          <h3 class="text-lg font-semibold text-orange-400">Ingredientes</h3>
+          <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <input
+              type="text"
+              placeholder="Buscar ingredientes..."
+              class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm w-full sm:w-64"
+              #searchInput
+            />
+            <button
+              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
+              (click)="openAddIngredienteModal()"
+            >
+              ➕ Crear Ingrediente
+            </button>
+            <button
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
+              (click)="openAddCategoriaModal('inventario')"
+            >
+              ➕ Agregar Categoría
+            </button>
+            <button
+              class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
+              (click)="openDeleteCategoriaModal(); $event.stopPropagation();"
+            >
+              🗑️ Eliminar Categoría
+            </button>
+          </div>
+        </div>
+
+
+        <!-- Tabla de ingredientes -->
+        @if (ingredientesResource.error()) {
+          <is-error />
+        } @else if (ingredientesResource.isLoading()) {
+          <is-loading />
+        } @else if (ingredientesResource.hasValue()) {
+          <div class="overflow-x-auto">
+            <table class="w-full bg-gray-700 rounded-lg overflow-hidden">
+              <thead class="bg-orange-500/10">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Nombre</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Categoría</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Stock Actual</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Costo Unitario</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Valor Total</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Estado</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-600">
+                @for (ingrediente of (ingredientesResource.value() || []); track ingrediente.ingrediente_id) {
+                  <tr class="hover:bg-gray-600 transition-colors">
+                    <td class="px-4 py-3 text-sm text-white font-medium">{{ ingrediente.nombre }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-300">{{ ingrediente.categoria || 'Sin categoría' }}</td>
+                    <td class="px-4 py-3 text-sm text-white">
+                      {{ ingrediente.stock_actual }} {{ ingrediente.unidad_medida || 'unidades' }}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-green-400">${{ (+ingrediente.costo_unitario || 0).toFixed(2) }}</td>
+                    <td class="px-4 py-3 text-sm text-orange-400">${{ (+ingrediente.valor_total || 0).toFixed(2) }}</td>
+                    <td class="px-4 py-3 text-sm">
+                      <span
+                        class="px-2 py-1 rounded-full text-xs font-semibold"
+                        [class.bg-red-600]="ingrediente.estado_stock === 'CRITICO'"
+                        [class.bg-yellow-600]="ingrediente.estado_stock === 'BAJO'"
+                        [class.bg-green-600]="ingrediente.estado_stock === 'NORMAL'"
+                        [class.bg-blue-600]="ingrediente.estado_stock === 'ALTO'"
+                        [class.text-white]="true"
+                      >
+                        {{ ingrediente.estado_stock }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                      <div class="flex gap-2">
+                        <button
+                          class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-xs font-medium transition-all"
+                          (click)="editIngrediente(ingrediente)"
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-all"
+                          (click)="deleteIngrediente(ingrediente)"
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else if (!ingredientesResource.hasValue()) {
+          <is-empty />
+        }
+      </div>
+
+      <!-- Modal para agregar categoría (Menú) -->
+      @if (showAddCategoriaModal() && activeTab() === 'menu') {
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 class="text-lg font-semibold text-orange-400 mb-4">Agregar Nueva Categoría (Menú)</h3>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-300 mb-2">
+                Nombre de la Categoría
+              </label>
+              <input
+                type="text"
+                [value]="newCategoriaName()"
+                (input)="newCategoriaName.set($any($event.target).value)"
+                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-orange-500"
+                placeholder="Ej: Postres, Bebidas, etc."
+              />
+            </div>
+
+            <div class="flex justify-end gap-3">
+              <button
+                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                (click)="closeAddCategoriaModal()"
+              >
+                Cancelar
+              </button>
+              <button
+                class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                (click)="addCategoria()"
+                [disabled]="!newCategoriaName().trim()"
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Modal para eliminar categoría (Menú) -->
+      @if (showDeleteCategoriaModal() && activeTab() === 'menu') {
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+          <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 class="text-lg font-semibold text-red-400 mb-4">Eliminar Categoría (Menú)</h3>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-300 mb-2">
+                Seleccionar Categoría a Eliminar
+              </label>
+              <select
+                [value]="categoriaToDelete()"
+                (change)="categoriaToDelete.set($any($event.target).value)"
+                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-red-500"
+              >
+                <option value="">Seleccionar categoría...</option>
+                @for (categoria of categoriasKeys; track categoria) {
+                  <option [value]="categoria">{{ categoria }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="flex justify-end gap-3">
+              <button
+                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                (click)="closeDeleteCategoriaModal()"
+              >
+                Cancelar
+              </button>
+              <button
+                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                (click)="confirmDeleteCategoria()"
+                [disabled]="!categoriaToDelete()"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Modal para crear/editar ingrediente -->
+      @if (showAddIngredienteModal()) {
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-gray-800 rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-semibold text-green-400 mb-4">{{ editingIngredienteId() ? 'Editar Ingrediente' : 'Crear Nuevo Ingrediente' }}</h3>
+
+            <form class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                  Nombre del Ingrediente *
+                </label>
+                <input
+                  type="text"
+                  [value]="ingredienteNombre()"
+                  (input)="updateIngredienteNombre($event)"
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                  placeholder="Ej: Harina de trigo"
+                />
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-300 mb-2">
+                    Categoría
+                  </label>
+                  <select
+                    [value]="ingredienteCategoria()"
+                    (change)="updateIngredienteCategoria($event)"
+                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                  >
+                    <option value="">Sin categoría</option>
+                    @for (categoria of categoriasInventarioKeys; track categoria) {
+                      <option [value]="categoria">{{ categoria }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-300 mb-2">
+                    Unidad de Medida
+                  </label>
+                  <input
+                    type="text"
+                    [value]="ingredienteUnidadMedida()"
+                    (input)="updateIngredienteUnidadMedida($event)"
+                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                    placeholder="Ej: kg, litros, unidades"
+                  />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-300 mb-2">
+                    Stock Actual *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    [value]="ingredienteStockActual()"
+                    (input)="updateIngredienteStockActual($event)"
+                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-300 mb-2">
+                    Stock Mínimo
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    [value]="ingredienteStockMinimo()"
+                    (input)="updateIngredienteStockMinimo($event)"
+                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-300 mb-2">
+                    Stock Máximo
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    [value]="ingredienteStockMaximo()"
+                    (input)="updateIngredienteStockMaximo($event)"
+                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                  Costo Unitario *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  [value]="ingredienteCostoUnitario()"
+                  (input)="updateIngredienteCostoUnitario($event)"
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                  Descripción
+                </label>
+                <textarea
+                  [value]="ingredienteDescripcion()"
+                  (input)="updateIngredienteDescripcion($event)"
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500 h-20 resize-none"
+                  placeholder="Descripción del ingrediente..."
+                ></textarea>
+              </div>
+
+              <div class="flex items-center">
+                <input
+                  type="checkbox"
+                  id="ingrediente-activo"
+                  [checked]="ingredienteActivo()"
+                  (change)="updateIngredienteActivo($event)"
+                  class="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500"
+                />
+                <label for="ingrediente-activo" class="ml-2 text-sm font-medium text-gray-300">
+                  Ingrediente activo
+                </label>
+              </div>
+            </form>
+
+            <div class="flex justify-end gap-3 mt-6">
+              <button
+                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                (click)="closeAddIngredienteModal()"
+              >
+                Cancelar
+              </button>
+              <button
+                class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                (click)="createIngrediente()"
+                [disabled]="!ingredienteNombre().trim() || !ingredienteCostoUnitario()"
+              >
+                {{ editingIngredienteId() ? 'Actualizar Ingrediente' : 'Crear Ingrediente' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Modal para agregar categoría (Inventario) -->
+      @if (showAddCategoriaModal() && activeTab() === 'inventario') {
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 class="text-lg font-semibold text-blue-400 mb-4">Agregar Nueva Categoría (Inventario)</h3>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-300 mb-2">
+                Nombre de la Categoría
+              </label>
+              <input
+                type="text"
+                [value]="newCategoriaName()"
+                (input)="newCategoriaName.set($any($event.target).value)"
+                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                placeholder="Ej: Carnes, Verduras, Lácteos, etc."
+              />
+            </div>
+
+            <div class="flex justify-end gap-3">
+              <button
+                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                (click)="closeAddCategoriaModal()"
+              >
+                Cancelar
+              </button>
+              <button
+                class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                (click)="addCategoria()"
+                [disabled]="!newCategoriaName().trim()"
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Modal para eliminar categoría (Inventario) -->
+      @if (showDeleteCategoriaModal() && activeTab() === 'inventario') {
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+          <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 class="text-lg font-semibold text-red-400 mb-4">Eliminar Categoría (Inventario)</h3>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-300 mb-2">
+                Seleccionar Categoría a Eliminar
+              </label>
+              <select
+                [value]="categoriaToDelete()"
+                (change)="categoriaToDelete.set($any($event.target).value)"
+                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-red-500"
+              >
+                <option value="">Seleccionar categoría...</option>
+                @for (categoria of categoriasInventarioKeys; track categoria) {
+                  <option [value]="categoria">{{ categoria }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="flex justify-end gap-3">
+              <button
+                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                (click)="closeDeleteCategoriaModal()"
+              >
+                Cancelar
+              </button>
+              <button
+                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                (click)="confirmDeleteCategoria()"
+                [disabled]="!categoriaToDelete()"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

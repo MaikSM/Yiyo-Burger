@@ -4,6 +4,7 @@ import { RouterOutlet } from '@angular/router';
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'front-layout-content',
+  standalone: true,
   imports: [RouterOutlet],
   templateUrl: './front-layout-content.component.html',
   styles: ``,

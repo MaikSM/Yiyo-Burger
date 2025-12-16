@@ -1,0 +1,239 @@
+<div class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-6 overflow-x-hidden">
+  <!-- Encabezado -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b-2 border-orange-500 p-4 bg-gray-800 shadow-md mb-6 rounded-lg">
+    <h1 class="text-center sm:text-left text-2xl sm:text-3xl font-bold text-white">
+      📊 Historial Completo de Asistencia
+    </h1>
+    <button
+      class="btn btn-sm sm:btn-md bg-gray-600 hover:bg-gray-700 text-white"
+      (click)="goBack()"
+    >
+      ← Volver
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-gray-800 rounded-lg p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Empleado</label>
+        <select
+          class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          (change)="onUserChange($event)"
+        >
+          <option value="">Todos los empleados</option>
+          @for (empleado of getEmpleadosFiltrados(); track empleado.id) {
+            <option [value]="empleado.id">
+              {{ empleado.name }} {{ empleado.surname }} - {{ getRolDisplay(empleado.rol) }}
+            </option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Año</label>
+        <select
+          class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          [value]="selectedYear()"
+          (change)="onYearChange($event)"
+        >
+          @for (year of getYears(); track year) {
+            <option [value]="year">{{ year }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">Mes</label>
+        <select
+          class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          [value]="selectedMonth()"
+          (change)="onMonthChange($event)"
+        >
+          @for (month of getMonths(); track month.value) {
+            <option [value]="month.value">{{ month.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="flex items-end gap-2 justify-center">
+        <button
+          class="w-36 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md font-medium transition text-center"
+          (click)="generateCalendar()"
+        >
+          🔄 Actualizar
+        </button>
+        <button
+          class="w-36 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md font-medium transition text-center"
+          (click)="generatePDFReport()"
+        >
+          📄 Generar PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Toggle de vista -->
+    <div class="flex gap-2 mt-4 pt-4 border-t border-gray-600">
+      <button
+        class="px-4 py-2 rounded-md font-medium transition"
+        [class]="viewMode() === 'table' ? 'bg-orange-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+        (click)="toggleView('table')"
+      >
+        📊 Tabla
+      </button>
+      <button
+        class="px-4 py-2 rounded-md font-medium transition"
+        [class]="viewMode() === 'charts' ? 'bg-orange-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+        (click)="toggleView('charts')"
+      >
+        📈 Gráficos
+      </button>
+    </div>
+  </div>
+
+  <!-- Estadísticas Generales -->
+  @if (usersResource.hasValue() && rolesResource.hasValue()) {
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+      <div class="bg-gray-800 rounded-lg p-4 text-center">
+        <div class="text-2xl font-bold text-blue-400">{{ getEstadisticasGenerales().totalEmpleados }}</div>
+        <div class="text-gray-300 text-sm">Total Empleados</div>
+      </div>
+      <div class="bg-gray-800 rounded-lg p-4 text-center">
+        <div class="text-2xl font-bold text-green-400">{{ getEstadisticasGenerales().presentes }}</div>
+        <div class="text-gray-300 text-sm">Presentes</div>
+      </div>
+      <div class="bg-gray-800 rounded-lg p-4 text-center">
+        <div class="text-2xl font-bold text-red-400">{{ getEstadisticasGenerales().ausentes }}</div>
+        <div class="text-gray-300 text-sm">Ausentes</div>
+      </div>
+      <div class="bg-gray-800 rounded-lg p-4 text-center">
+        <div class="text-2xl font-bold text-yellow-400">{{ getEstadisticasGenerales().retrasos }}</div>
+        <div class="text-gray-300 text-sm">Retrasos</div>
+      </div>
+      <div class="bg-gray-800 rounded-lg p-4 text-center">
+        <div class="text-2xl font-bold text-orange-400">{{ getEstadisticasGenerales().salidasTempranas }}</div>
+        <div class="text-gray-300 text-sm">Salidas Tempranas</div>
+      </div>
+      <div class="bg-gray-800 rounded-lg p-4 text-center">
+        <div class="text-2xl font-bold text-purple-400">{{ getEstadisticasGenerales().totalAsistencias }}</div>
+        <div class="text-gray-300 text-sm">Total Registros</div>
+      </div>
+    </div>
+  }
+
+
+  <!-- Vista de Tabla -->
+  @if (viewMode() === 'table') {
+    <div class="bg-gray-800 rounded-lg overflow-hidden">
+      <div class="p-4 border-b border-gray-700">
+        <h2 class="text-xl font-semibold text-orange-400">
+          📋 Detalle de Asistencias
+        </h2>
+      </div>
+
+      @if (asistenciasResource.isLoading()) {
+        <is-loading />
+      } @else if (asistenciasResource.hasValue()) {
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-orange-500/10">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Fecha</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Empleado</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Rol</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Hora Entrada</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Hora Salida</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Estado</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-600">
+              @for (asistencia of getAsistenciasFiltradas(); track asistencia.id) {
+                <tr class="hover:bg-gray-700 transition-colors">
+                  <td class="px-4 py-3 text-sm text-white font-medium">
+                    {{ asistencia.fecha | date:'dd/MM/yyyy' }}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-white">
+                    {{ asistencia.user?.name }} {{ asistencia.user?.surname }}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-300">
+                    {{ getRolDisplay(asistencia.user?.role?.name || 'Sin rol') }}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-white">
+                    @if (asistencia.hora_entrada) {
+                      <span class="text-green-400">{{ asistencia.hora_entrada }}</span>
+                    } @else {
+                      <span class="text-gray-500">-</span>
+                    }
+                  </td>
+                  <td class="px-4 py-3 text-sm text-white">
+                    @if (asistencia.hora_salida) {
+                      <span class="text-blue-400">{{ asistencia.hora_salida }}</span>
+                    } @else {
+                      <span class="text-gray-500">-</span>
+                    }
+                  </td>
+                  <td class="px-4 py-3 text-sm">
+                    <span
+                      class="px-2 py-1 rounded-full text-xs font-medium"
+                      [class]="getEstadoColor(asistencia.estado) + ' text-white'"
+                    >
+                      {{ getEstadoAsistencia(asistencia.estado) }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else if (asistenciasResource.error()) {
+        <is-error />
+      } @else {
+        <is-empty />
+      }
+    </div>
+  }
+
+  <!-- Vista de Gráficos -->
+  @if (viewMode() === 'charts') {
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Gráfico Circular - Estados de Asistencia -->
+      <div class="bg-gray-800 rounded-lg p-4">
+        <h3 class="text-lg font-semibold text-orange-400 mb-4">📊 Distribución de Estados</h3>
+        <div class="h-64">
+          <canvas #pieChart></canvas>
+        </div>
+      </div>
+
+      <!-- Gráfico de Barras - Asistencias Diarias -->
+      <div class="bg-gray-800 rounded-lg p-4">
+        <h3 class="text-lg font-semibold text-orange-400 mb-4">📈 Asistencias por Día</h3>
+        <div class="h-64">
+          <canvas #barChart></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estadísticas Adicionales -->
+    <div class="bg-gray-800 rounded-lg p-4 mt-6">
+      <h3 class="text-lg font-semibold text-orange-400 mb-4">📋 Resumen del Mes</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="text-center">
+          <div class="text-2xl font-bold text-blue-400">{{ getEstadisticasGenerales().totalAsistencias }}</div>
+          <div class="text-gray-300 text-sm">Total Registros</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-green-400">{{ getEstadisticasGenerales().presentes }}</div>
+          <div class="text-gray-300 text-sm">Días con Presencia</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-red-400">{{ getEstadisticasGenerales().ausentes }}</div>
+          <div class="text-gray-300 text-sm">Días de Ausencia</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-yellow-400">{{ getEstadisticasGenerales().retrasos }}</div>
+          <div class="text-gray-300 text-sm">Retrasos</div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

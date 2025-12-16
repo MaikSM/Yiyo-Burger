@@ -1,0 +1,154 @@
+<div class="min-h-screen bg-gray-900 py-8">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-gray-800/50 backdrop-blur-sm shadow-2xl rounded-3xl overflow-hidden border border-orange-500/20">
+      <div class="px-6 py-6 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+        <h1 class="text-3xl font-bold text-center">Hacer una Reserva</h1>
+        <p class="text-orange-100 text-center mt-2">Completa el formulario para reservar tu mesa</p>
+      </div>
+
+      <form [formGroup]="reservaForm" (ngSubmit)="onSubmit()" class="p-8 space-y-8">
+        <!-- Seleccionar Mesa -->
+        <div>
+          <label for="mesa_id" class="block text-lg font-semibold text-orange-400 mb-3">
+            Seleccionar Mesa
+          </label>
+          @if (isLoadingMesas()) {
+            <div class="flex items-center space-x-3">
+              <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-orange-500"></div>
+              <span class="text-gray-300">Cargando mesas disponibles...</span>
+            </div>
+          } @else {
+            <select
+              id="mesa_id"
+              formControlName="mesa_id"
+              class="w-full px-4 py-3 bg-gray-700/50 border border-orange-500/30 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300"
+            >
+              <option value="" class="bg-gray-800">Selecciona una mesa</option>
+              @for (mesa of mesas(); track mesa.id) {
+                <option [value]="mesa.id" class="bg-gray-800">
+                  Mesa {{ mesa.numero }} - Capacidad: {{ mesa.capacidad }} personas
+                  @if (mesa.ubicacion) {
+                    ({{ mesa.ubicacion }})
+                  }
+                </option>
+              }
+            </select>
+          }
+        </div>
+
+        <!-- Nombre del Cliente -->
+        <div>
+          <label for="cliente_nombre" class="block text-lg font-semibold text-orange-400 mb-3">
+            Nombre Completo
+          </label>
+          <input
+            type="text"
+            id="cliente_nombre"
+            formControlName="cliente_nombre"
+            class="w-full px-4 py-3 bg-gray-700/50 border border-orange-500/30 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300"
+            placeholder="Ingresa tu nombre completo"
+          />
+        </div>
+
+        <!-- Email del Cliente -->
+        <div>
+          <label for="cliente_email" class="block text-lg font-semibold text-orange-400 mb-3">
+            Correo Electrónico
+          </label>
+          <input
+            type="email"
+            id="cliente_email"
+            formControlName="cliente_email"
+            class="w-full px-4 py-3 bg-gray-700/50 border border-orange-500/30 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300"
+            placeholder="tu@email.com"
+          />
+        </div>
+
+        <!-- Teléfono del Cliente -->
+        <div>
+          <label for="cliente_telefono" class="block text-lg font-semibold text-orange-400 mb-3">
+            Teléfono
+          </label>
+          <input
+            type="tel"
+            id="cliente_telefono"
+            formControlName="cliente_telefono"
+            class="w-full px-4 py-3 bg-gray-700/50 border border-orange-500/30 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300"
+            placeholder="+57 300 123 4567"
+          />
+        </div>
+
+        <!-- Fecha y Hora -->
+        <div>
+          <label for="fecha_hora" class="block text-lg font-semibold text-orange-400 mb-3">
+            Fecha y Hora
+          </label>
+          <input
+            type="datetime-local"
+            id="fecha_hora"
+            formControlName="fecha_hora"
+            class="w-full px-4 py-3 bg-gray-700/50 border border-orange-500/30 rounded-xl text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300"
+            [min]="getMinDateTime()"
+          />
+        </div>
+
+        <!-- Número de Personas -->
+        <div>
+          <label for="numero_personas" class="block text-lg font-semibold text-orange-400 mb-3">
+            Número de Personas
+          </label>
+          <input
+            type="number"
+            id="numero_personas"
+            formControlName="numero_personas"
+            min="1"
+            max="20"
+            class="w-full px-4 py-3 bg-gray-700/50 border border-orange-500/30 rounded-xl text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300"
+          />
+        </div>
+
+        <!-- Notas -->
+        <div>
+          <label for="notas" class="block text-lg font-semibold text-orange-400 mb-3">
+            Notas Especiales (Opcional)
+          </label>
+          <textarea
+            id="notas"
+            formControlName="notas"
+            rows="4"
+            class="w-full px-4 py-3 bg-gray-700/50 border border-orange-500/30 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300 resize-none"
+            placeholder="Alergias, preferencias especiales, etc."
+          ></textarea>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex space-x-6 pt-8">
+          <button
+            type="button"
+            routerLink="/"
+            class="flex-1 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 hover:border-gray-500/50 text-gray-300 hover:text-gray-200 py-4 px-6 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg hover:shadow-orange-500/10"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            [disabled]="isPosting() || reservaForm.invalid"
+            class="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-2xl font-bold shadow-2xl hover:shadow-orange-500/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+          >
+            @if (isPosting()) {
+              <div class="flex items-center justify-center">
+                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                Creando Reserva...
+              </div>
+            } @else {
+              <span class="flex items-center justify-center gap-2">
+                <span>🎯</span>
+                Crear Reserva
+              </span>
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

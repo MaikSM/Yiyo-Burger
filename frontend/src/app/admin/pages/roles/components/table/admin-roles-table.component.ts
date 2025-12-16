@@ -31,7 +31,79 @@ import { Router } from '@angular/router';
   selector: 'admin-roles-table',
   imports: [CommonModule, FlexRenderDirective],
   templateUrl: './admin-roles-table.component.html',
-  styles: ``,
+  styles: `
+    :host {
+      /* Forzar que se apliquen los estilos de TailwindCSS sobre DaisyUI */
+      table {
+        background-color: rgb(31 41 55) !important;
+        border-radius: 0.5rem !important;
+        overflow: hidden !important;
+      }
+
+      table thead tr {
+        background-color: rgb(55 65 81) !important;
+        color: rgb(251 146 60) !important;
+      }
+
+      table tbody tr {
+        background-color: white !important;
+        color: rgb(17 24 39) !important;
+        border-bottom: 1px solid rgb(75 85 99) !important;
+      }
+
+      table tbody tr:hover {
+        background-color: white !important;
+      }
+
+      table th,
+      table td {
+        padding: 0.75rem 1rem !important;
+        text-align: left !important;
+      }
+
+      /* Sobrescribir estilos de DaisyUI para inputs */
+      input {
+        background-color: rgb(55 65 81) !important;
+        border-color: rgb(75 85 99) !important;
+        color: rgb(243 244 246) !important;
+      }
+
+      input:focus {
+        outline: none !important;
+        border-color: rgb(251 146 60) !important;
+        box-shadow: 0 0 0 2px rgb(251 146 60 / 0.2) !important;
+      }
+
+      /* Sobrescribir estilos de DaisyUI para botones */
+      button {
+        border-radius: 0.375rem !important;
+        transition: all 0.2s !important;
+      }
+
+      /* Sobrescribir estilos de DaisyUI para select */
+      select {
+        background-color: rgb(55 65 81) !important;
+        border-color: rgb(75 85 99) !important;
+        color: rgb(243 244 246) !important;
+      }
+
+      select:focus {
+        outline: none !important;
+        border-color: rgb(251 146 60) !important;
+        box-shadow: 0 0 0 2px rgb(251 146 60 / 0.2) !important;
+      }
+
+      /* Sobrescribir estilos de DaisyUI para badges */
+      .badge {
+        background-color: initial !important;
+        color: initial !important;
+        border-radius: 9999px !important;
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+      }
+    }
+  `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminRolesTableComponent {

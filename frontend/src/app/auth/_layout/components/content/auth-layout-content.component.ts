@@ -4,6 +4,7 @@ import { RouterOutlet } from '@angular/router';
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'auth-layout-content',
+  standalone: true,
   imports: [RouterOutlet],
   templateUrl: './auth-layout-content.component.html',
   styles: ``,

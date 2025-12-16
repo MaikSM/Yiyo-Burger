@@ -1,9 +1,61 @@
-<div class="grid grid-cols-[auto_1fr] min-h-screen">
-  <!-- Sidebar - Sección lateral para navegación -->
-  <admin-layout-side-bar
-    class="w-52 bg-gray-700 shadow-2xl h-full transition-all duration-300 z-10 rounded-lg border border-gray-300 p-1"
-  />
+<div class="min-h-screen bg-gray-900">
+  <!-- Barra superior para móviles -->
+  <div
+    class="lg:hidden sticky top-0 z-20 bg-gray-900/95 backdrop-blur border-b border-gray-800">
+    <div class="flex items-center justify-between px-4 h-14">
+      <button
+        type="button"
+        class="inline-flex items-center justify-center w-10 h-10 rounded-md text-gray-200 hover:bg-gray-800 border border-gray-700"
+        (click)="toggleSidebar()"
+        aria-label="Abrir menú">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
 
-  <!-- Content - Área principal de contenido -->
-  <admin-layout-content class="p-1 transition-all duration-300" />
+      <span class="text-orange-500 font-bold text-base">Administración</span>
+
+      <!-- placeholder para balancear layout -->
+      <span class="w-10"></span>
+    </div>
+  </div>
+
+  <!-- Drawer lateral para móviles -->
+  @if (sidebarOpen()) {
+    <div class="lg:hidden fixed inset-0 z-30">
+      <div
+        class="absolute inset-0 bg-black/50"
+        (click)="closeSidebar()"
+        (keydown.enter)="closeSidebar()"
+        (keydown.space)="closeSidebar()"
+        role="button"
+        tabindex="0"
+        aria-label="Cerrar menú">
+      </div>
+      <div
+        class="absolute left-0 top-0 h-full w-64 max-w-[80vw] bg-gray-800 shadow-xl border-r border-gray-700 p-3">
+        <admin-layout-side-bar />
+      </div>
+    </div>
+  }
+
+  <!-- Layout de escritorio (sidebar fija + contenido) -->
+  <div
+    class="grid grid-cols-1 lg:grid-cols-[auto_1fr] min-h-[calc(100vh-56px)] lg:min-h-screen">
+    <!-- Sidebar visible sólo en pantallas grandes -->
+    <admin-layout-side-bar
+      class="hidden lg:block w-56 bg-gray-800 shadow-lg h-full transition-all duration-300 z-10 rounded-lg border border-gray-700 p-3" />
+
+    <!-- Contenido -->
+    <admin-layout-content class="p-3" />
+  </div>
 </div>
