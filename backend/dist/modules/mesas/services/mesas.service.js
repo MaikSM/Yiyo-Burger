@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MesasService = void 0;
+const realtime_events_1 = require("../../../core/events/realtime.events");
 class MesasService {
     constructor(mesaRepository) {
         this.mesaRepository = mesaRepository;
@@ -30,6 +31,10 @@ class MesasService {
     }
     create(createMesaDto) {
         return __awaiter(this, void 0, void 0, function* () {
+            const existingMesa = yield this.mesaRepository.findByNumero(createMesaDto.numero);
+            if (existingMesa) {
+                throw new Error(`Ya existe una mesa con el número ${createMesaDto.numero}`);
+            }
             const mesa = yield this.mesaRepository.create(createMesaDto);
             return mesa;
         });
@@ -44,17 +49,28 @@ class MesasService {
     delete(id) {
         return __awaiter(this, void 0, void 0, function* () {
             const mesa = yield this.findById(id);
-            // Verificar si la mesa tiene reservas activas
-            const hasReservations = yield this.mesaRepository.hasActiveReservations(id);
-            if (hasReservations) {
-                throw new Error(`No se puede eliminar la mesa ${mesa.numero} porque tiene reservas activas. Cancele todas las reservas primero.`);
+            if (mesa.estado === 'ocupada') {
+                throw new Error(`No se puede eliminar la mesa #${mesa.numero} porque está ocupada en este momento.`);
+            }
+            try {
+                const hasReservations = yield this.mesaRepository.hasActiveReservations(id);
+                if (hasReservations) {
+                    throw new Error(`No se puede eliminar la mesa #${mesa.numero} porque tiene reservas activas. Cancele todas las reservas primero.`);
+                }
+            }
+            catch (error) {
+                if (error.message && error.message.includes('No se puede eliminar')) {
+                    throw error;
+                }
             }
             yield this.mesaRepository.delete(id);
         });
     }
     cambiarEstado(id, estado) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.mesaRepository.cambiarEstado(id, estado);
+            const updated = yield this.mesaRepository.cambiarEstado(id, estado);
+            realtime_events_1.realTimeEmitter.broadcast('mesa_changed', { id, estado });
+            return updated;
         });
     }
     findByEstado(estado) {

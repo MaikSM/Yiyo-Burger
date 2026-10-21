@@ -58,6 +58,21 @@ __decorate([
 ], UserEntity.prototype, "password", void 0);
 __decorate([
     (0, typeorm_1.Column)({
+        type: 'text', // Usar tipo text para SQLite en lugar de longtext
+        nullable: true, // Permite valores nulos.
+        default: null,
+    }),
+    __metadata("design:type", String)
+], UserEntity.prototype, "photo", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        type: 'boolean',
+        default: true, // Por defecto el usuario está activo.
+    }),
+    __metadata("design:type", Boolean)
+], UserEntity.prototype, "is_active", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
         type: 'time',
         nullable: true, // Permite valores nulos inicialmente.
     }),
@@ -79,21 +94,21 @@ __decorate([
 ], UserEntity.prototype, "role", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({
-        type: 'timestamp', // Guarda la fecha como timestamp en la base de datos.
+        type: 'datetime', // Guarda la fecha como timestamp en la base de datos.
         nullable: false, // No permite valores nulos.
     }),
     __metadata("design:type", Date)
 ], UserEntity.prototype, "created_at", void 0);
 __decorate([
     (0, typeorm_1.UpdateDateColumn)({
-        type: 'timestamp', // Guarda la fecha como timestamp.
+        type: 'datetime', // Guarda la fecha como timestamp.
         nullable: false, // No permite valores nulos.
     }),
     __metadata("design:type", Date)
 ], UserEntity.prototype, "updated_at", void 0);
 __decorate([
     (0, typeorm_1.DeleteDateColumn)({
-        type: 'timestamp', // Guarda la fecha de eliminación lógica.
+        type: 'datetime', // Guarda la fecha de eliminación lógica.
         nullable: true, // Permite valores nulos porque el registro puede no haber sido eliminado.
     }),
     __metadata("design:type", Date)

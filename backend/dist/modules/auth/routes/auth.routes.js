@@ -19,7 +19,7 @@ class AuthRoutes {
     // Método para definir todas las rutas del módulo de autenticación.
     initializeRoutes() {
         // Desestructuración para obtener los métodos del controlador de autenticación.
-        const { register, login, profile, updateById, checkToken } = this.controller;
+        const { register, login, profile, updateById, checkToken, requestPasswordRecovery, resetPassword } = this.controller;
         // Define la ruta para registrar un nuevo usuario.
         // Se utiliza el método POST porque se está enviando información para crear un recurso (usuario).
         this.router.post('/register', register.bind(this.controller));
@@ -32,6 +32,10 @@ class AuthRoutes {
         this.router.post('/profile', tokenExists_middleware_1.TokenExistsMiddleware.check, profile.bind(this.controller));
         this.router.post('/update-profile', tokenExists_middleware_1.TokenExistsMiddleware.check, updateById.bind(this.controller));
         this.router.post('/check-token', tokenExists_middleware_1.TokenExistsMiddleware.check, checkToken.bind(this.controller));
+        // Ruta para solicitar recuperación de contraseña
+        this.router.post('/request-password-recovery', requestPasswordRecovery.bind(this.controller));
+        // Ruta para restablecer la contraseña con el token
+        this.router.post('/reset-password', resetPassword.bind(this.controller));
     }
 }
 exports.AuthRoutes = AuthRoutes;

@@ -33,7 +33,10 @@ export class FrontLayoutNavBarComponent {
     if (!user || !user.role) return this.userName();
 
     const roleName = user.role.name.toLowerCase();
-    return roleName === 'mesero' ? 'Panel de Mesero' : this.userName();
+    if (roleName === 'mesero') return 'Panel de Mesero';
+    if (roleName === 'cocinero') return 'Cocinero';
+    
+    return this.userName();
   });
 
   public isWaiter = computed(() => {
@@ -44,6 +47,11 @@ export class FrontLayoutNavBarComponent {
   public isAdmin = computed(() => {
     const user = this._authService.user();
     return user?.role_id === 1;
+  });
+
+  public isCook = computed(() => {
+    const user = this._authService.user();
+    return user?.role_id === 5;
   });
 
   logout() {

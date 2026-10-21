@@ -14,7 +14,7 @@ import { UpdateResult } from 'typeorm';
 import { AuthService } from '../services/auth.service';
 
 // Importar los DTOs para la validación de datos de entrada.
-import { LoginUserDto } from '../dtos/login-user.dto';
+import { LoginUserDto, PasswordRecoveryDto, PasswordResetDto } from '../dtos/login-user.dto';
 import { RegisterUserDto } from '../dtos/register-user.dto';
 
 // Importa utilidades para manejar el hashing de contraseñas y la generación de tokens JWT.
@@ -24,20 +24,35 @@ import { JwtUtil } from '../../../utils/jwt.util';
 // Importa la entidad de usuario para interactuar con la base de datos.
 import { UserEntity } from '../../user/entities/user.entity';
 import { UpdateUserDto } from '../dtos/update-user.dto';
+import { SystemSecurityService } from '../../config/services/system-security.service';
 
 // Define la clase AuthController para manejar la autenticación de usuarios.
 export class AuthController {
   // Define una instancia del servicio de autenticación para interactuar con la base de datos.
   private service: AuthService;
+  private systemSecurityService: SystemSecurityService;
 
   constructor() {
     // Inicializa el servicio de autenticación.
     this.service = new AuthService();
+    this.systemSecurityService = new SystemSecurityService();
   }
 
   // Método para manejar el inicio de sesión de usuarios.
   public async login(req: Request, res: Response): Promise<Response> {
     try {
+      console.log('🔐 Login attempt - Email received:', req.body.email);
+
+      // Verificar si el sistema está bloqueado por seguridad mensual
+      const securityStatus = await this.systemSecurityService.getStatus();
+      if (securityStatus.isLocked) {
+        console.log('🔒 Login rejected - System is locked for monthly security');
+        return res.status(423).json({
+          message: securityStatus.message,
+          isSystemLocked: true,
+        });
+      }
+      
       // Convierte el cuerpo de la solicitud (req.body) a una instancia del DTO de inicio de sesión.
       const dto: LoginUserDto = plainToInstance(LoginUserDto, req.body);
 
@@ -46,6 +61,7 @@ export class AuthController {
 
       // Si hay errores de validación, devuelve una respuesta con el mensaje de error.
       if (errors.length > 0) {
+        console.log('❌ Validation errors:', errors);
         return res.status(400).json({
           message: 'Validation Error | UserController CreateNew',
           errors: errors.map((err) => ({
@@ -59,13 +75,26 @@ export class AuthController {
       let data = await this.service.getByEmail(dto.email);
 
       // Si el usuario no existe, devuelve un mensaje de error.
-      if (!data) return res.status(401).json('Invalid Credentials');
+      if (!data) {
+        console.log('❌ User not found with email:', dto.email);
+        return res.status(401).json('Invalid Credentials');
+      }
+
+      console.log('✅ User found:', data.email, '| Role:', data.role?.name);
+
+      // Si el usuario está desactivado, devuelve un mensaje de error.
+      if (!data.is_active) {
+        console.log('❌ Account deactivated:', dto.email);
+        return res.status(403).json('Account deactivated');
+      }
 
       // Comprueba si la contraseña ingresada coincide con la almacenada (hasheada).
       const isMatch = await BcryptUtil.comparePassword(
         dto.password,
         data.password,
       );
+
+      console.log('🔑 Password match result:', isMatch);
 
       // Si las contraseñas no coinciden, devuelve un mensaje de error.
       if (!isMatch) return res.status(401).json('Invalid Credentials');
@@ -79,6 +108,7 @@ export class AuthController {
         name: data.name,
         surname: data.surname,
         email: data.email,
+        photo: data.photo,
         role: {
           id: data.role.id,
           name: data.role.name,
@@ -113,13 +143,14 @@ export class AuthController {
       // Obtiene los datos del usuario por su ID.
       let data = await this.service.getById(id);
 
-      // Si el usuario no existe, devuelve un error de autorización.
-      if (!data) return res.status(401).json('Unauthorized');
+      // Si el usuario no existe o está desactivado, devuelve un error de autorización.
+      if (!data || !data.is_active) return res.status(401).json('Unauthorized');
 
       const resData = {
         ...data, // Copiamos todos los datos del usuario
         token: token, // Añadimos el token al mismo nivel
         role: data.role, // Mantenemos el objeto role completo
+        photo: data.photo, // Incluimos la foto de perfil
       };
       // Devuelve la información del perfil del usuario.
       return res.status(200).json(resData);
@@ -162,6 +193,19 @@ export class AuthController {
         return res.status(400).json(`User Already Exists: ${exists.name}`);
       }
 
+      // Si no se proporciona role_id, asignar el rol de 'user' por defecto
+      if (!dto.role_id) {
+        const { DatabaseConnection } = await import('../../../core/database/DatabaseConnection');
+        const { RoleEntity } = await import('../../role/entities/role.entity');
+        const roleRepository = DatabaseConnection.appDataSource.getRepository(RoleEntity);
+        const userRole = await roleRepository.findOne({ where: { name: 'user' } });
+        if (userRole) {
+          dto.role_id = userRole.id;
+        } else {
+          return res.status(500).json('Default user role not found. Please run seeders first.');
+        }
+      }
+
       // Hashea la contraseña antes de guardarla en la base de datos.
       dto.password = await BcryptUtil.hashPassword(dto.password);
 
@@ -183,6 +227,7 @@ export class AuthController {
         name: data?.name,
         surname: data?.surname,
         email: data?.email,
+        photo: data?.photo,
         role: {
           id: data?.role.id,
           name: data?.role.name,
@@ -217,13 +262,14 @@ export class AuthController {
       // Obtiene los datos del usuario por su ID.
       const data = await this.service.getById(id);
 
-      // Si el usuario no existe, devuelve un error de autorización.
-      if (!data) return res.status(401).json('Unauthorized');
+      // Si el usuario no existe o está desactivado, devuelve un error de autorización.
+      if (!data || !data.is_active) return res.status(401).json('Unauthorized');
 
       const resData = {
         ...data, // Copiamos todos los datos del usuario
         token: token, // Añadimos el token al mismo nivel
         role: data.role, // Mantenemos el objeto role completo
+        photo: data.photo, // Incluimos la foto de perfil
       };
       // Devuelve la información del perfil del usuario.
       return res.status(200).json(resData);
@@ -270,15 +316,13 @@ export class AuthController {
         dto.email,
       );
 
-      // Si el usuario ya existe, devuelve un mensaje de error.
-      if (exists && exists.email !== dto.email) {
+      // Si el usuario ya existe con ese correo y no es el usuario actual, devuelve un mensaje de error.
+      if (exists && exists.id !== id) {
         return res.status(400).json(`User Already Exists: ${exists.name}`);
       }
 
       if (dto.password)
         dto.password = await BcryptUtil.hashPassword(dto.password);
-
-      await this.service.updateById(id, plainToInstance(UserEntity, dto));
 
       const updatedData: UpdateResult | null = await this.service.updateById(
         id,
@@ -301,6 +345,7 @@ export class AuthController {
         name: data?.name,
         surname: data?.surname,
         email: data?.email,
+        photo: data?.photo,
         role: {
           id: data?.role.id,
           name: data?.role.name,
@@ -311,6 +356,127 @@ export class AuthController {
     } catch (error) {
       return res.status(500).json({
         message: 'Unauthorized',
+        data: error,
+      });
+    }
+  }
+
+  // Método para solicitar recuperación de contraseña
+  public async requestPasswordRecovery(req: Request, res: Response): Promise<Response> {
+    try {
+      // Convierte el cuerpo de la solicitud a una instancia del DTO
+      const dto: PasswordRecoveryDto = plainToInstance(PasswordRecoveryDto, req.body);
+
+      // Valida los datos del DTO
+      const errors: ValidationError[] = await validate(dto);
+
+      if (errors.length > 0) {
+        return res.status(400).json({
+          message: 'Validation Error',
+          errors: errors.map((err) => ({
+            property: err.property,
+            constraints: err.constraints,
+          })),
+        });
+      }
+
+      // Busca el usuario por su correo electrónico
+      const user = await this.service.getByEmail(dto.email);
+
+      // Por seguridad, siempre devolvemos el mismo mensaje aunque el usuario no exista
+      if (!user) {
+        console.log(`📧 Intento de recuperación para email no registrado: ${dto.email}`);
+        return res.status(200).json({
+          message: 'Si el correo está registrado, recibirás un email con las instrucciones para restablecer tu contraseña.',
+        });
+      }
+
+      // Genera un token de recuperación
+      const token = await this.service.generatePasswordRecoveryToken(user.id);
+
+      // URL para restablecer la contraseña (frontend)
+      const resetUrl = process.env.FRONTEND_URL 
+        ? `${process.env.FRONTEND_URL}/auth/restablecer-contrasena`
+        : 'http://localhost:4200/auth/restablecer-contrasena';
+
+      // Importa y envía el correo electrónico
+      const { EmailUtil } = await import('../../../utils/email.util');
+      const emailSent = await EmailUtil.sendPasswordRecoveryEmail(
+        user.email,
+        token,
+        resetUrl,
+      );
+
+      if (!emailSent) {
+        console.error('❌ Error al enviar el correo de recuperación');
+      }
+
+      console.log(`📧 Correo de recuperación enviado a: ${user.email}`);
+
+      return res.status(200).json({
+        message: 'Si el correo está registrado, recibirás un email con las instrucciones para restablecer tu contraseña.',
+      });
+    } catch (error) {
+      console.error('❌ Error en requestPasswordRecovery:', error);
+      return res.status(500).json({
+        message: 'Error al procesar la solicitud',
+        data: error,
+      });
+    }
+  }
+
+  // Método para restablecer la contraseña
+  public async resetPassword(req: Request, res: Response): Promise<Response> {
+    try {
+      // Convierte el cuerpo de la solicitud a una instancia del DTO
+      const dto: PasswordResetDto = plainToInstance(PasswordResetDto, req.body);
+
+      // Valida los datos del DTO
+      const errors: ValidationError[] = await validate(dto);
+
+      if (errors.length > 0) {
+        return res.status(400).json({
+          message: 'Validation Error',
+          errors: errors.map((err) => ({
+            property: err.property,
+            constraints: err.constraints,
+          })),
+        });
+      }
+
+      // Verifica el token de recuperación
+      const userId = await this.service.verifyPasswordRecoveryToken(dto.token);
+
+      if (!userId) {
+        return res.status(400).json({
+          message: 'Token inválido o expirado. Por favor, solicita un nuevo enlace de recuperación.',
+        });
+      }
+
+      // Busca el usuario
+      const user = await this.service.getById(userId);
+
+      if (!user) {
+        return res.status(400).json({
+          message: 'Usuario no encontrado.',
+        });
+      }
+
+      // Hashea la nueva contraseña
+      const hashedPassword = await BcryptUtil.hashPassword(dto.password);
+
+      // Actualiza la contraseña
+      await this.service.updatePassword(userId, hashedPassword);
+
+      console.log(`✅ Contraseña actualizada para usuario: ${user.email}`);
+
+      return res.status(200).json({
+        message: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión con tu nueva contraseña.',
+      });
+    } catch (error) {
+      console.error('❌ Error en resetPassword:', error);
+      return res.status(500).json({
+        message: 'Error al restablecer la contraseña',
         data: error,
       });
     }

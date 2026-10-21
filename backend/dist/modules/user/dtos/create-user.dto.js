@@ -10,6 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateUserDto = void 0;
+const class_transformer_1 = require("class-transformer");
 // Importa los decoradores de validación de la librería "class-validator".
 const class_validator_1 = require("class-validator");
 // Define una clase DTO (Data Transfer Object) para la creación de usuarios.
@@ -23,7 +24,7 @@ __decorate([
     (0, class_validator_1.IsString)()
     // Restringe la longitud del nombre entre 4 y 100 caracteres.
     ,
-    (0, class_validator_1.Length)(4, 200),
+    (0, class_validator_1.Length)(2, 200),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "name", void 0);
 __decorate([
@@ -33,7 +34,7 @@ __decorate([
     (0, class_validator_1.IsString)()
     // Restringe la longitud del nombre entre 4 y 100 caracteres.
     ,
-    (0, class_validator_1.Length)(4, 200),
+    (0, class_validator_1.Length)(2, 200),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "surname", void 0);
 __decorate([
@@ -61,6 +62,7 @@ __decorate([
 ], CreateUserDto.prototype, "password", void 0);
 __decorate([
     (0, class_validator_1.IsNotEmpty)(),
+    (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsInt)() // Asegura que sea un número entero
     ,
     (0, class_validator_1.Min)(1) // Evita valores menores que 1

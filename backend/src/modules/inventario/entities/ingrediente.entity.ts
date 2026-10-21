@@ -80,23 +80,30 @@ export class IngredienteEntity extends BaseEntity {
   })
   activo: boolean;
 
+  // Estado manual del ingrediente (configurable por el usuario)
+  @Column({
+    length: 20,
+    nullable: true,
+  })
+  estado?: string;
+
   @OneToMany(() => InventarioEntity, movimiento => movimiento.ingrediente_id, { cascade: true })
   movimientos: InventarioEntity[];
 
   @CreateDateColumn({
-    type: 'timestamp',
+    type: 'datetime',
     nullable: false,
   })
   created_at: Date;
 
   @UpdateDateColumn({
-    type: 'timestamp',
+    type: 'datetime',
     nullable: false,
   })
   updated_at: Date;
 
   @DeleteDateColumn({
-    type: 'timestamp',
+    type: 'datetime',
     nullable: true,
   })
   deleted_at?: Date;
@@ -111,8 +118,8 @@ export class IngredienteEntity extends BaseEntity {
     return this.stock_actual <= this.stock_minimo;
   }
 
-  // Propiedad calculada para el estado del stock
-  get estado_stock(): 'CRITICO' | 'BAJO' | 'NORMAL' | 'ALTO' {
+  // Propiedad calculada para el estado automático del stock
+  get stock(): 'CRITICO' | 'BAJO' | 'NORMAL' | 'ALTO' {
     if (this.stock_actual <= this.stock_minimo * 0.5) return 'CRITICO';
     if (this.stock_actual <= this.stock_minimo) return 'BAJO';
     if (this.stock_maximo && this.stock_actual >= this.stock_maximo) return 'ALTO';

@@ -1,0 +1,1378 @@
+@if (!showOrderModal() && !showHistoryModal()) {
+  <!-- Vista Principal: Mesas -->
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+    <div class="flex items-center gap-3">
+      <h1 class="text-3xl font-bold text-orange-500">
+        <i class="fas fa-chair"></i> Mesas
+      </h1>
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        En vivo (Sincronizado)
+      </span>
+    </div>
+    <div class="flex flex-wrap gap-3">
+      <button (click)="abrirCajaDirecta()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2 px-4 rounded border border-emerald-600 transition-colors flex items-center gap-2 shadow-lg shadow-emerald-700/20" title="Abrir caja registradora directamente">
+        <i class="fas fa-cash-register text-emerald-300"></i> Abrir Caja
+      </button>
+      <button (click)="openHistoryModal()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded border border-gray-600 transition-colors">
+        <i class="fas fa-history"></i> Historial
+      </button>
+      <button (click)="abrirPedidoRapidoDirecto()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition-colors flex items-center gap-2 shadow-lg shadow-purple-600/20" title="Crear un pedido express sin mesa y sin imprimir en impresoras térmicas">
+        <i class="fas fa-bolt"></i> Pedido Rápido (Sin Impresión)
+      </button>
+      <button (click)="crearBarraRapida()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded transition-colors flex items-center gap-2 shadow-lg shadow-amber-600/20">
+        <i class="fas fa-glass-cheers"></i> Nueva Barra
+      </button>
+      <button (click)="showForm.set(true)" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded transition-colors flex items-center gap-2">
+        <i class="fas fa-plus"></i> Nueva Mesa
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal para Crear Mesa -->
+  @if (showForm()) {
+    <div class="fixed inset-0 bg-black/50 z-[100] flex justify-center items-center backdrop-blur-sm">
+      <div class="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 w-full max-w-md">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl text-white"><i class="fas fa-plus"></i> Nueva Mesa / Barra</h2>
+          <button (click)="showForm.set(false)" class="text-gray-400 hover:text-white transition-colors">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <form [formGroup]="mesaForm" (ngSubmit)="onSubmit()">
+          <div class="mb-4">
+            <label class="block text-gray-400 mb-2 font-semibold">Número de Mesa / Barra</label>
+            <input type="number" formControlName="numero" class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-orange-500 rounded px-4 py-2" placeholder="Ej: 1">
+            @if (mesaForm.get('numero')?.invalid && mesaForm.get('numero')?.touched) {
+              <span class="text-red-400 text-sm mt-1">El número es requerido.</span>
+            }
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-gray-400 mb-2 font-semibold">Tipo / Ubicación</label>
+            <select formControlName="ubicacion" class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-orange-500 rounded px-4 py-2">
+              <option value="Salón">🪑 Mesa Normal (Salón)</option>
+              <option value="Barra">🍺 Barra / Mostrador (Tienda)</option>
+            </select>
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-gray-400 mb-2 font-semibold">Capacidad (Personas)</label>
+            <input type="number" formControlName="capacidad" class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-orange-500 rounded px-4 py-2" placeholder="Ej: 4">
+            @if (mesaForm.get('capacidad')?.invalid && mesaForm.get('capacidad')?.touched) {
+              <span class="text-red-400 text-sm mt-1">La capacidad es requerida.</span>
+            }
+          </div>
+
+          <button type="submit" [disabled]="mesaForm.invalid || isSubmitting()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            @if (isSubmitting()) {
+              <i class="fas fa-spinner fa-spin"></i> Guardando...
+            } @else {
+              <i class="fas fa-save"></i> Crear
+            }
+          </button>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Lista de Mesas -->
+  <div class="bg-gray-800 rounded-lg shadow p-6 border border-gray-700 h-full mt-4">
+    <h2 class="text-xl text-white mb-4"><i class="fas fa-list"></i> Mesas Registradas</h2>
+    
+    @if (mesasResource.isLoading()) {
+      <div class="flex justify-center items-center py-10">
+        <i class="fas fa-spinner fa-spin text-4xl text-orange-500"></i>
+      </div>
+    } @else if (mesasResource.error()) {
+      <div class="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded text-center">
+        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+        <p>Ocurrió un error al cargar las mesas.</p>
+      </div>
+    } @else {
+      @if (mesasResource.value(); as mesas) {
+        @if (mesas.length === 0) {
+          <div class="text-center text-gray-400 py-10 border-2 border-dashed border-gray-700 rounded-lg">
+            <i class="fas fa-inbox text-4xl mb-3"></i>
+            <p>No hay mesas registradas. ¡Crea una nueva!</p>
+          </div>
+        } @else {
+          <!-- 2D Floor Map -->
+          <div class="relative w-full min-h-[600px] bg-gray-900 border-2 border-gray-700 rounded-xl overflow-hidden p-8 flex flex-wrap gap-8 justify-center content-start">
+            <!-- Floor pattern -->
+            <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#9ca3af 2px, transparent 2px); background-size: 30px 30px;"></div>
+            
+            @for (mesa of mesas; track mesa.mesa_id) {
+              <div (click)="openOrderModal(mesa)" 
+                   class="relative cursor-pointer transition-transform hover:scale-105 z-10 flex flex-col items-center justify-center group"
+                   [ngClass]="{
+                     'w-32 h-32 rounded-xl': mesa.capacidad <= 2,
+                     'w-48 h-48 rounded-2xl': mesa.capacidad > 2 && mesa.capacidad <= 4,
+                     'w-64 h-40 rounded-3xl': mesa.capacidad > 4
+                   }"
+                   [class]="mesa.estado === 'libre' ? 'bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)]' : 
+                            mesa.estado === 'reservada' ? 'bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]' :
+                            mesa.estado === 'ocupada' ? 'bg-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' :
+                            'bg-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.4)]'">
+                
+                <!-- Inner Table Texture -->
+                <div class="absolute inset-2 bg-gray-800 opacity-90 flex flex-col items-center justify-center border-2 border-gray-700 group-hover:border-white transition-colors"
+                     [ngClass]="{
+                       'rounded-lg': mesa.capacidad <= 2,
+                       'rounded-xl': mesa.capacidad > 2 && mesa.capacidad <= 4,
+                       'rounded-2xl': mesa.capacidad > 4
+                     }">
+                  <span class="text-xs uppercase tracking-widest font-bold mb-1" 
+                        [class]="mesa.estado === 'libre' ? 'text-green-400' : 
+                                 mesa.estado === 'ocupada' ? 'text-red-400' : 
+                                 'text-gray-400'">
+                    {{ mesa.estado }}
+                  </span>
+                  
+                  @if (mesa.ubicacion === 'Barra') {
+                    <span class="text-[10px] bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full font-black uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <i class="fas fa-shopping-bag"></i> LLEVAR
+                    </span>
+                    <h3 class="text-green-400 text-4xl font-black">B{{ mesa.numero }}</h3>
+                  } @else {
+                    <h3 class="text-white text-5xl font-black">M{{ mesa.numero }}</h3>
+                  }
+                  <div class="flex items-center text-sm text-gray-300 mt-2 font-bold">
+                    <i class="fas fa-users mr-1 text-gray-500"></i> {{ mesa.capacidad }}
+                  </div>
+                </div>
+
+                @if (mesa.estado === 'ocupada') {
+                  <button (click)="reimprimirTicketMesaDesdeMapa(mesa, $event)" 
+                          class="absolute -top-3 -left-3 bg-blue-700 hover:bg-blue-600 text-white w-8 h-8 rounded-full border-2 border-gray-700 opacity-90 hover:opacity-100 transition-all flex items-center justify-center shadow-lg z-20" 
+                          title="Reimprimir Ticket / Factura de esta Mesa">
+                    <i class="fas fa-print text-xs"></i>
+                  </button>
+                }
+
+                <!-- Delete button (visible on hover) -->
+                <button (click)="onDelete(mesa.mesa_id); $event.stopPropagation()" 
+                        class="absolute -top-3 -right-3 bg-gray-900 text-red-500 w-8 h-8 rounded-full border-2 border-gray-700 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-red-500 hover:text-white hover:border-red-500 z-20 shadow-lg" 
+                        title="Eliminar Mesa">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            }
+          </div>
+        }
+      }
+    }
+  </div>
+
+} @else if (showHistoryModal()) {
+  
+  <!-- Vista Historial Completa -->
+  <div class="bg-gray-800 rounded-xl shadow-2xl border border-gray-700 w-full flex flex-col h-[calc(100vh-120px)] overflow-hidden">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-gray-900 border-b border-gray-700 gap-4">
+      <div class="flex items-center flex-wrap gap-4">
+        <h2 class="text-2xl text-white font-bold"><i class="fas fa-history text-orange-500 mr-2"></i> Historial de Pedidos</h2>
+        <div class="relative">
+          <input type="date" [value]="historyFilterDate()" (change)="historyFilterDate.set($any($event.target).value)" 
+                 class="bg-gray-800 text-gray-300 border border-gray-700 rounded-lg px-3 py-1.5 focus:border-orange-500 focus:outline-none" title="Filtrar por fecha">
+          @if (historyFilterDate()) {
+            <button (click)="historyFilterDate.set('')" class="absolute -right-2 -top-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex justify-center items-center text-xs shadow-md transition-colors" title="Borrar filtro">
+              <i class="fas fa-times"></i>
+            </button>
+          }
+        </div>
+      </div>
+      <button (click)="closeHistoryModal()" class="text-gray-400 hover:text-white transition-colors bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg border border-gray-700 font-semibold flex items-center gap-2">
+        <i class="fas fa-arrow-left"></i> Volver a Mesas
+      </button>
+    </div>
+    
+    <div class="p-6 overflow-y-auto flex-1 bg-gray-900/50">
+      @if (filteredOrderHistory.length === 0) {
+        <div class="text-center text-gray-400 py-20">
+          <i class="fas fa-receipt text-6xl mb-4 opacity-50"></i>
+          <p class="text-xl">No hay pedidos registrados para esta fecha.</p>
+        </div>
+      } @else {
+        <div class="space-y-4 max-w-5xl mx-auto">
+          @for (pedido of filteredOrderHistory; track pedido.id) {
+            <div class="bg-gray-800 border border-gray-700 hover:border-gray-500 transition-colors shadow-lg rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <div class="flex items-center gap-3 mb-2 flex-wrap">
+                  <span class="font-bold text-white text-xl">{{ getOrderTitle(pedido) }}</span>
+                  @if (pedido.orderNumber || pedido.id) {
+                    <span class="text-xs font-black text-orange-400 bg-orange-500/20 border border-orange-500/30 px-2 py-1 rounded">Orden #{{ pedido.orderNumber || shortId(pedido.id) }}</span>
+                  }
+                  <span class="text-xs font-bold px-2 py-1 rounded bg-gray-900 text-gray-400 border border-gray-700">ID: {{ shortId(pedido.id) }}</span>
+                  <span class="text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider
+                    {{ pedido.estado === 'Completado' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 
+                       pedido.estado === 'Cancelado' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                       'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' }}">
+                    {{ pedido.estado }}
+                  </span>
+                  <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/30 flex items-center gap-1.5 shadow-sm">
+                    <i class="fas fa-user-tag text-[10px]"></i>
+                    <span>Atendido por: <strong class="text-white">{{ pedido.mesero || 'Administrador' }}</strong></span>
+                  </span>
+                </div>
+                <p class="text-sm text-gray-400"><i class="far fa-calendar-alt mr-1"></i> {{ pedido.fecha | date:'medium' }}</p>
+                <p class="text-sm text-gray-500 mt-1"><i class="fas fa-shopping-basket mr-1"></i> {{ pedido.items?.length || 0 }} artículos en el pedido.</p>
+                <!-- Selector Método de Pago -->
+                <div class="flex items-center gap-2 mt-3 bg-gray-900/80 px-3 py-1.5 rounded-lg border border-gray-700 w-fit">
+                  <span class="text-xs text-gray-300 font-bold flex items-center gap-1"><i class="fas fa-wallet text-orange-400"></i> Método Pago:</span>
+                  <select [value]="getMetodoPagoValue(pedido.metodo_pago)" (change)="cambiarMetodoPago(pedido, $any($event.target).value)" 
+                          class="bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded border border-gray-600 focus:border-orange-500 focus:outline-none cursor-pointer">
+                    <option value="Efectivo">💵 Efectivo</option>
+                    <option value="Tarjeta">💳 Tarjeta</option>
+                    <option value="Nequi">💜 Nequi</option>
+                    <option value="Daviplata">🔴 Daviplata</option>
+                    <option value="Bre-B">⚡ Bre-B</option>
+                    <option value="Bold">🟦 Bold</option>
+                    <option value="Crédito">📝 Crédito</option>
+                    <option value="Transferencia">🏦 Transferencia</option>
+                    <option value="Pago Mixto">🔀 Pago Mixto</option>
+                    <option value="Otros">📦 Otros</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="flex flex-col items-end gap-2">
+                <p class="text-2xl font-black text-green-400">{{ pedido.total | currency }}</p>
+                <div class="flex items-center gap-2">
+                  <button (click)="openEditarPedidoHistorial(pedido)" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-2 px-3 rounded-lg transition-colors shadow flex items-center gap-1" title="Editar precio o método de pago">
+                    <i class="fas fa-edit"></i> Editar
+                  </button>
+                  <button (click)="viewOrderDetails(pedido)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 px-3 rounded-lg transition-colors shadow">
+                    <i class="fas fa-file-invoice mr-1"></i> Detalle
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+} @else if (showOrderModal()) {
+
+  <!-- Vista POS Completa (Punto de Venta por Mesa) -->
+  <div class="bg-gray-800 rounded-xl shadow-2xl border border-gray-700 w-full flex flex-col h-[calc(100vh-120px)] overflow-hidden">
+    <!-- Header Modal POS -->
+    <div class="flex justify-between items-center p-4 bg-gray-900 border-b border-gray-700">
+      <div>
+        <h2 class="text-2xl font-bold" [class]="isQuickOrderMode() ? 'text-purple-400' : (selectedMesa()?.ubicacion === 'Barra' ? 'text-amber-400' : 'text-orange-500')">
+          @if (isQuickOrderMode()) {
+            <i class="fas fa-bolt mr-2"></i> Venta Rápida (Sin Impresión)
+          } @else if (selectedMesa()?.ubicacion === 'Barra') {
+            <i class="fas fa-shopping-bag mr-2"></i> Pedido - LLEVAR {{ selectedMesa()?.numero }}
+          } @else {
+            <i class="fas fa-concierge-bell mr-2"></i> Pedido - Mesa {{ selectedMesa()?.numero }}
+          }
+          @if (activeOrderId()) {
+            <span class="ml-2 text-sm bg-orange-500/20 text-orange-400 px-2 py-1 rounded border border-orange-500/30">ID: {{ activeOrderId() }}</span>
+          }
+        </h2>
+        <p class="text-gray-400 text-sm">
+          @if (activeOrderId()) {
+            Puedes editar este pedido o cerrarlo para liberar la mesa.
+          } @else if (selectedMesa()?.estado === 'ocupada') {
+            <span class="text-amber-400 font-semibold">⚠️ Esta {{ selectedMesa()?.ubicacion === 'Barra' ? 'barra' : 'mesa' }} figura como ocupada pero no tiene ningún pedido activo pendiente.</span>
+          } @else {
+            Agrega los platillos para iniciar el pedido.
+          }
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        @if (activeOrderId() || orderItems().length > 0) {
+          <button (click)="imprimirPrecuentaMesaActual()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-md" title="Imprimir Pre-cuenta informativa en la Impresora Principal (Caja)">
+            <i class="fas fa-receipt"></i> Pre-cuenta
+          </button>
+        }
+        @if (activeOrderId()) {
+          <button (click)="reimprimirTicketMesaActual()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-md" title="Reimprimir Ticket / Precuenta">
+            <i class="fas fa-print"></i> Reimprimir Factura
+          </button>
+          <button (click)="openCambiarMesaModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-md">
+            <i class="fas fa-exchange-alt"></i> Cambiar de Mesa
+          </button>
+        }
+        @if (activeOrderId() || orderItems().length > 0) {
+          <button (click)="openMigrarADomicilioModal()" class="bg-orange-600 hover:bg-orange-500 text-white font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-md">
+            <i class="fas fa-motorcycle"></i> Migrar a Domicilio
+          </button>
+        }
+        @if (!activeOrderId() && orderItems().length > 0) {
+          <button (click)="descartarBorradorActual()" class="bg-gray-800 hover:bg-rose-900/60 text-gray-400 hover:text-rose-300 border border-gray-700 px-3 py-2 rounded-lg font-semibold flex items-center gap-1.5 transition-colors" title="Descartar borrador no guardado">
+            <i class="fas fa-trash-alt text-xs"></i> Descartar
+          </button>
+        }
+        @if (!activeOrderId() && selectedMesa()?.estado === 'ocupada') {
+          <button (click)="liberarMesaActual()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-md">
+            <i class="fas fa-unlock"></i> Liberar {{ selectedMesa()?.ubicacion === 'Barra' ? 'Barra' : 'Mesa' }}
+          </button>
+        }
+        <button (click)="closeOrderModal()" class="text-gray-400 hover:text-white transition-colors bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg border border-gray-700 font-semibold flex items-center gap-2">
+          <i class="fas fa-arrow-left"></i> Volver a Mesas
+        </button>
+      </div>
+    </div>
+    
+    <!-- Body Modal POS (Dos Columnas) -->
+    <div class="flex flex-col lg:flex-row flex-1 overflow-hidden relative">
+      <!-- Izquierda: Menú de Platos -->
+      <div class="w-full lg:w-3/5 xl:w-2/3 p-4 lg:p-6 overflow-y-auto border-b lg:border-b-0 lg:border-r border-gray-700 bg-gray-800/50">
+        <div class="flex flex-col gap-4 mb-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h3 class="text-white text-2xl font-bold">Menú Disponible</h3>
+            <div class="flex gap-2 sm:gap-4 border-b border-gray-700 pb-2 flex-1 w-full sm:w-auto mt-4 sm:mt-0 justify-center sm:justify-start overflow-x-auto">
+              <button (click)="activeSeccion.set('Todos'); selectCategory('Todos')" [class]="activeSeccion() === 'Todos' ? 'text-orange-500 border-b-2 border-orange-500 font-bold px-3 pb-2 flex items-center gap-1.5' : 'text-gray-400 px-3 pb-2 hover:text-gray-300 flex items-center gap-1.5'"><i class="fas fa-utensils"></i> Todos</button>
+              <button (click)="activeSeccion.set('Parrilla'); selectCategory('Todos')" [class]="activeSeccion() === 'Parrilla' ? 'text-orange-500 border-b-2 border-orange-500 font-bold px-3 pb-2' : 'text-gray-400 px-3 pb-2 hover:text-gray-300'">Parrilla</button>
+              <button (click)="activeSeccion.set('Pizzas'); selectCategory('Todos')" [class]="activeSeccion() === 'Pizzas' ? 'text-red-500 border-b-2 border-red-500 font-bold px-3 pb-2 flex items-center gap-2' : 'text-gray-400 px-4 pb-2 hover:text-gray-300 flex items-center gap-2'"><i class="fas fa-pizza-slice"></i> Pizzas</button>
+              <button (click)="activeSeccion.set('Bebidas'); selectCategory('Todos')" [class]="activeSeccion() === 'Bebidas' ? 'text-blue-500 border-b-2 border-blue-500 font-bold px-4 pb-2 flex items-center gap-2' : 'text-gray-400 px-4 pb-2 hover:text-gray-300 flex items-center gap-2'"><i class="fas fa-glass-martini-alt"></i> Bebidas</button>
+            </div>
+            
+            <!-- Buscador -->
+            <div class="relative w-full sm:w-64">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+              <input type="text" 
+                     [value]="searchTerm()" 
+                     (input)="searchTerm.set($any($event.target).value)" 
+                     placeholder="Buscar plato..." 
+                     class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-full pl-10 pr-4 py-2 text-sm outline-none transition-all">
+            </div>
+          </div>
+          
+          <!-- Categorías -->
+          <div class="relative group mt-4 w-full">
+            <!-- Botón Scroll Izquierda -->
+            <button 
+              type="button" 
+              (click)="catListMesas.scrollBy({ left: -200, behavior: 'smooth' })"
+              class="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 items-center justify-center bg-gray-900/90 text-white rounded-full shadow-lg hover:bg-orange-500 transition-all opacity-0 group-hover:opacity-100">
+              <i class="fas fa-chevron-left text-xs"></i>
+            </button>
+
+            <div 
+              #catListMesas
+              (wheel)="onWheelScroll($event, catListMesas)"
+              class="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 w-full no-scrollbar scroll-smooth">
+              <button 
+                (click)="selectCategory('Todos')"
+                class="whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all border flex-shrink-0"
+                [class]="selectedCategory() === 'Todos' 
+                  ? (activeSeccion() === 'Pizzas' ? 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20' : (activeSeccion() === 'Bebidas' ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/20')) 
+                  : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white'">
+                Todos
+              </button>
+
+              @for (categoria of filteredCategories; track categoria) {
+                @if (categoria !== 'Todos') {
+                  <button 
+                    (click)="selectCategory(categoria)"
+                    class="whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all border flex-shrink-0"
+                    [class]="selectedCategory() === categoria 
+                      ? (activeSeccion() === 'Pizzas' ? 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20' : (activeSeccion() === 'Bebidas' ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/20')) 
+                      : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white'">
+                    {{ categoria }}
+                  </button>
+                }
+              }
+            </div>
+
+            <!-- Botón Scroll Derecha -->
+            <button 
+              type="button" 
+              (click)="catListMesas.scrollBy({ left: 200, behavior: 'smooth' })"
+              class="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 items-center justify-center bg-gray-900/90 text-white rounded-full shadow-lg hover:bg-orange-500 transition-all opacity-0 group-hover:opacity-100">
+              <i class="fas fa-chevron-right text-xs"></i>
+            </button>
+          </div>
+        </div>
+        
+        @if (filteredPlatos.length === 0) {
+          <div class="flex flex-col items-center justify-center py-20 text-gray-400">
+            <i class="fas fa-utensils text-5xl mb-4 opacity-50"></i>
+            <p class="text-lg">No hay platos disponibles en esta categoría.</p>
+          </div>
+        } @else {
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+            <!-- Tarjeta Especial: Mitad y Mitad (Solo para pizzas) -->
+            @if (activeSeccion() === 'Pizzas') {
+              <div class="bg-gray-700/60 border border-dashed border-orange-500 hover:border-orange-400 rounded-xl p-4 flex flex-col justify-between cursor-pointer transition-all hover:bg-gray-700 hover:scale-[1.02] min-h-[140px]"
+                   (click)="openHalfAndHalfModal()">
+                <div class="text-center py-4 flex flex-col justify-center items-center h-full w-full">
+                  <div class="w-10 h-10 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center mb-2">
+                    <i class="fas fa-pizza-slice text-orange-500 text-lg"></i>
+                  </div>
+                  <h4 class="text-white font-bold text-base leading-tight">🍕 Mitad y Mitad</h4>
+                  <p class="text-[11px] text-gray-400 mt-1">Combina dos sabores en una pizza</p>
+                  <span class="text-[9px] text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full mt-2 font-semibold">Grande o superior</span>
+                </div>
+              </div>
+            }
+
+            @for (plato of filteredPlatos; track plato.plato_id) {
+              <div 
+                [class.opacity-50]="!plato.disponible"
+                [class.pointer-events-none]="!plato.disponible"
+                [class.cursor-not-allowed]="!plato.disponible"
+                class="bg-gray-700 rounded-xl overflow-hidden border border-gray-600 shadow-md group cursor-pointer hover:border-orange-500 hover:shadow-orange-500/10 transition-all flex flex-col justify-between" 
+                (click)="!isPizzaPlato(plato) ? addPlato(plato) : null"
+              >
+                
+                <!-- Info del Plato -->
+                <div class="p-4 flex flex-col flex-1 justify-between">
+                  <div>
+                    <h4 class="text-white font-bold text-lg leading-tight">
+                      {{ plato.nombre }}
+                      @if (!plato.disponible) {
+                        <span class="ml-2 text-xs bg-red-600 text-white px-1.5 py-0.5 rounded font-semibold inline-block align-middle">Agotado</span>
+                      }
+                    </h4>
+                    <p class="text-sm text-gray-400 line-clamp-2 mt-1">{{ plato.descripcion || 'Sin descripción' }}</p>
+                  </div>
+                  
+                  <div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-600/50">
+                    <span class="text-green-400 font-extrabold text-lg">{{ plato.precio | currency }}</span>
+                    @if (!isPizzaPlato(plato)) {
+                      <button class="bg-gray-600 text-white w-8 h-8 rounded-full group-hover:bg-orange-500 group-hover:shadow-lg transition-all flex items-center justify-center">
+                        <i class="fas fa-plus"></i>
+                      </button>
+                    }
+                  </div>
+
+                  @if (isPizzaPlato(plato)) {
+                    <div class="flex flex-wrap gap-1 mt-3 pt-3 border-t border-gray-600/50" (click)="$event.stopPropagation()">
+                      <button (click)="addPizzaWithSize(plato, 'Personal', $event)" title="Personal" class="flex-1 py-1 px-0.5 text-[9px] font-bold bg-gray-800 hover:bg-orange-500 rounded text-center text-gray-300 hover:text-white transition-colors border border-gray-600">P</button>
+                      <button (click)="addPizzaWithSize(plato, 'Mediana', $event)" title="Mediana" class="flex-1 py-1 px-0.5 text-[9px] font-bold bg-gray-800 hover:bg-orange-500 rounded text-center text-gray-300 hover:text-white transition-colors border border-gray-600">M</button>
+                      <button (click)="addPizzaWithSize(plato, 'Grande', $event)" title="Grande" class="flex-1 py-1 px-0.5 text-[9px] font-bold bg-gray-800 hover:bg-orange-500 rounded text-center text-gray-300 hover:text-white transition-colors border border-gray-600">G</button>
+                      <button (click)="addPizzaWithSize(plato, 'Extragrande', $event)" title="Extragrande" class="flex-1 py-1 px-0.5 text-[9px] font-bold bg-gray-800 hover:bg-orange-500 rounded text-center text-gray-300 hover:text-white transition-colors border border-gray-600">EG</button>
+                      <button (click)="addPizzaWithSize(plato, 'Gigante', $event)" title="Gigante" class="flex-1 py-1 px-0.5 text-[9px] font-bold bg-gray-800 hover:bg-orange-500 rounded text-center text-gray-300 hover:text-white transition-colors border border-gray-600">GG</button>
+                      <button (click)="addPizzaWithSize(plato, 'Familiar', $event)" title="Familiar" class="flex-1 py-1 px-0.5 text-[9px] font-bold bg-gray-800 hover:bg-orange-500 rounded text-center text-gray-300 hover:text-white transition-colors border border-gray-600">F</button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Derecha: Ticket / Carrito -->
+      <div class="w-full lg:w-2/5 xl:w-1/3 bg-gray-900 p-4 flex flex-col">
+        <h3 class="text-white text-lg font-bold mb-4 border-b border-gray-700 pb-2">Ticket Actual</h3>
+        
+        <div class="flex-1 overflow-y-auto pr-2">
+          @if (orderItems().length === 0) {
+            <div class="flex flex-col items-center justify-center h-full text-gray-500">
+              <i class="fas fa-shopping-basket text-4xl mb-3"></i>
+              <p>El pedido está vacío</p>
+            </div>
+          } @else {
+            <div class="space-y-3">
+              @for (item of orderItems(); track item.id) {
+                <div class="bg-gray-800 p-3 rounded border border-gray-700 flex flex-col gap-2">
+                  <div class="flex justify-between items-center">
+                    <div class="flex-1">
+                      <h4 class="text-white font-medium">{{ item.nombre }}</h4>
+                      <p class="text-gray-400 text-sm">{{ item.precio | currency }} x {{ item.qty }} = <span class="text-white">{{ (item.precio * item.qty) | currency }}</span></p>
+                    </div>
+                    <div class="flex items-center gap-2 ml-2">
+                      <button (click)="removePlato(item.id)" class="text-red-400 hover:text-red-300 w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center">
+                        <i class="fas fa-minus"></i>
+                      </button>
+                      <span class="text-white font-bold min-w-[1.5rem] text-center">{{ item.qty }}</span>
+                      <button (click)="incrementQty(item.id)" class="text-green-400 hover:text-green-300 w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center">
+                        <i class="fas fa-plus"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <!-- Opciones extra por item -->
+                  <div class="flex flex-col gap-2 border-t border-gray-700 pt-2 mt-1">
+                    <!-- Toggle Mesa/Llevar -->
+                    <div class="flex rounded-lg overflow-hidden bg-gray-900 border border-gray-700 w-full">
+                      <button (click)="updateItemOption(item.id, 'tipoEntrega', 'mesa')" 
+                              [class]="(item.tipoEntrega || 'mesa') === 'mesa' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-gray-200'"
+                              class="flex-1 py-1 text-xs font-bold transition-colors">
+                        <i class="fas fa-utensils"></i> Mesa
+                      </button>
+                      <button (click)="updateItemOption(item.id, 'tipoEntrega', 'llevar')"
+                              [class]="(item.tipoEntrega || 'mesa') === 'llevar' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-gray-200'"
+                              class="flex-1 py-1 text-xs font-bold transition-colors border-l border-gray-700">
+                        <i class="fas fa-shopping-bag"></i> Llevar
+                      </button>
+                    </div>
+                    <!-- Notas con Chips Rápidos a 1 Toque -->
+                    <div class="flex items-center gap-1.5">
+                      <input type="text" 
+                             [ngModel]="item.notas" 
+                             (ngModelChange)="updateItemOption(item.id, 'notas', $event)"
+                             placeholder="Nota (ej. sin cebolla, salsa aparte...)"
+                             class="flex-1 bg-gray-900 border border-orange-500/60 focus:border-orange-400 rounded-lg px-3 py-1.5 text-xs text-yellow-300 font-bold outline-none placeholder-gray-500 transition-colors shadow-inner">
+                      <button
+                        type="button"
+                        (click)="toggleNotesItem(item.id)"
+                        [class]="activeNotesItemId() === item.id
+                          ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                          : (item.notas ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700')"
+                        class="px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all shrink-0 active:scale-95"
+                        title="Notas rápidas de cocina a 1 toque"
+                      >
+                        <i class="fas fa-tags text-[10px]"></i>
+                        <span>Chips</span>
+                      </button>
+                    </div>
+
+                    @if (activeNotesItemId() === item.id) {
+                      <div class="p-2 bg-gray-950/90 rounded-xl border border-orange-500/40 space-y-1.5 shadow-inner">
+                        <div class="flex items-center justify-between text-[11px] text-gray-400 font-bold">
+                          <span class="flex items-center gap-1 text-orange-400">
+                            <i class="fas fa-bolt text-yellow-400"></i> Notas Rápidas para Cocina
+                          </span>
+                          @if (item.notas) {
+                            <button
+                              type="button"
+                              (click)="clearNotas(item.id)"
+                              class="text-rose-400 hover:text-rose-300 font-bold transition-colors"
+                            >
+                              <i class="fas fa-trash-alt mr-0.5"></i> Borrar
+                            </button>
+                          }
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pt-0.5">
+                          @for (nota of NOTAS_RAPIDAS; track nota) {
+                            <button
+                              type="button"
+                              (click)="toggleNotaRapida(item.id, nota)"
+                              [class]="hasNota(item.id, nota)
+                                ? 'bg-orange-500 text-white font-black border-orange-400 shadow-md shadow-orange-500/30 ring-1 ring-orange-300'
+                                : 'bg-gray-800 text-gray-300 border-gray-700 hover:border-gray-500 hover:text-white'"
+                              class="px-2 py-1 rounded-lg text-[10px] border transition-all active:scale-95 flex items-center gap-1 select-none"
+                            >
+                              <i class="fas" [class.fa-check]="hasNota(item.id, nota)" [class.fa-plus]="!hasNota(item.id, nota)"></i>
+                              <span>{{ nota }}</span>
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Totales -->
+        <div class="mt-4 pt-4 border-t border-gray-700 space-y-2">
+          <div class="flex justify-between text-gray-400">
+            <span>Subtotal:</span>
+            <span>{{ orderSubtotal() | currency }}</span>
+          </div>
+          <div class="flex justify-between text-white font-bold text-xl pt-2 border-t border-gray-700">
+            <span>Total:</span>
+            <span class="text-orange-500">{{ orderTotal() | currency }}</span>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row gap-2 mt-4">
+            @if (isQuickOrderMode()) {
+              <button (click)="abrirCobroMesa()" [disabled]="orderItems().length === 0" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg">
+                <i class="fas fa-bolt"></i> Registrar Pago de Venta Rápida
+              </button>
+            } @else if (!activeOrderId()) {
+              <button (click)="guardarYOcuparMesa(true)" [disabled]="orderItems().length === 0" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg" title="Guardar pedido y ocupar mesa sin enviar comanda a impresoras">
+                <i class="fas fa-save"></i> Guardar (Sin Impresión)
+              </button>
+
+              <button (click)="guardarYOcuparMesa()" [disabled]="orderItems().length === 0" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg">
+                <i class="fas fa-paper-plane"></i> Enviar a Cocina y Ocupar Mesa
+              </button>
+            } @else {
+              <button (click)="reimprimirTicketMesaActual()" class="bg-blue-700 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded transition-colors flex items-center justify-center gap-2 shadow-lg" title="Reimprimir Ticket / Precuenta de la Mesa">
+                <i class="fas fa-print"></i> Reimprimir Ticket
+              </button>
+
+              <button (click)="guardarYOcuparMesa(true)" [disabled]="orderItems().length === 0" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg" title="Guardar cambios sin enviar a impresoras">
+                <i class="fas fa-save"></i> Guardar (Sin Impresión)
+              </button>
+
+              <button (click)="guardarYOcuparMesa()" [disabled]="orderItems().length === 0" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg">
+                <i class="fas fa-paper-plane"></i> Enviar Adición a Cocina
+              </button>
+
+              <button (click)="abrirCobroMesa()" [disabled]="orderItems().length === 0" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg">
+                <i class="fas fa-cash-register"></i> Cobrar y Desocupar Mesa
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+}
+
+<!-- Modal de Checkout (Resumen de venta) -->
+@if (showCheckoutModal()) {
+  <div class="fixed inset-0 bg-black/80 z-[150] flex justify-center items-center backdrop-blur-sm p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col md:flex-row min-h-[500px]">
+      
+      <!-- Izquierda: Métodos de Pago -->
+      <div class="w-full md:w-1/2 p-6 bg-gray-50 border-r border-gray-200">
+        <h2 class="text-gray-500 font-bold uppercase tracking-wider text-sm mb-4">Método de Pago</h2>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Efectivo -->
+          <button 
+            (click)="setPaymentMethod('Efectivo')"
+            class="flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all bg-white"
+            [class]="checkoutMetodoPago() === 'Efectivo' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+            <div class="bg-green-500 text-white w-12 h-8 rounded mb-2 flex items-center justify-center shadow-inner">
+              <span class="font-black">$</span>
+            </div>
+            <span class="font-bold text-gray-800">Efectivo</span>
+          </button>
+          
+          <!-- Tarjeta -->
+          <button 
+            (click)="setPaymentMethod('Tarjeta')"
+            class="flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all bg-white"
+            [class]="checkoutMetodoPago() === 'Tarjeta' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+            <i class="fas fa-credit-card text-3xl text-blue-500 mb-2"></i>
+            <span class="font-bold text-gray-800">Tarjeta</span>
+          </button>
+
+          <!-- Nequi -->
+          <button 
+            (click)="setPaymentMethod('Nequi')"
+            class="flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all bg-white"
+            [class]="checkoutMetodoPago() === 'Nequi' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+            <div class="text-3xl font-black text-purple-900 tracking-tighter mb-2">Nequi</div>
+            <span class="font-bold text-gray-800">Nequi</span>
+          </button>
+
+          <!-- Daviplata -->
+          <button 
+            (click)="setPaymentMethod('Daviplata')"
+            class="flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all bg-white"
+            [class]="checkoutMetodoPago() === 'Daviplata' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+            <div class="text-xl font-black text-red-600 tracking-tighter mb-2">Daviplata</div>
+            <span class="font-bold text-gray-800">Daviplata</span>
+          </button>
+
+          <!-- Bre-B -->
+          <button 
+            (click)="setPaymentMethod('Bre-B')"
+            class="flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all bg-white"
+            [class]="checkoutMetodoPago() === 'Bre-B' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+            <div class="text-xl font-black text-teal-500 tracking-tighter mb-2">Bre-B</div>
+            <span class="font-bold text-gray-800">Bre-B</span>
+          </button>
+
+          <!-- Bold -->
+          <button 
+            (click)="setPaymentMethod('Bold')"
+            class="flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all bg-white"
+            [class]="checkoutMetodoPago() === 'Bold' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+            <div class="text-2xl font-black text-blue-600 tracking-tighter mb-2">Bold</div>
+            <span class="font-bold text-gray-800">Bold</span>
+          </button>
+
+          <!-- Crédito -->
+          <button 
+            (click)="setPaymentMethod('Crédito')"
+            class="flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all bg-white"
+            [class]="checkoutMetodoPago() === 'Crédito' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+            <i class="fas fa-money-check text-3xl text-gray-600 mb-2"></i>
+            <span class="font-bold text-gray-800">Crédito</span>
+          </button>
+
+          <!-- Pago Mixto -->
+          <button 
+            (click)="setPaymentMethod('Pago Mixto')"
+            class="flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all bg-white"
+            [class]="checkoutMetodoPago() === 'Pago Mixto' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+            <i class="fas fa-random text-3xl text-orange-500 mb-2"></i>
+            <span class="font-bold text-gray-800">Pago Mixto</span>
+          </button>
+        </div>
+
+        @if (checkoutMetodoPago() === 'Pago Mixto') {
+          <div class="bg-orange-50/80 border border-orange-200 rounded-xl p-4 mt-4 space-y-3 shadow-inner">
+            <div class="flex justify-between items-center border-b border-orange-200 pb-2">
+              <h3 class="font-bold text-gray-900 text-sm flex items-center gap-2">
+                <i class="fas fa-random text-orange-600"></i> Desglose de Pago Mixto
+              </h3>
+              <button type="button" (click)="addPagoMixtoFila()" class="text-xs bg-orange-500 hover:bg-orange-600 text-white font-bold px-2.5 py-1 rounded transition-colors flex items-center gap-1 shadow">
+                <i class="fas fa-plus"></i> Agregar Método
+              </button>
+            </div>
+
+            @for (pago of pagosMixtosList(); track $index) {
+              <div class="flex items-center gap-2">
+                <select [ngModel]="pago.metodo" (ngModelChange)="updatePagoMixtoFila($index, 'metodo', $event)"
+                        class="flex-1 bg-white border border-gray-300 text-gray-900 text-sm font-bold rounded-lg px-2.5 py-1.5 focus:border-teal-500 outline-none">
+                  <option value="Efectivo">💵 Efectivo</option>
+                  <option value="Tarjeta">💳 Tarjeta</option>
+                  <option value="Nequi">💜 Nequi</option>
+                  <option value="Daviplata">🔴 Daviplata</option>
+                  <option value="Bre-B">⚡ Bre-B</option>
+                  <option value="Bold">🟦 Bold</option>
+                  <option value="Crédito">📝 Crédito</option>
+                  <option value="Transferencia">🏦 Transferencia</option>
+                </select>
+                
+                <input type="number" [ngModel]="pago.monto" (ngModelChange)="updatePagoMixtoFila($index, 'monto', $event)"
+                       class="w-32 bg-white border border-gray-300 text-gray-900 font-mono font-bold text-right text-sm rounded-lg px-2.5 py-1.5 focus:border-teal-500 outline-none" placeholder="Monto $">
+                
+                @if (pagosMixtosList().length > 1) {
+                  <button type="button" (click)="removePagoMixtoFila($index)" class="text-red-500 hover:text-red-700 p-1 transition-colors">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                }
+              </div>
+            }
+
+            <div class="pt-2 border-t border-orange-200 text-xs font-bold space-y-1">
+              <div class="flex justify-between text-gray-700">
+                <span>Suma de Pagos:</span>
+                <span class="font-mono text-sm text-gray-900">{{ totalPagadoMixto() | currency }}</span>
+              </div>
+              @if (diferenciaMixto() > 0) {
+                <div class="flex justify-between text-red-600 bg-red-100 p-1.5 rounded">
+                  <span>Falta por asignar:</span>
+                  <span class="font-mono text-sm">${{ diferenciaMixto().toLocaleString() }}</span>
+                </div>
+              } @else if (diferenciaMixto() < 0) {
+                <div class="flex justify-between text-amber-800 bg-amber-100 p-1.5 rounded">
+                  <span>Excedente asignado:</span>
+                  <span class="font-mono text-sm">${{ (-diferenciaMixto()).toLocaleString() }}</span>
+                </div>
+              } @else {
+                <div class="flex justify-between text-green-800 bg-green-100 p-1.5 rounded">
+                  <span>¡Total exacto cubierto!</span>
+                  <i class="fas fa-check-circle text-green-600"></i>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Derecha: Resumen de venta -->
+      <div class="w-full md:w-1/2 p-6 bg-white flex flex-col">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">Resumen de venta</h2>
+        
+        <!-- Lista de productos mini -->
+        <div class="max-h-32 overflow-y-auto mb-4 border-b border-gray-200 pb-2">
+          <table class="w-full text-sm text-gray-600">
+            <thead>
+              <tr class="uppercase text-xs text-gray-400 border-b border-gray-200">
+                <th class="text-left pb-2 font-medium">Producto</th>
+                <th class="text-center pb-2 font-medium">Cant.</th>
+                <th class="text-right pb-2 font-medium">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of orderItems(); track item.id) {
+                <tr>
+                  <td class="py-2 truncate max-w-[150px]">{{ item.nombre }}</td>
+                  <td class="py-2 text-center">{{ item.qty }}</td>
+                  <td class="py-2 text-right">{{ (item.precio * item.qty) | currency }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Subtotal -->
+        <div class="flex justify-between text-gray-500 mb-2 font-medium">
+          <span>Subtotal</span>
+          <span class="text-gray-900">{{ checkoutSubtotal() | currency }}</span>
+        </div>
+
+        <!-- Impuestos Configurables -->
+        <div class="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+          <span class="text-gray-500 font-medium">Impuestos (%)</span>
+          <div class="flex items-center gap-2">
+            <input type="number" min="0" max="100" [ngModel]="checkoutImpuesto()" (ngModelChange)="checkoutImpuesto.set($event)" class="w-16 border border-gray-300 rounded px-2 py-1 text-right text-gray-900 outline-none focus:border-teal-500">
+            <span class="text-gray-900 w-24 text-right">{{ checkoutImpuestoMonto() | currency }}</span>
+          </div>
+        </div>
+
+        <!-- Total Principal -->
+        <div class="flex justify-between items-end mb-1">
+          <span class="text-xl font-black text-gray-900">TOTAL</span>
+          <span class="text-3xl font-black text-teal-700">{{ checkoutTotal() | currency }}</span>
+        </div>
+        <div class="flex justify-between text-sm text-gray-500 mb-6">
+          <span>Método de pago</span>
+          <span class="font-bold text-gray-900">{{ checkoutMetodoPago() }}</span>
+        </div>
+
+        <!-- Sección de Propinas -->
+        <div class="bg-gray-100 rounded-xl p-4 mb-4 border border-gray-200">
+          <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Propina (Opcional)</h3>
+          
+          <div class="flex flex-wrap gap-2 mb-3">
+            <button (click)="setTip('5%')" [class]="checkoutPropinaTipo() === '5%' ? 'bg-white border-teal-500 text-teal-700 font-bold shadow-sm border' : 'bg-white border-gray-300 text-gray-600 border hover:border-teal-400'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">5%</button>
+            <button (click)="setTip('10%')" [class]="checkoutPropinaTipo() === '10%' ? 'bg-white border-teal-500 text-teal-700 font-bold shadow-sm border' : 'bg-white border-gray-300 text-gray-600 border hover:border-teal-400'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">10%</button>
+            <button (click)="setTip('15%')" [class]="checkoutPropinaTipo() === '15%' ? 'bg-white border-teal-500 text-teal-700 font-bold shadow-sm border' : 'bg-white border-gray-300 text-gray-600 border hover:border-teal-400'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">15%</button>
+            <button (click)="setTip('20%')" [class]="checkoutPropinaTipo() === '20%' ? 'bg-white border-teal-500 text-teal-700 font-bold shadow-sm border' : 'bg-white border-gray-300 text-gray-600 border hover:border-teal-400'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">20%</button>
+            <button (click)="setTip('Sin propina')" [class]="checkoutPropinaTipo() === 'Sin propina' ? 'bg-white border-teal-500 text-teal-700 font-bold shadow-sm border' : 'bg-white border-gray-300 text-gray-600 border hover:border-teal-400'" class="px-3 py-1.5 rounded-lg text-sm transition-colors">Sin propina</button>
+          </div>
+          
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-600">Personalizada $</span>
+              <input type="number" 
+                     [ngModel]="checkoutPropinaPersonalizada()" 
+                     (ngModelChange)="checkoutPropinaPersonalizada.set($event); checkoutPropinaTipo.set('Personalizada')" 
+                     class="w-24 border border-gray-300 rounded-lg px-2 py-1 text-gray-900 outline-none focus:border-teal-500">
+            </div>
+            <span class="font-bold text-teal-600">{{ checkoutPropinaMonto() | currency }}</span>
+          </div>
+        </div>
+
+        <!-- Efectivo / Vuelto -->
+        @if (checkoutMetodoPago() === 'Efectivo' || (checkoutMetodoPago() === 'Pago Mixto' && montoEfectivoMixto() > 0)) {
+          <div class="bg-teal-50 rounded-xl p-4 mb-4 flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <i class="fas fa-money-bill text-green-600"></i>
+                {{ checkoutMetodoPago() === 'Pago Mixto' ? 'Cliente entrega en efectivo' : 'Cliente entrega' }}
+              </span>
+              <input type="number" [ngModel]="checkoutEntrega()" (ngModelChange)="checkoutEntrega.set($event)" class="w-32 border border-teal-200 rounded-lg px-3 py-2 text-right font-bold text-gray-900 outline-none focus:border-teal-500">
+            </div>
+            <div class="flex justify-between items-center text-lg">
+              <span class="font-bold text-gray-900">Vuelto / Cambio</span>
+              <span class="font-black text-teal-700 font-mono">
+                {{ (checkoutMetodoPago() === 'Pago Mixto' ? vueltoMixto() : checkoutVuelto()) | currency }}
+              </span>
+            </div>
+          </div>
+        }
+
+        <div class="flex-1"></div> <!-- Spacer -->
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-2 pt-4 border-t border-gray-200">
+          <button (click)="cancelCheckout()" class="px-4 py-3 rounded-lg border-2 border-red-400 text-red-500 font-bold hover:bg-red-50 transition-colors">
+            Cancelar
+          </button>
+
+          <button (click)="confirmarCobro(false)" class="flex-1 px-3 py-3 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm transition-colors flex items-center justify-center gap-1.5 shadow">
+            <i class="fas fa-check"></i> {{ isQuickOrderMode() ? 'Cobrar Sin Factura' : 'Cobrar y Desocupar (Sin Impresión)' }}
+          </button>
+
+          <button (click)="confirmarCobro(true)" class="flex-1 px-3 py-3 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm transition-colors flex items-center justify-center gap-1.5 shadow-lg">
+            <i class="fas fa-print"></i> {{ isQuickOrderMode() ? 'Cobrar e Imprimir Factura' : 'Cobrar, Imprimir Factura y Desocupar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal de Detalle (Factura) -->
+@if (selectedHistoryOrder()) {
+  <div class="fixed inset-0 bg-black/80 z-[200] flex justify-center items-center backdrop-blur-sm p-3 sm:p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden relative border border-gray-200">
+      <!-- Textura superior del ticket -->
+      <div class="h-4 w-full flex-shrink-0" style="background-image: radial-gradient(circle at 10px 0, transparent 10px, #ffffff 11px); background-size: 20px 10px; background-position: top; background-repeat: repeat-x; transform: rotate(180deg); margin-top: -4px;"></div>
+      
+      <!-- Contenido Scrolleable del Ticket -->
+      <div class="p-6 sm:p-8 overflow-y-auto flex-1 custom-scrollbar">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <i class="fas fa-utensils text-3xl text-gray-700"></i>
+          </div>
+          <h2 class="text-2xl font-black text-gray-800 uppercase tracking-widest">Yiyo Burger</h2>
+          <p class="text-sm text-gray-500">Comprobante de Pedido</p>
+        </div>
+
+        <div class="border-t-2 border-dashed border-gray-300 py-4 mb-4">
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Nº Pedido:</span>
+            <span class="font-bold text-gray-800">{{ shortId(selectedHistoryOrder().id) }}</span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Mesa / Servicio:</span>
+            <span class="font-bold text-gray-800">{{ selectedHistoryOrder().mesa || 'Domicilio' }}</span>
+          </div>
+          @if (selectedHistoryOrder().cliente_nombre) {
+            <div class="flex justify-between text-sm text-gray-600 mb-1">
+              <span>Cliente:</span>
+              <span class="font-bold text-gray-800">{{ selectedHistoryOrder().cliente_nombre }}</span>
+            </div>
+          }
+          @if (selectedHistoryOrder().cliente_barrio) {
+            <div class="flex justify-between text-sm text-gray-600 mb-1">
+              <span>Barrio:</span>
+              <span class="font-bold text-gray-800">{{ selectedHistoryOrder().cliente_barrio }}</span>
+            </div>
+          }
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Fecha:</span>
+            <span class="font-bold text-gray-800">{{ selectedHistoryOrder().fecha | date:'short' }}</span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Atendido por:</span>
+            <span class="font-bold text-orange-600 flex items-center gap-1">
+              <i class="fas fa-user text-xs"></i> {{ selectedHistoryOrder().mesero || 'Administrador' }}
+            </span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-600 mt-1">
+            <span>Estado:</span>
+            <span class="font-bold uppercase">{{ selectedHistoryOrder().estado }}</span>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex justify-between border-b border-gray-200 pb-1">
+            <span class="w-3/5">Descripción</span>
+            <span class="w-1/5 text-center">Cant</span>
+            <span class="w-1/5 text-right">Total</span>
+          </div>
+          <div class="space-y-2">
+            @for (item of selectedHistoryOrder().items; track item.id) {
+              <div class="flex flex-col text-sm text-gray-700 pb-1 border-b border-gray-100">
+                <div class="flex justify-between">
+                  <span class="w-3/5 font-medium pr-2">{{ item.nombre }}</span>
+                  <span class="w-1/5 text-center">x{{ item.qty }}</span>
+                  <span class="w-1/5 text-right">{{ (item.precio * item.qty) | currency }}</span>
+                </div>
+                @if (item.notas) {
+                  <div class="mt-1 bg-red-50 border border-red-200 rounded-lg p-1.5 flex items-start gap-1.5">
+                    <span class="text-xs font-black text-red-600 uppercase tracking-wider flex-shrink-0">⚠️ NOTA:</span>
+                    <span class="text-sm font-bold text-red-700 leading-tight uppercase">{{ item.notas }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="border-t-2 border-dashed border-gray-300 pt-4">
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Subtotal</span>
+            <span>{{ selectedHistoryOrder().subtotal | currency }}</span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Impuestos ({{ selectedHistoryOrder().impuesto_porcentaje || 0 }}%)</span>
+            <span>{{ selectedHistoryOrder().impuesto_valor || 0 | currency }}</span>
+          </div>
+          @if (selectedHistoryOrder().propina_valor > 0) {
+            <div class="flex justify-between text-sm text-gray-600 mb-1">
+              <span>Propina</span>
+              <span>{{ selectedHistoryOrder().propina_valor | currency }}</span>
+            </div>
+          }
+          <div class="flex justify-between text-xl font-black text-gray-900 mt-2 pt-2 border-t border-gray-200">
+            <span>Total</span>
+            <span>{{ selectedHistoryOrder().total | currency }}</span>
+          </div>
+
+          <div class="flex justify-between items-center text-xs text-gray-700 mt-2 border-t border-gray-100 pt-2">
+            <span class="font-bold">Método de pago:</span>
+            <select [value]="getMetodoPagoValue(selectedHistoryOrder().metodo_pago)" (change)="cambiarMetodoPago(selectedHistoryOrder(), $any($event.target).value)" 
+                    class="bg-gray-100 text-gray-800 font-bold px-2 py-1 rounded border border-gray-300 focus:border-orange-500 focus:outline-none cursor-pointer">
+              <option value="Efectivo">💵 Efectivo</option>
+              <option value="Tarjeta">💳 Tarjeta</option>
+              <option value="Nequi">💜 Nequi</option>
+              <option value="Daviplata">🔴 Daviplata</option>
+              <option value="Bre-B">⚡ Bre-B</option>
+              <option value="Bold">🟦 Bold</option>
+              <option value="Crédito">📝 Crédito</option>
+              <option value="Transferencia">🏦 Transferencia</option>
+              <option value="Pago Mixto">🔀 Pago Mixto</option>
+              <option value="Otros">📦 Otros</option>
+            </select>
+          </div>
+          @if (selectedHistoryOrder().metodo_pago === 'Efectivo' && selectedHistoryOrder().monto_entregado > 0) {
+            <div class="flex justify-between text-xs text-gray-500">
+              <span>Efectivo entregado: {{ selectedHistoryOrder().monto_entregado | currency }}</span>
+            </div>
+            <div class="flex justify-between text-xs text-gray-500">
+              <span>Vuelto: {{ selectedHistoryOrder().vuelto | currency }}</span>
+            </div>
+          }
+        </div>
+      </div>
+      
+      <!-- Footer Fijo con los Botones (Cerrar, Editar e Imprimir) siempre visibles -->
+      <div class="p-4 bg-gray-50 border-t border-gray-200 flex gap-2 flex-shrink-0">
+        <button (click)="closeOrderDetails()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2.5 px-3 rounded-xl transition-colors">
+          Cerrar
+        </button>
+        <button (click)="openEditarPedidoHistorial(selectedHistoryOrder())" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-3 rounded-xl transition-colors shadow flex items-center justify-center gap-1">
+          <i class="fas fa-edit"></i> Editar
+        </button>
+        <button (click)="imprimirTicketFactura(selectedHistoryOrder())" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-3 rounded-xl transition-colors shadow flex items-center justify-center gap-1">
+          <i class="fas fa-print"></i> Imprimir
+        </button>
+      </div>
+
+      <!-- Textura inferior del ticket -->
+      <div class="h-4 w-full flex-shrink-0" style="background-image: radial-gradient(circle at 10px 0, transparent 10px, #ffffff 11px); background-size: 20px 10px; background-position: top; background-repeat: repeat-x;"></div>
+    </div>
+  </div>
+}
+
+<!-- Modal para Editar Precio y Pago de Pedido del Historial -->
+@if (showEditHistoryOrderModal() && editingHistoryOrder()) {
+  <div class="fixed inset-0 bg-black/80 z-[220] flex justify-center items-center backdrop-blur-sm p-4">
+    <div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-lg overflow-hidden flex flex-col p-6">
+      
+      <div class="flex justify-between items-center pb-4 border-b border-gray-700 mb-4">
+        <h3 class="text-xl font-bold text-orange-500 flex items-center gap-2">
+          <i class="fas fa-edit"></i> Editar Pedido del Historial
+        </h3>
+        <button (click)="showEditHistoryOrderModal.set(false)" class="text-gray-400 hover:text-white transition-colors">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-sm text-gray-300">
+        <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-700 space-y-1">
+          <p><strong class="text-white">Pedido:</strong> {{ getOrderTitle(editingHistoryOrder()) }}</p>
+          <p><strong class="text-white">ID / Orden:</strong> #{{ editingHistoryOrder().orderNumber || shortId(editingHistoryOrder().id) }}</p>
+          <p><strong class="text-white">Fecha:</strong> {{ editingHistoryOrder().fecha | date:'medium' }}</p>
+        </div>
+
+        <!-- Editar Precio Total -->
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Precio Total del Pedido ($)</label>
+          <input type="number" [ngModel]="editingHistoryTotal()" (ngModelChange)="editingHistoryTotal.set(+$event)"
+                 class="w-full bg-gray-700 text-white font-mono font-bold text-lg border border-gray-600 focus:border-orange-500 rounded-lg px-3 py-2 outline-none">
+          <p class="text-[11px] text-gray-400 mt-1">Modificar el precio total actualizará automáticamente el Cierre de Caja y los reportes diarios.</p>
+        </div>
+
+        <!-- Editar Método de Pago -->
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Método de Pago</label>
+          <select [ngModel]="editingHistoryMetodoPago()" (ngModelChange)="editingHistoryMetodoPago.set($event)"
+                  class="w-full bg-gray-700 text-white font-bold border border-gray-600 focus:border-orange-500 rounded-lg px-3 py-2 outline-none cursor-pointer">
+            <option value="Efectivo">💵 Efectivo</option>
+            <option value="Tarjeta">💳 Tarjeta</option>
+            <option value="Nequi">💜 Nequi</option>
+            <option value="Daviplata">🔴 Daviplata</option>
+            <option value="Bre-B">⚡ Bre-B</option>
+            <option value="Bold">🟦 Bold</option>
+            <option value="Crédito">📝 Crédito</option>
+            <option value="Transferencia">🏦 Transferencia</option>
+            <option value="Pago Mixto">🔀 Pago Mixto</option>
+            <option value="Otros">📦 Otros</option>
+          </select>
+        </div>
+
+        <!-- Si es Pago Mixto -->
+        @if (editingHistoryMetodoPago() === 'Pago Mixto') {
+          <div class="bg-gray-900/80 border border-orange-500/40 rounded-xl p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-gray-700 pb-2">
+              <span class="text-xs font-bold text-orange-400 flex items-center gap-1">
+                <i class="fas fa-random"></i> Desglose de Pago Mixto
+              </span>
+              <button type="button" (click)="addEditingHistoryPagoMixtoFila()" class="text-xs bg-orange-500 hover:bg-orange-600 text-white font-bold px-2 py-0.5 rounded">
+                + Añadir
+              </button>
+            </div>
+
+            @for (pago of editingHistoryPagosMixtos(); track $index) {
+              <div class="flex items-center gap-2">
+                <select [ngModel]="pago.metodo" (ngModelChange)="updateEditingHistoryPagoMixtoFila($index, 'metodo', $event)"
+                        class="flex-1 bg-gray-800 border border-gray-600 text-white text-xs font-bold rounded px-2 py-1.5 focus:border-orange-500">
+                  <option value="Efectivo">💵 Efectivo</option>
+                  <option value="Tarjeta">💳 Tarjeta</option>
+                  <option value="Nequi">💜 Nequi</option>
+                  <option value="Daviplata">🔴 Daviplata</option>
+                  <option value="Bre-B">⚡ Bre-B</option>
+                  <option value="Bold">🟦 Bold</option>
+                  <option value="Crédito">📝 Crédito</option>
+                  <option value="Transferencia">🏦 Transferencia</option>
+                </select>
+                <input type="number" [ngModel]="pago.monto" (ngModelChange)="updateEditingHistoryPagoMixtoFila($index, 'monto', $event)"
+                       class="w-28 bg-gray-800 border border-gray-600 text-white font-mono font-bold text-right text-xs rounded px-2 py-1.5 focus:border-orange-500" placeholder="Monto $">
+                @if (editingHistoryPagosMixtos().length > 1) {
+                  <button type="button" (click)="removeEditingHistoryPagoMixtoFila($index)" class="text-red-400 hover:text-red-300">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="flex gap-3 pt-6 mt-4 border-t border-gray-700">
+        <button (click)="showEditHistoryOrderModal.set(false)" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2.5 px-4 rounded-xl transition-colors">
+          Cancelar
+        </button>
+        <button (click)="guardarCambiosPedidoHistorial()" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg">
+          <i class="fas fa-save"></i> Guardar Cambios
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal Pizza Mitad y Mitad -->
+@if (showHalfAndHalfModal()) {
+  <div class="fixed inset-0 bg-black/80 z-[160] flex justify-center items-center backdrop-blur-sm p-4">
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fas fa-pizza-slice text-orange-500"></i>
+          Pizza Mitad y Mitad
+        </h3>
+        <button (click)="showHalfAndHalfModal.set(false)" class="text-gray-400 hover:text-white transition-colors">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="p-6 space-y-4">
+        <!-- Tamaño -->
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-2">Selecciona el Tamaño</label>
+          <div class="grid grid-cols-5 gap-2">
+            <button (click)="selectedHalfSize.set('Mediana')" 
+                    [class]="selectedHalfSize() === 'Mediana' ? 'bg-orange-500 text-white font-bold' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'" 
+                    class="py-2 px-3 rounded-lg text-sm transition-colors text-center">
+              Mediana
+            </button>
+            <button (click)="selectedHalfSize.set('Grande')" 
+                    [class]="selectedHalfSize() === 'Grande' ? 'bg-orange-500 text-white font-bold' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'" 
+                    class="py-2 px-3 rounded-lg text-sm transition-colors text-center">
+              Grande
+            </button>
+            <button (click)="selectedHalfSize.set('Extragrande')" 
+                    [class]="selectedHalfSize() === 'Extragrande' ? 'bg-orange-500 text-white font-bold' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'" 
+                    class="py-2 px-3 rounded-lg text-sm transition-colors text-center">
+              Extra G.
+            </button>
+            <button (click)="selectedHalfSize.set('Gigante')" 
+                    [class]="selectedHalfSize() === 'Gigante' ? 'bg-orange-500 text-white font-bold' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'" 
+                    class="py-2 px-3 rounded-lg text-sm transition-colors text-center">
+              Gigante
+            </button>
+            <button (click)="selectedHalfSize.set('Familiar')" 
+                    [class]="selectedHalfSize() === 'Familiar' ? 'bg-orange-500 text-white font-bold' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'" 
+                    class="py-2 px-3 rounded-lg text-sm transition-colors text-center">
+              Familiar
+            </button>
+          </div>
+        </div>
+
+        <!-- Sabor 1 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-2">Primer Sabor (Mitad A)</label>
+          <select [ngModel]="selectedFlavor1()" (ngModelChange)="selectedFlavor1.set($event)" 
+                  class="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2.5 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none text-sm">
+            <option [ngValue]="null" disabled selected>Selecciona primer sabor</option>
+            @for (plato of allPizzas(); track plato.plato_id) {
+              <option [ngValue]="plato">{{ cleanPizzaName(plato.nombre) }} ({{ getPizzaPrice(plato, selectedHalfSize()) | currency }})</option>
+            }
+          </select>
+        </div>
+
+        <!-- Sabor 2 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-2">Segundo Sabor (Mitad B)</label>
+          <select [ngModel]="selectedFlavor2()" (ngModelChange)="selectedFlavor2.set($event)" 
+                  class="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2.5 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none text-sm">
+            <option [ngValue]="null" disabled selected>Selecciona segundo sabor</option>
+            @for (plato of allPizzas(); track plato.plato_id) {
+              <option [ngValue]="plato">{{ cleanPizzaName(plato.nombre) }} ({{ getPizzaPrice(plato, selectedHalfSize()) | currency }})</option>
+            }
+          </select>
+        </div>
+
+        <!-- Resumen Precio -->
+        @if (selectedFlavor1() && selectedFlavor2()) {
+          <div class="bg-gray-900/50 border border-gray-700 rounded-xl p-4 flex justify-between items-center mt-6">
+            <div>
+              <p class="text-xs text-gray-400">Precio (Sabor más alto)</p>
+              <p class="text-white text-sm mt-0.5">
+                {{ cleanPizzaName(selectedFlavor1()!.nombre) }} vs {{ cleanPizzaName(selectedFlavor2()!.nombre) }}
+              </p>
+            </div>
+            <div class="text-right">
+              <span class="text-green-400 font-extrabold text-xl">{{ halfAndHalfPrice() | currency }}</span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-4 bg-gray-900/30 border-t border-gray-700 flex justify-end gap-3">
+        <button (click)="showHalfAndHalfModal.set(false)" 
+                class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-bold rounded-lg transition-colors">
+          Cancelar
+        </button>
+        <button (click)="addHalfAndHalfToCart()" 
+                [disabled]="!selectedFlavor1() || !selectedFlavor2()" 
+                class="px-5 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-black rounded-lg transition-colors flex items-center gap-2">
+          <i class="fas fa-plus"></i> Agregar al Pedido
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL PARA CAMBIAR PEDIDO DE MESA -->
+@if (showCambiarMesaModal()) {
+  <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-4 animate-fade-in">
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]">
+      
+      <!-- Top Decoration -->
+      <div class="h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+
+      <!-- Header -->
+      <div class="p-6 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
+        <div>
+          <h3 class="text-2xl font-black text-white flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+              <i class="fas fa-exchange-alt"></i>
+            </div>
+            Cambiar Pedido de Mesa
+          </h3>
+          <p class="text-gray-400 text-sm mt-1">
+            Trasladar pedido de 
+            <span class="text-indigo-400 font-bold">
+              {{ selectedMesa()?.ubicacion === 'Barra' ? 'Barra B' + selectedMesa()?.numero : 'Mesa ' + selectedMesa()?.numero }}
+            </span> 
+            a una nueva mesa libre
+          </p>
+        </div>
+        <button (click)="closeCambiarMesaModal()" class="w-9 h-9 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 flex items-center justify-center transition-colors">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Body: Grid de Mesas Disponibles -->
+      <div class="p-6 overflow-y-auto flex-1 bg-gray-900/30">
+        <h4 class="text-xs uppercase tracking-widest text-gray-400 font-bold mb-4">Selecciona la mesa destino (Libre):</h4>
+
+        @if (mesasLibresParaCambio().length === 0) {
+          <div class="text-center py-12 bg-gray-900/50 border-2 border-dashed border-gray-700 rounded-xl">
+            <i class="fas fa-exclamation-circle text-4xl text-amber-400 mb-3"></i>
+            <p class="text-gray-300 font-bold text-lg">No hay mesas ni barras libres disponibles en este momento.</p>
+            <p class="text-gray-500 text-sm mt-1">Crea una nueva mesa o libera una mesa para realizar el traslado.</p>
+          </div>
+        } @else {
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            @for (m of mesasLibresParaCambio(); track m.mesa_id) {
+              <div 
+                (click)="seleccionarMesaTarget(m)"
+                class="p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col items-center justify-center relative group"
+                [class]="targetMesaCambio()?.mesa_id === m.mesa_id
+                  ? 'bg-indigo-600/30 border-indigo-500 shadow-lg shadow-indigo-500/20 scale-105'
+                  : 'bg-gray-800/80 border-gray-700 hover:border-gray-500 hover:bg-gray-800'"
+              >
+                <!-- Badge de ubicación -->
+                <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full mb-1"
+                      [class]="m.ubicacion === 'Barra' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'">
+                  {{ m.ubicacion === 'Barra' ? 'BARRA LLEVAR' : 'MESA' }}
+                </span>
+
+                <h4 class="text-3xl font-black text-white">
+                  {{ m.ubicacion === 'Barra' ? 'B' + m.numero : 'M' + m.numero }}
+                </h4>
+
+                <span class="text-xs text-gray-400 font-medium mt-1 flex items-center gap-1">
+                  <i class="fas fa-users text-gray-500"></i> {{ m.capacidad }} personas
+                </span>
+
+                @if (targetMesaCambio()?.mesa_id === m.mesa_id) {
+                  <div class="absolute -top-2 -right-2 bg-indigo-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-md">
+                    <i class="fas fa-check"></i>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="p-4 bg-gray-900 border-t border-gray-700 flex justify-end gap-3">
+        <button 
+          (click)="closeCambiarMesaModal()" 
+          class="px-5 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold text-sm transition-colors"
+        >
+          Cancelar
+        </button>
+        <button 
+          (click)="confirmarCambioDeMesa()" 
+          [disabled]="!targetMesaCambio()"
+          class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-sm shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2 active:scale-95"
+        >
+          <i class="fas fa-exchange-alt"></i> Confirmar Cambio de Mesa
+        </button>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- Modal para Migrar Pedido a Domicilio -->
+@if (showMigrarADomicilioModal()) {
+  <div class="fixed inset-0 bg-gray-900/90 z-[100] flex flex-col justify-center items-center p-4 overflow-y-auto backdrop-blur-sm">
+    <div class="bg-gray-800 rounded-xl shadow-2xl p-6 sm:p-8 border border-gray-700 w-full max-w-2xl my-auto">
+      <div class="flex justify-between items-center mb-5 border-b border-gray-700 pb-3">
+        <h2 class="text-2xl text-orange-500 font-bold flex items-center gap-2">
+          <i class="fas fa-motorcycle"></i> Migrar Pedido a Domicilio
+        </h2>
+        <button (click)="closeMigrarADomicilioModal()" class="text-gray-400 hover:text-white transition-colors text-xl">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <p class="text-gray-300 text-sm mb-4">
+        Ingresa los datos de envío del cliente. Al confirmar, el pedido pasará al módulo de <strong>Domicilios</strong> y la {{ selectedMesa()?.ubicacion === 'Barra' ? 'Barra' : 'Mesa' }} quedará <strong>LIBRE</strong>.
+      </p>
+      
+      <form [formGroup]="migrarForm" (ngSubmit)="confirmarMigracionADomicilio()" class="w-full">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-gray-400 mb-1.5 font-bold text-sm">Teléfono (Busca el cliente)</label>
+            <input type="text" formControlName="cliente_telefono" (input)="searchClientByPhone($event)" class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-lg px-4 py-2.5 text-base" placeholder="Ej: 300 123 4567">
+          </div>
+
+          <div>
+            <label class="block text-gray-400 mb-1.5 font-bold text-sm">Nombre del Cliente</label>
+            <input type="text" formControlName="cliente_nombre" class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-lg px-4 py-2.5 text-base" placeholder="Ej: Juan Pérez">
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-gray-400 mb-1.5 font-bold text-sm">Dirección de Entrega</label>
+          <textarea formControlName="cliente_direccion" class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-lg px-4 py-2.5 text-base" placeholder="Ej: Calle 123 #45-67, Apto 201" rows="2"></textarea>
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-gray-400 mb-1.5 font-bold text-sm">Barrio</label>
+          <input type="text" formControlName="cliente_barrio" list="barriosMigracionDatalist" class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-lg px-4 py-2.5 text-base" placeholder="Ej: El Poblado">
+          <datalist id="barriosMigracionDatalist">
+            @for (b of barrios(); track b.id) {
+              <option [value]="b.nombre">{{ b.nombre }} ({{ b.precio | currency }})</option>
+            }
+          </datalist>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-gray-700">
+          <button type="button" (click)="closeMigrarADomicilioModal()" class="px-5 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold text-sm transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" [disabled]="migrarForm.invalid" class="bg-orange-500 hover:bg-orange-600 text-white font-bold text-base py-2.5 px-5 rounded-xl transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <i class="fas fa-motorcycle"></i> Confirmar Migración a Domicilio
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

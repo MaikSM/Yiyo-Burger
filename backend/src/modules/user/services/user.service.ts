@@ -5,7 +5,7 @@ import { DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { IUserRepository } from '../repositories/iuser.repository';
 
 // Importa la clase DatabaseConnection para obtener la conexión a la base de datos.
-import { DatabaseConnection } from '../../database/DatabaseConnection';
+import { DatabaseConnection } from '../../../core/database/DatabaseConnection';
 import { UserEntity } from '../entities/user.entity';
 
 // Define la clase UserService que implementa la interfaz IUserRepository.
@@ -64,5 +64,10 @@ export class UserService implements IUserRepository {
   // Realiza un "borrado lógico" (soft delete) de un usuario por su ID y devuelve el resultado de la operación.
   public async deleteById(id: number): Promise<DeleteResult | null> {
     return await this.repository.softDelete(id);
+  }
+
+  // Alterna el estado de activación del usuario.
+  public async toggleStatus(id: number, status: boolean): Promise<UpdateResult | null> {
+    return await this.repository.update(id, { is_active: status });
   }
 }

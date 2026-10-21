@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.InventarioService = void 0;
 // Importa la clase DatabaseConnection para obtener la conexión a la base de datos.
-const DatabaseConnection_1 = require("../../database/DatabaseConnection");
+const DatabaseConnection_1 = require("../../../core/database/DatabaseConnection");
 const inventario_entity_1 = require("../entities/inventario.entity");
 // Define la clase InventarioService que implementa la interfaz IInventarioRepository.
 class InventarioService {

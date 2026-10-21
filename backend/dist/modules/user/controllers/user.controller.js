@@ -44,6 +44,7 @@ class UserController {
                         name: user.name,
                         surname: user.surname,
                         email: user.email,
+                        is_active: user.is_active,
                         role: {
                             id: (_a = user.role) === null || _a === void 0 ? void 0 : _a.id,
                             name: (_b = user.role) === null || _b === void 0 ? void 0 : _b.name,
@@ -81,6 +82,7 @@ class UserController {
                     name: data === null || data === void 0 ? void 0 : data.name,
                     surname: data === null || data === void 0 ? void 0 : data.surname,
                     email: data === null || data === void 0 ? void 0 : data.email,
+                    is_active: data === null || data === void 0 ? void 0 : data.is_active,
                     role: {
                         id: (_a = data === null || data === void 0 ? void 0 : data.role) === null || _a === void 0 ? void 0 : _a.id,
                         name: (_b = data === null || data === void 0 ? void 0 : data.role) === null || _b === void 0 ? void 0 : _b.name,
@@ -140,6 +142,7 @@ class UserController {
                     name: newUserData === null || newUserData === void 0 ? void 0 : newUserData.name,
                     surname: newUserData === null || newUserData === void 0 ? void 0 : newUserData.surname,
                     email: newUserData === null || newUserData === void 0 ? void 0 : newUserData.email,
+                    is_active: newUserData === null || newUserData === void 0 ? void 0 : newUserData.is_active,
                     role: {
                         id: (_a = newUserData === null || newUserData === void 0 ? void 0 : newUserData.role) === null || _a === void 0 ? void 0 : _a.id,
                         name: (_b = newUserData === null || newUserData === void 0 ? void 0 : newUserData.role) === null || _b === void 0 ? void 0 : _b.name,
@@ -200,6 +203,7 @@ class UserController {
                     name: data === null || data === void 0 ? void 0 : data.name,
                     surname: data === null || data === void 0 ? void 0 : data.surname,
                     email: data === null || data === void 0 ? void 0 : data.email,
+                    is_active: data === null || data === void 0 ? void 0 : data.is_active,
                     role: {
                         id: (_a = data === null || data === void 0 ? void 0 : data.role) === null || _a === void 0 ? void 0 : _a.id,
                         name: (_b = data === null || data === void 0 ? void 0 : data.role) === null || _b === void 0 ? void 0 : _b.name,
@@ -239,6 +243,34 @@ class UserController {
                 // Maneja cualquier error inesperado y devuelve un mensaje de error.
                 return res.status(500).json({
                     message: 'Error Fetching Users  | UserController',
+                    data: error instanceof Error ? error.message : String(error),
+                });
+            }
+        });
+    }
+    // Método para alternar el estado de un usuario (activar/desactivar).
+    toggleStatus(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const id = parseInt(req.params.id);
+                const { is_active } = req.body;
+                if (typeof is_active !== 'boolean') {
+                    return res.status(400).json('is_active must be a boolean');
+                }
+                const user = yield this.service.getById(id);
+                if (!user)
+                    return res.status(404).json('User Not Found');
+                const result = yield this.service.toggleStatus(id, is_active);
+                if (!result)
+                    return res.status(500).json('Error Updating User Status');
+                return res.status(200).json({
+                    message: `User ${is_active ? 'Activated' : 'Deactivated'} Successfully`,
+                    is_active,
+                });
+            }
+            catch (error) {
+                return res.status(500).json({
+                    message: 'Error Toggling User Status | UserController',
                     data: error instanceof Error ? error.message : String(error),
                 });
             }

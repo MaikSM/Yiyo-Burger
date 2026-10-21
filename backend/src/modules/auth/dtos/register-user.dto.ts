@@ -3,6 +3,7 @@ import {
   IsEmail,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Length,
   Min,
@@ -45,8 +46,8 @@ export class RegisterUserDto {
   password: string;
 
   // Indica que el campo "role" es opcional en la solicitud.
-  @IsNotEmpty()
+  @IsOptional()
   @IsInt() // Asegura que sea un número entero
   @Min(1) // Evita valores menores que 1
-  role_id: number;
+  role_id?: number;
 }

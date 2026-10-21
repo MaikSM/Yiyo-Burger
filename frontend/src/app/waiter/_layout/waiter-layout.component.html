@@ -1,9 +1,11 @@
-<div class="grid grid-cols-[auto_1fr] min-h-screen">
-  <!-- Sidebar - Sección lateral para navegación -->
-  <waiter-layout-side-bar
-    class="w-52 bg-gray-900 shadow-lg h-full transition-all duration-300 z-10 border border-gray-700 p-3"
-  />
+<div class="min-h-screen flex flex-col bg-gray-900 text-gray-100">
+  <!-- Barra de Navegación Superior Fija (Top Navbar) -->
+  <header class="sticky top-0 z-40 bg-gray-800 w-full shadow-lg">
+    <waiter-layout-side-bar />
+  </header>
 
-  <!-- Content - Área principal de contenido -->
-  <waiter-layout-content class="" />
+  <!-- Área de Contenido Principal -->
+  <main class="flex-1 p-2 sm:p-3 md:p-4 overflow-x-hidden overflow-y-auto">
+    <waiter-layout-content />
+  </main>
 </div>

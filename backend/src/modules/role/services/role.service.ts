@@ -5,7 +5,7 @@ import { DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { IRoleRepository } from '../repositories/irole.repository';
 
 // Importa la clase DatabaseConnection para obtener la conexión a la base de datos.
-import { DatabaseConnection } from '../../database/DatabaseConnection';
+import { DatabaseConnection } from '../../../core/database/DatabaseConnection';
 import { RoleEntity } from '../entities/role.entity';
 
 // Define la clase RoleService que implementa la interfaz IRoleRepository.
@@ -39,13 +39,12 @@ export class RoleService implements IRoleRepository {
     });
   }
 
-  // Busca un rol por su nombre y lo devuelve si existe, de lo contrario, retorna null.
-  public async getByName(name: string): Promise<RoleEntity | null> {
-    return await this.repository.findOne({
-      where: {
-        name: name, // Se puede simplificar a `name`
-      },
-    });
+  // Busca un rol por su nombre y lo devuelve si existe (incluyendo eliminados suavemente si se especifica)
+  public async getByName(name: string, withDeleted = true): Promise<RoleEntity | null> {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return null;
+    const all = await this.repository.find({ withDeleted });
+    return all.find((r) => r.name.toLowerCase().trim() === trimmed.toLowerCase()) || null;
   }
 
   // Crea un nuevo rol en la base de datos y lo devuelve si la operación tiene éxito.

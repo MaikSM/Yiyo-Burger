@@ -1,48 +1,79 @@
-<div class="bg-gray-900 text-gray-100 h-full flex flex-col">
-  <div class="p-6">
-    <span class="block text-lg font-extrabold text-center text-orange-500"
-      >👨‍🍳 Menú Mesero</span
-    >
+<nav class="flex w-full h-12 md:h-13 items-stretch text-white text-xs sm:text-sm bg-gray-800 border-b border-gray-700 select-none shadow-md">
+  <!-- Izquierda: Brand & Tiempo -->
+  <div class="flex items-stretch border-r border-gray-700 flex-shrink-0">
+    <div class="flex items-center px-3 sm:px-4 font-bold tracking-wider gap-2 text-orange-500 text-sm sm:text-base flex-shrink-0">
+      <img src="/logo.png" alt="Yiyo Burger" class="h-6 sm:h-7 w-auto object-contain drop-shadow" onerror="this.style.display='none'" />
+      <span class="font-black text-white flex items-center gap-1.5">
+        <span>🍔</span>
+        <span class="hidden sm:inline text-orange-400">Yiyo</span>
+        <span class="text-orange-500">POS</span>
+      </span>
+      <span class="text-[10px] bg-orange-500/20 text-orange-400 border border-orange-500/40 px-1.5 py-0.5 rounded font-black tracking-wider uppercase">
+        Mesero
+      </span>
+    </div>
+
+    <!-- Reloj -->
+    <div class="hidden sm:flex items-center px-3 bg-gray-900/60 border-l border-gray-700 gap-1.5 flex-shrink-0 text-gray-300">
+      <i class="fas fa-clock text-gray-400 text-xs"></i>
+      <span class="font-bold font-mono text-xs">{{ currentTime() | date:'hh:mm a' | lowercase }}</span>
+    </div>
   </div>
 
-  <div class="flex-1 px-6">
-    <ul class="space-y-2">
-      @for (item of menuItems(); track $index) {
-        <li>
-          <a
-            [routerLink]="item.path"
-            routerLinkActive="bg-orange-500 text-white"
-            [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-gray-800 hover:text-orange-400 text-gray-300"
-          >
-            <i [class]="item.icon + ' text-lg'"></i>
-            <span class="font-medium">{{ item.label }}</span>
-          </a>
-        </li>
-      }
-    </ul>
-  </div>
-
-  <div class="p-6 border-t border-gray-700">
-    <ul class="space-y-2">
-      <li>
+  <!-- Centro: Pestañas de Navegación (Solo Mesas y Mis Pedidos) -->
+  <div class="flex-1 flex items-stretch min-w-0 overflow-x-auto no-scrollbar">
+    <ul class="flex items-stretch flex-1 h-full">
+      <li class="flex items-stretch border-r border-gray-700/80 flex-shrink-0">
         <a
-          [routerLink]="'/'"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-gray-800 hover:text-orange-400 text-gray-300"
+          routerLink="/waiter/mesas"
+          routerLinkActive="bg-orange-500 text-white md:border-b-2 md:border-white font-semibold"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="flex items-center gap-2 px-3.5 sm:px-5 py-0 text-gray-300 hover:text-orange-400 hover:bg-gray-700/70 transition-colors h-full md:border-b-2 md:border-transparent whitespace-nowrap cursor-pointer"
         >
-          <i class="fas fa-home text-lg"></i>
-          <span class="font-medium">Inicio</span>
+          <i class="fa-chair fas text-sm"></i>
+          <span class="font-bold text-xs sm:text-sm">Mesas</span>
         </a>
       </li>
-      <li>
-        <button
-          class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 hover:bg-gray-800 hover:text-red-400 text-gray-300 w-full text-left bg-gray-800"
-          (click)="logout()"
+
+      <li class="flex items-stretch border-r border-gray-700/80 flex-shrink-0">
+        <a
+          routerLink="/waiter/pedidos"
+          routerLinkActive="bg-orange-500 text-white md:border-b-2 md:border-white font-semibold"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="flex items-center gap-2 px-3.5 sm:px-5 py-0 text-gray-300 hover:text-orange-400 hover:bg-gray-700/70 transition-colors h-full md:border-b-2 md:border-transparent whitespace-nowrap cursor-pointer"
         >
-          <i class="fas fa-sign-out-alt text-lg"></i>
-          <span class="font-medium">Salir</span>
-        </button>
+          <i class="fa-history fas text-sm"></i>
+          <span class="font-bold text-xs sm:text-sm">Mis Pedidos</span>
+        </a>
       </li>
     </ul>
   </div>
-</div>
+
+  <!-- Derecha: Perfil del Mesero y Salir -->
+  <div class="flex items-stretch border-l border-gray-700 flex-shrink-0">
+    <!-- Info del Mesero -->
+    <a
+      routerLink="/waiter/perfil"
+      class="flex items-center gap-2 px-3 sm:px-4 bg-gray-900/40 hover:bg-gray-700/50 transition-colors text-gray-200 border-r border-gray-700"
+      title="Ver mi perfil"
+    >
+      <div class="w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 font-bold flex items-center justify-center text-xs border border-orange-500/30">
+        👤
+      </div>
+      <span class="font-semibold text-xs truncate max-w-[120px] sm:max-w-[160px]">
+        {{ authService.user()?.name }} {{ authService.user()?.surname || '' }}
+      </span>
+    </a>
+
+    <!-- Botón Salir -->
+    <button
+      type="button"
+      (click)="logout()"
+      class="flex items-center gap-1.5 px-3 sm:px-4 bg-rose-950/40 hover:bg-rose-600 text-rose-300 hover:text-white transition-all text-xs font-bold"
+      title="Cerrar sesión"
+    >
+      <i class="fas fa-sign-out-alt"></i>
+      <span class="hidden sm:inline">Salir</span>
+    </button>
+  </div>
+</nav>

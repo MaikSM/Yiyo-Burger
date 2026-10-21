@@ -60,7 +60,7 @@ __decorate([
     __metadata("design:type", String)
 ], RegisterUserDto.prototype, "password", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsInt)() // Asegura que sea un número entero
     ,
     (0, class_validator_1.Min)(1) // Evita valores menores que 1

@@ -49,6 +49,15 @@ class ReservasRoutes {
                     .json({ error: 'Error al obtener las estadísticas de reservas' });
             }
         }));
+        // GET /api/v1/reservas/mis-reservas - Obtener las reservas del usuario logueado
+        this.router.get('/mis-reservas', (req, res) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                yield this.reservasController.obtenerMisReservas(req, res);
+            }
+            catch (error) {
+                res.status(500).json({ error: 'Error al obtener mis reservas' });
+            }
+        }));
         // GET /api/v1/reservas/estado/:estado - Obtener reservas por estado
         this.router.get('/estado/:estado', (req, res) => __awaiter(this, void 0, void 0, function* () {
             try {

@@ -39,9 +39,13 @@ __decorate([
     __metadata("design:type", String)
 ], PlatoEntity.prototype, "categoria", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', length: 500, nullable: true }),
+    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     __metadata("design:type", String)
 ], PlatoEntity.prototype, "imagen_url", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'boolean', default: false }),
+    __metadata("design:type", Boolean)
+], PlatoEntity.prototype, "es_especial", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'boolean', default: true }),
     __metadata("design:type", Boolean)
@@ -54,6 +58,10 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'json', nullable: true }),
     __metadata("design:type", Array)
 ], PlatoEntity.prototype, "alergenos", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'json', nullable: true }),
+    __metadata("design:type", Object)
+], PlatoEntity.prototype, "precios_por_tamano", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

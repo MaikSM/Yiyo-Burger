@@ -1,16 +1,15 @@
-<div class="min-h-screen bg-gray-900">
+<div class="min-h-screen flex flex-col bg-gray-900">
   <!-- Barra superior para móviles -->
-  <div
-    class="lg:hidden sticky top-0 z-20 bg-gray-900/95 backdrop-blur border-b border-gray-800">
+  <div class="md:hidden sticky top-0 z-20 bg-gray-800 shadow-md border-b border-gray-700">
     <div class="flex items-center justify-between px-4 h-14">
       <button
         type="button"
-        class="inline-flex items-center justify-center w-10 h-10 rounded-md text-gray-200 hover:bg-gray-800 border border-gray-700"
+        class="inline-flex items-center justify-center w-10 h-10 rounded-md text-gray-200 hover:bg-gray-700 transition-colors"
         (click)="toggleSidebar()"
         aria-label="Abrir menú">
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          class="h-5 w-5"
+          class="h-6 w-6"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor">
@@ -22,18 +21,25 @@
         </svg>
       </button>
 
-      <span class="text-orange-500 font-bold text-base">Administración</span>
+      <span class="text-orange-500 font-bold text-base tracking-wider">
+        Yiyo Burguer
+      </span>
 
       <!-- placeholder para balancear layout -->
       <span class="w-10"></span>
     </div>
   </div>
 
+  <!-- Top bar (Desktop) -->
+  <div class="hidden md:block sticky top-0 z-20 bg-gray-800 w-full shadow-md">
+    <admin-layout-side-bar />
+  </div>
+
   <!-- Drawer lateral para móviles -->
   @if (sidebarOpen()) {
-    <div class="lg:hidden fixed inset-0 z-30">
+    <div class="md:hidden fixed inset-0 z-30">
       <div
-        class="absolute inset-0 bg-black/50"
+        class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
         (click)="closeSidebar()"
         (keydown.enter)="closeSidebar()"
         (keydown.space)="closeSidebar()"
@@ -42,20 +48,12 @@
         aria-label="Cerrar menú">
       </div>
       <div
-        class="absolute left-0 top-0 h-full w-64 max-w-[80vw] bg-gray-800 shadow-xl border-r border-gray-700 p-3">
+        class="absolute left-0 top-0 h-full w-64 max-w-[80vw] bg-gray-800 shadow-xl border-r border-gray-700">
         <admin-layout-side-bar />
       </div>
     </div>
   }
 
-  <!-- Layout de escritorio (sidebar fija + contenido) -->
-  <div
-    class="grid grid-cols-1 lg:grid-cols-[auto_1fr] min-h-[calc(100vh-56px)] lg:min-h-screen">
-    <!-- Sidebar visible sólo en pantallas grandes -->
-    <admin-layout-side-bar
-      class="hidden lg:block w-56 bg-gray-800 shadow-lg h-full transition-all duration-300 z-10 rounded-lg border border-gray-700 p-3" />
-
-    <!-- Contenido -->
-    <admin-layout-content class="p-3" />
-  </div>
+  <!-- Contenido -->
+  <admin-layout-content class="flex-1 p-3 md:p-4 overflow-auto" />
 </div>

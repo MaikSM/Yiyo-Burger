@@ -1,0 +1,1375 @@
+@if (!showOrderModal() && !showHistoryModal()) {
+  <!-- Vista Principal: Domicilios -->
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <h1 class="text-3xl font-bold text-orange-500">
+      <i class="fas fa-motorcycle"></i> Domicilios
+    </h1>
+    <div class="flex flex-wrap gap-3">
+      <button (click)="abrirCajaDirecta()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2 px-4 rounded border border-emerald-600 transition-colors flex items-center gap-2 shadow-lg shadow-emerald-700/20" title="Abrir caja registradora directamente">
+        <i class="fas fa-cash-register text-emerald-300"></i> Abrir Caja
+      </button>
+      <button (click)="openBarriosModal()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded border border-gray-600 transition-colors flex items-center gap-2">
+        <i class="fas fa-map-marked-alt text-orange-400"></i> Barrios y Tarifas
+      </button>
+      <button (click)="openHistoryModal()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded border border-gray-600 transition-colors flex items-center gap-2">
+        <i class="fas fa-history"></i> Historial
+      </button>
+      <button (click)="openNewDomicilio()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded transition-colors flex items-center gap-2">
+        <i class="fas fa-plus"></i> Nuevo Domicilio
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal para Datos del Cliente -->
+  @if (showForm()) {
+    <div class="fixed inset-0 bg-gray-900/90 z-[100] flex flex-col justify-center items-center p-4 overflow-y-auto backdrop-blur-sm">
+      <div class="bg-gray-800 rounded-xl shadow-2xl p-6 sm:p-8 border border-gray-700 w-full max-w-2xl my-auto">
+        <div class="flex justify-between items-center mb-5 border-b border-gray-700 pb-3">
+          <h2 class="text-2xl text-orange-500 font-bold"><i class="fas fa-user-plus mr-2"></i> Datos del Domicilio</h2>
+          <button (click)="showForm.set(false)" class="text-gray-400 hover:text-white transition-colors text-xl">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <form [formGroup]="clienteForm" (ngSubmit)="onSubmitCliente()" class="w-full">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-gray-400 mb-1.5 font-bold text-sm">Teléfono (Busca el cliente)</label>
+              <input type="text" formControlName="cliente_telefono" (input)="searchClientByPhone($event)" class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-lg px-4 py-2.5 text-base" placeholder="Ej: 300 123 4567">
+            </div>
+
+            <div>
+              <label class="block text-gray-400 mb-1.5 font-bold text-sm">Nombre del Cliente</label>
+              <input type="text" formControlName="cliente_nombre" class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-lg px-4 py-2.5 text-base" placeholder="Ej: Juan Pérez">
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-gray-400 mb-1.5 font-bold text-sm">Dirección</label>
+            <textarea formControlName="cliente_direccion" class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-lg px-4 py-2.5 text-base" placeholder="Ej: Calle 123 #45-67, Apto 201" rows="2"></textarea>
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-gray-400 mb-1.5 font-bold text-sm">Barrio</label>
+            <input type="text" formControlName="cliente_barrio" list="barriosDatalist" class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-lg px-4 py-2.5 text-base" placeholder="Ej: El Poblado">
+            <datalist id="barriosDatalist">
+              @for (b of barrios(); track b.id) {
+                <option [value]="b.nombre">{{ b.nombre }} ({{ b.precio | currency }})</option>
+              }
+            </datalist>
+          </div>
+
+          <button type="submit" [disabled]="clienteForm.invalid" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg py-3 px-5 rounded-lg transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider flex items-center justify-center gap-3">
+            Continuar al Menú <i class="fas fa-arrow-right"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Sección de Borradores Pendientes (LocalStorage) -->
+  @if (borradoresList().length > 0) {
+    <div class="bg-amber-950/40 border border-amber-500/40 rounded-xl p-5 mb-4 shadow-lg">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+          <i class="fas fa-file-signature text-amber-300"></i> Borradores en Proceso (LocalStorage)
+          <span class="text-xs bg-amber-500/30 text-amber-300 px-2.5 py-0.5 rounded-full border border-amber-500/40 font-bold">
+            {{ borradoresList().length }} {{ borradoresList().length === 1 ? 'borrador' : 'borradores' }}
+          </span>
+        </h2>
+        <button (click)="nuevoBorrador()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow">
+          <i class="fas fa-plus"></i> Nuevo Borrador
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        @for (borrador of borradoresList(); track borrador.id) {
+          <div (click)="cargarBorrador(borrador)" 
+               class="bg-gray-800/90 hover:bg-gray-800 border transition-all rounded-xl p-4 cursor-pointer relative group flex flex-col justify-between"
+               [class]="currentDraftId() === borrador.id ? 'border-amber-500 ring-2 ring-amber-500/50 shadow-lg' : 'border-gray-700 hover:border-amber-400'">
+            <div>
+              <div class="flex justify-between items-start mb-2">
+                <div class="overflow-hidden pr-2">
+                  <h3 class="text-white font-bold text-base truncate flex items-center gap-1.5">
+                    <i class="fas fa-user text-amber-400 text-sm"></i>
+                    {{ borrador.cliente.cliente_nombre || 'Cliente sin nombre' }}
+                  </h3>
+                  <p class="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                    <i class="fas fa-phone text-gray-500"></i>
+                    {{ borrador.cliente.cliente_telefono || 'Sin teléfono' }}
+                  </p>
+                </div>
+                <button (click)="eliminarBorrador(borrador.id, $event)" title="Descartar Borrador" class="text-gray-500 hover:text-red-400 p-1.5 transition-colors text-sm rounded hover:bg-red-500/10">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </div>
+
+              @if (borrador.cliente.cliente_direccion) {
+                <p class="text-xs text-gray-300 truncate mb-2">
+                  <i class="fas fa-map-marker-alt text-gray-400 mr-1"></i>{{ borrador.cliente.cliente_direccion }}
+                </p>
+              }
+
+              <div class="flex items-center justify-between text-xs bg-gray-900/80 px-2.5 py-1.5 rounded-lg border border-gray-700/80 mt-2">
+                <span class="text-gray-400 font-semibold flex items-center gap-1">
+                  <i class="fas fa-shopping-basket text-amber-400"></i> {{ borrador.items.length || 0 }} {{ (borrador.items.length === 1) ? 'producto' : 'productos' }}
+                </span>
+                <span class="text-green-400 font-black text-sm">{{ borrador.total | currency }}</span>
+              </div>
+            </div>
+
+            <div class="mt-3 pt-2 border-t border-gray-700/60 flex justify-between items-center text-[11px] text-gray-400">
+              <span><i class="far fa-clock mr-1"></i> {{ borrador.fechaCreacion | date:'shortTime' }}</span>
+              <span class="text-amber-400 font-bold group-hover:underline flex items-center gap-1">
+                Continuar <i class="fas fa-chevron-right text-[10px]"></i>
+              </span>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Lista de Domicilios Activos -->
+  <div class="bg-gray-800 rounded-lg shadow p-6 border border-gray-700 h-full mt-4">
+    <h2 class="text-xl text-white mb-4"><i class="fas fa-list"></i> Domicilios Pendientes / En Camino</h2>
+    
+    @if (domiciliosActivos().length === 0) {
+      <div class="text-center text-gray-400 py-10 border-2 border-dashed border-gray-700 rounded-lg">
+        <i class="fas fa-motorcycle text-4xl mb-3 opacity-50"></i>
+        <p>No hay domicilios activos en este momento.</p>
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        @for (domicilio of domiciliosActivos(); track domicilio.id) {
+          <div (click)="openExistingDomicilio(domicilio)" class="bg-gray-700 hover:bg-gray-600 cursor-pointer transition-colors border border-gray-600 hover:border-orange-500 rounded-lg p-5 relative flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-start mb-2">
+                <h3 class="text-white text-xl font-bold truncate pr-2"><i class="fas fa-user text-gray-400 mr-2"></i>{{ domicilio.cliente_nombre }}</h3>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs font-black text-orange-400 bg-orange-500/20 border border-orange-500/30 px-2.5 py-1 rounded-md flex items-center gap-1 shadow-sm">
+                    <i class="fas fa-hashtag text-[10px]"></i> Orden #{{ domicilio.orderNumber || shortId(domicilio.id) }}
+                  </span>
+                  @if (domicilio.estado === 'En camino') {
+                    <span class="text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded font-black tracking-wide uppercase animate-pulse flex items-center gap-1">
+                      <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping"></span>
+                      En camino
+                    </span>
+                  }
+                  <span class="text-xs text-gray-400 bg-gray-900 px-2 py-1 rounded font-mono opacity-80" title="ID único">#{{ shortId(domicilio.id) }}</span>
+                </div>
+              </div>
+              
+              <div class="text-gray-300 text-sm space-y-1 mb-4">
+                <p><i class="fas fa-phone text-gray-400 w-4"></i> {{ domicilio.cliente_telefono }}</p>
+                <p class="truncate"><i class="fas fa-map-marker-alt text-gray-400 w-4"></i> {{ domicilio.cliente_direccion }}</p>
+                @if (domicilio.cliente_barrio || domicilio.barrio) {
+                  <p class="truncate"><i class="fas fa-building text-gray-400 w-4"></i> Barrio: <span class="font-semibold text-gray-200">{{ domicilio.cliente_barrio || domicilio.barrio }}</span></p>
+                }
+                <p><i class="fas fa-motorcycle text-gray-400 w-4"></i> Repartidor: <span class="font-semibold">{{ domicilio.domiciliario }}</span></p>
+                <p><i class="fas fa-clock text-gray-400 w-4"></i> {{ domicilio.fecha | date:'shortTime' }}</p>
+              </div>
+
+              <!-- Detalle de Pago, Cambio y Entrega a Caja -->
+              <div class="bg-gray-800/90 rounded-lg p-3 my-3 border border-gray-600/80 space-y-1.5 text-xs shadow-inner">
+                <div class="flex justify-between items-center pb-1.5 border-b border-gray-700">
+                  <span class="text-gray-400 font-semibold flex items-center gap-1.5">
+                    <i class="fas fa-wallet text-orange-400"></i> Método de pago:
+                  </span>
+                  <span class="font-bold text-white bg-gray-700/80 px-2 py-0.5 rounded border border-gray-600 flex items-center gap-1">
+                    {{ getMetodoPagoDisplay(domicilio.metodo_pago) }}
+                  </span>
+                </div>
+
+                @if (isMetodoEfectivo(domicilio.metodo_pago)) {
+                  <div class="flex justify-between items-center text-gray-300">
+                    <span class="flex items-center gap-1.5">
+                      <i class="fas fa-money-bill-wave text-green-400 w-3.5"></i> Cliente paga con:
+                    </span>
+                    <span class="font-bold text-green-400 font-mono text-sm">
+                      {{ getClientePagaCon(domicilio) | currency }}
+                    </span>
+                  </div>
+
+                  <div class="flex justify-between items-center text-gray-300">
+                    <span class="flex items-center gap-1.5">
+                      <i class="fas fa-coins text-amber-400 w-3.5"></i> Cambio a llevar (Vuelto):
+                    </span>
+                    <span class="font-bold text-amber-400 font-mono text-sm">
+                      {{ getDomicilioVuelto(domicilio) | currency }}
+                    </span>
+                  </div>
+                }
+              </div>
+
+              <div class="flex justify-between items-center mt-4 border-t border-gray-600 pt-3">
+                <span class="text-green-400 font-bold text-lg">{{ getDomicilioTotalConEnvio(domicilio) | currency }}</span>
+                
+                <div class="flex gap-2" (click)="$event.stopPropagation()">
+                  <button (click)="imprimirTicketFacturaDirecto(domicilio, $event)" title="Reimprimir Factura / Ticket" class="bg-gray-800 hover:bg-gray-900 text-blue-400 hover:text-blue-300 border border-blue-500/40 px-2.5 py-1 rounded transition-colors text-sm font-semibold flex items-center gap-1.5 shadow">
+                    <i class="fas fa-print"></i> Reimprimir
+                  </button>
+                  <button (click)="cancelarDomicilio(domicilio, $event)" class="bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/30 px-3 py-1 rounded transition-colors text-sm font-semibold">
+                    <i class="fas fa-times"></i> Cancelar
+                  </button>
+                  @if (domicilio.estado !== 'En camino') {
+                    <button (click)="despacharDomicilio(domicilio, $event)" class="bg-blue-600 hover:bg-blue-700 text-white border border-blue-500/30 px-3 py-1 rounded transition-colors text-sm font-semibold flex items-center gap-1">
+                      <i class="fas fa-motorcycle"></i> Despachar
+                    </button>
+                  } @else {
+                    <button (click)="completarDomicilio(domicilio, $event)" class="bg-green-600 hover:bg-green-700 text-white border border-green-500/30 px-3 py-1 rounded transition-colors text-sm font-semibold flex items-center gap-1">
+                      <i class="fas fa-check"></i> Completar
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+} @else if (showHistoryModal()) {
+  
+  <!-- Vista Historial Completa -->
+  <div class="bg-gray-800 rounded-xl shadow-2xl border border-gray-700 w-full flex flex-col h-[calc(100vh-120px)] overflow-hidden">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-gray-900 border-b border-gray-700 gap-4">
+      <div class="flex items-center flex-wrap gap-4">
+        <h2 class="text-2xl text-white font-bold"><i class="fas fa-history text-orange-500 mr-2"></i> Historial de Domicilios</h2>
+        <div class="relative">
+          <input type="date" [value]="historyFilterDate()" (change)="historyFilterDate.set($any($event.target).value)" 
+                 class="bg-gray-800 text-gray-300 border border-gray-700 rounded-lg px-3 py-1.5 focus:border-orange-500 focus:outline-none" title="Filtrar por fecha">
+          @if (historyFilterDate()) {
+            <button (click)="historyFilterDate.set('')" class="absolute -right-2 -top-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex justify-center items-center text-xs shadow-md transition-colors" title="Borrar filtro">
+              <i class="fas fa-times"></i>
+            </button>
+          }
+        </div>
+      </div>
+      <button (click)="closeHistoryModal()" class="text-gray-400 hover:text-white transition-colors bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg border border-gray-700 font-semibold flex items-center gap-2">
+        <i class="fas fa-arrow-left"></i> Volver a Domicilios
+      </button>
+    </div>
+    
+    <div class="p-6 overflow-y-auto flex-1 bg-gray-900/50">
+      @if (filteredOrderHistory.length === 0) {
+        <div class="text-center text-gray-400 py-20">
+          <i class="fas fa-receipt text-6xl mb-4 opacity-50"></i>
+          <p class="text-xl">No hay domicilios registrados para esta fecha.</p>
+        </div>
+      } @else {
+        <div class="space-y-4 max-w-5xl mx-auto">
+          @for (pedido of filteredOrderHistory; track pedido.id) {
+            <div class="bg-gray-800 border border-gray-700 hover:border-gray-500 transition-colors shadow-lg rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-3 mb-2 flex-wrap">
+                  <span class="font-bold text-white text-xl">{{ pedido.cliente_nombre }}</span>
+                  <span class="text-xs font-black text-orange-400 bg-orange-500/20 border border-orange-500/30 px-2 py-1 rounded">Orden #{{ pedido.orderNumber || shortId(pedido.id) }}</span>
+                  <span class="text-xs font-bold px-2 py-1 rounded bg-gray-900 text-gray-400 border border-gray-700">ID: {{ shortId(pedido.id) }}</span>
+                  <span class="text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider
+                    {{ pedido.estado === 'Completado' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 
+                       pedido.estado === 'Cancelado' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                       'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' }}">
+                    {{ pedido.estado }}
+                  </span>
+                </div>
+
+                <div class="text-gray-300 text-sm space-y-1 mb-2">
+                  @if (pedido.cliente_telefono) {
+                    <p><i class="fas fa-phone text-gray-400 w-4 mr-1"></i> {{ pedido.cliente_telefono }}</p>
+                  }
+                  @if (pedido.cliente_direccion) {
+                    <p class="truncate"><i class="fas fa-map-marker-alt text-gray-400 w-4 mr-1"></i> {{ pedido.cliente_direccion }}</p>
+                  }
+                  @if (pedido.cliente_barrio || pedido.barrio) {
+                    <p class="truncate"><i class="fas fa-building text-gray-400 w-4 mr-1"></i> Barrio: <span class="font-semibold text-gray-200">{{ pedido.cliente_barrio || pedido.barrio }}</span></p>
+                  }
+                </div>
+
+                <div class="flex flex-wrap items-center gap-4 text-xs text-gray-400 border-t border-gray-700/60 pt-2 mt-2">
+                  <p><i class="far fa-calendar-alt mr-1"></i> {{ pedido.fecha | date:'medium' }}</p>
+                  <p><i class="fas fa-motorcycle mr-1"></i> Repartidor: <span class="text-gray-300 font-semibold">{{ pedido.domiciliario || 'Sin repartidor' }}</span></p>
+                  
+                  <div class="flex items-center gap-1.5 bg-gray-900/80 px-2.5 py-1 rounded-lg border border-gray-700">
+                    <span class="text-xs text-gray-300 font-bold flex items-center gap-1"><i class="fas fa-wallet text-orange-400"></i> Pago:</span>
+                    <select [value]="getMetodoPagoValue(pedido.metodo_pago)" (change)="cambiarMetodoPago(pedido, $any($event.target).value)" 
+                            class="bg-gray-800 text-white text-xs font-bold px-2 py-0.5 rounded border border-gray-600 focus:border-orange-500 focus:outline-none cursor-pointer">
+                      <option value="Efectivo">💵 Efectivo</option>
+                      <option value="Tarjeta">💳 Tarjeta</option>
+                      <option value="Nequi">💜 Nequi</option>
+                      <option value="Daviplata">🔴 Daviplata</option>
+                      <option value="Bre-B">⚡ Bre-B</option>
+                      <option value="Bold">🟦 Bold</option>
+                      <option value="Crédito">📝 Crédito</option>
+                      <option value="Transferencia">🏦 Transferencia</option>
+                      <option value="Pago Mixto">🔀 Pago Mixto</option>
+                      <option value="Otros">📦 Otros</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="flex flex-col items-end gap-2 self-stretch sm:self-auto justify-between sm:justify-center">
+                <p class="text-2xl font-black text-green-400">{{ getDomicilioTotalConEnvio(pedido) | currency }}</p>
+                <div class="flex items-center gap-2">
+                  <button (click)="openEditarPedidoHistorial(pedido)" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs py-2 px-3 rounded-lg transition-colors shadow flex items-center gap-1" title="Editar precio o método de pago">
+                    <i class="fas fa-edit"></i> Editar
+                  </button>
+                  <button (click)="viewOrderDetails(pedido)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 px-3 rounded-lg transition-colors shadow flex items-center gap-1.5">
+                    <i class="fas fa-file-invoice"></i> Detalle
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+
+} @else if (showOrderModal()) {
+
+  <!-- Vista POS Completa (Punto de Venta para Domicilio) -->
+  <div class="bg-gray-800 rounded-xl shadow-2xl border border-gray-700 w-full flex flex-col h-[calc(100vh-120px)] overflow-hidden">
+    <!-- Header Modal POS -->
+    <div class="flex justify-between items-center p-4 bg-gray-900 border-b border-gray-700">
+      <div>
+        <h2 class="text-2xl text-orange-500 font-bold">
+          <i class="fas fa-motorcycle mr-2"></i> Domicilio - {{ activeOrderClientData()?.cliente_nombre }}
+          @if (activeOrderId()) {
+            <span class="ml-2 text-sm bg-orange-500/20 text-orange-400 px-2 py-1 rounded border border-orange-500/30 font-bold">
+              Orden #{{ activeOrderNumber() || shortId(activeOrderId()) }} (ID: {{ shortId(activeOrderId()) }})
+            </span>
+          }
+        </h2>
+        <p class="text-gray-400 text-sm">
+          <i class="fas fa-map-marker-alt mr-1"></i> {{ activeOrderClientData()?.cliente_direccion }} | <i class="fas fa-phone mr-1"></i> {{ activeOrderClientData()?.cliente_telefono }}
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        @if (currentDraftId()) {
+          <button (click)="nuevoBorrador()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 text-sm shadow">
+            <i class="fas fa-plus"></i> Nuevo Borrador
+          </button>
+          <button (click)="eliminarBorrador(currentDraftId()!)" class="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 font-bold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 text-sm shadow">
+            <i class="fas fa-trash-alt"></i> Descartar Borrador
+          </button>
+        }
+        <button (click)="closeOrderModal()" class="text-gray-400 hover:text-white transition-colors bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg border border-gray-700 font-semibold flex items-center gap-2">
+          <i class="fas fa-arrow-left"></i> Volver a Domicilios
+        </button>
+      </div>
+    </div>
+    
+    <!-- Body Modal POS (Dos Columnas) -->
+    <div class="flex flex-col lg:flex-row flex-1 overflow-hidden">
+      <!-- Izquierda: Menú de Platos -->
+      <div class="w-full lg:w-3/5 xl:w-2/3 p-4 lg:p-6 overflow-y-auto border-b lg:border-b-0 lg:border-r border-gray-700 bg-gray-800/50">
+        <div class="flex flex-col gap-4 mb-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h3 class="text-white text-2xl font-bold">Menú Disponible</h3>
+            <div class="flex gap-2 sm:gap-4 border-b border-gray-700 pb-2 flex-1 w-full sm:w-auto mt-4 sm:mt-0 justify-center sm:justify-start overflow-x-auto">
+              <button (click)="activeSeccion.set('Todos'); selectCategory('Todos')" [class]="activeSeccion() === 'Todos' ? 'text-orange-500 border-b-2 border-orange-500 font-bold px-3 pb-2 flex items-center gap-1.5' : 'text-gray-400 px-3 pb-2 hover:text-gray-300 flex items-center gap-1.5'"><i class="fas fa-utensils"></i> Todos</button>
+              <button (click)="activeSeccion.set('Parrilla'); selectCategory('Todos')" [class]="activeSeccion() === 'Parrilla' ? 'text-orange-500 border-b-2 border-orange-500 font-bold px-3 pb-2' : 'text-gray-400 px-3 pb-2 hover:text-gray-300'">Parrilla</button>
+              <button (click)="activeSeccion.set('Pizzas'); selectCategory('Todos')" [class]="activeSeccion() === 'Pizzas' ? 'text-red-500 border-b-2 border-red-500 font-bold px-3 pb-2 flex items-center gap-2' : 'text-gray-400 px-4 pb-2 hover:text-gray-300 flex items-center gap-2'"><i class="fas fa-pizza-slice"></i> Pizzas</button>
+              <button (click)="activeSeccion.set('Bebidas'); selectCategory('Todos')" [class]="activeSeccion() === 'Bebidas' ? 'text-blue-500 border-b-2 border-blue-500 font-bold px-3 pb-2 flex items-center gap-2' : 'text-gray-400 px-4 pb-2 hover:text-gray-300 flex items-center gap-2'"><i class="fas fa-glass-martini-alt"></i> Bebidas</button>
+            </div>
+            
+            <!-- Buscador -->
+            <div class="relative w-full sm:w-64">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+              <input type="text" 
+                     [value]="searchTerm()" 
+                     (input)="searchTerm.set($any($event.target).value)" 
+                     placeholder="Buscar plato..." 
+                     class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-full pl-10 pr-4 py-2 text-sm outline-none transition-all">
+            </div>
+          </div>
+          
+          <!-- Categorías -->
+          <div class="flex items-center gap-3 overflow-x-auto pb-2 w-full no-scrollbar mt-4">
+            <button 
+              (click)="selectCategory('Todos')"
+              class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-all border"
+              [class]="selectedCategory() === 'Todos' 
+                ? (activeSeccion() === 'Pizzas' ? 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20' : (activeSeccion() === 'Bebidas' ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/20')) 
+                : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white'">
+              Todos
+            </button>
+
+            @for (categoria of filteredCategories; track categoria) {
+              @if (categoria !== 'Todos') {
+                <button 
+                  (click)="selectCategory(categoria)"
+                  class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-all border"
+                  [class]="selectedCategory() === categoria 
+                    ? (activeSeccion() === 'Pizzas' ? 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20' : (activeSeccion() === 'Bebidas' ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/20')) 
+                    : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white'">
+                  {{ categoria }}
+                </button>
+              }
+            }
+          </div>
+        </div>
+        
+        @if (filteredPlatos.length === 0) {
+          <div class="flex flex-col items-center justify-center py-20 text-gray-400">
+            <i class="fas fa-utensils text-5xl mb-4 opacity-50"></i>
+            <p class="text-lg">No hay platos disponibles en esta categoría.</p>
+          </div>
+        } @else {
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+            <!-- Tarjeta Especial: Mitad y Mitad (Solo para pizzas) -->
+            @if (activeSeccion() === 'Pizzas') {
+              <div class="bg-gray-700/60 border border-dashed border-orange-500 hover:border-orange-400 rounded-xl p-4 flex flex-col justify-between cursor-pointer transition-all hover:bg-gray-700 hover:scale-[1.02] min-h-[140px]"
+                   (click)="openHalfAndHalfModal()">
+                <div class="text-center py-4 flex flex-col justify-center items-center h-full w-full">
+                  <div class="w-10 h-10 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center mb-2">
+                    <i class="fas fa-pizza-slice text-orange-500 text-lg"></i>
+                  </div>
+                  <h4 class="text-white font-bold text-base leading-tight">🍕 Mitad y Mitad</h4>
+                  <p class="text-[11px] text-gray-400 mt-1">Combina dos sabores en una pizza</p>
+                  <span class="text-[9px] text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full mt-2 font-semibold">Grande o superior</span>
+                </div>
+              </div>
+            }
+
+            @for (plato of filteredPlatos; track plato.plato_id) {
+              <div 
+                [class.opacity-50]="!plato.disponible"
+                [class.pointer-events-none]="!plato.disponible"
+                [class.cursor-not-allowed]="!plato.disponible"
+                class="bg-gray-700 rounded-xl overflow-hidden border border-gray-600 shadow-md group cursor-pointer hover:border-orange-500 hover:shadow-orange-500/10 transition-all flex flex-col justify-between" 
+                (click)="!isPizzaPlato(plato) ? addPlato(plato) : null"
+              >
+                
+                <!-- Info del Plato -->
+                <div class="p-4 flex flex-col flex-1 justify-between">
+                  <div>
+                    <h4 class="text-white font-bold text-lg leading-tight">
+                      {{ plato.nombre }}
+                      @if (!plato.disponible) {
+                        <span class="ml-2 text-xs bg-red-600 text-white px-1.5 py-0.5 rounded font-semibold inline-block align-middle">Agotado</span>
+                      }
+                    </h4>
+                    <p class="text-sm text-gray-400 line-clamp-2 mt-1">{{ plato.descripcion || 'Sin descripción' }}</p>
+                  </div>
+                  
+                  <div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-600/50">
+                    <span class="text-green-400 font-extrabold text-lg">{{ plato.precio | currency }}</span>
+                    @if (!isPizzaPlato(plato)) {
+                      <button class="bg-gray-600 text-white w-8 h-8 rounded-full group-hover:bg-orange-500 group-hover:shadow-lg transition-all flex items-center justify-center">
+                        <i class="fas fa-plus"></i>
+                      </button>
+                    }
+                  </div>
+
+                  @if (isPizzaPlato(plato)) {
+                    <div class="flex flex-wrap gap-1 mt-3 pt-3 border-t border-gray-600/50" (click)="$event.stopPropagation()">
+                      <button (click)="addPizzaWithSize(plato, 'Personal', $event)" title="Personal" class="flex-1 py-1 px-0.5 text-[9px] font-bold bg-gray-800 hover:bg-orange-500 rounded text-center text-gray-300 hover:text-white transition-colors border border-gray-600">P</button>
+                      <button (click)="addPizzaWithSize(plato, 'Mediana', $event)" title="Mediana" class="flex-1 py-1 px-0.5 text-[9px] font-bold bg-gray-800 hover:bg-orange-500 rounded text-center text-gray-300 hover:text-white transition-colors border border-gray-600">M</button>
+                      <button (click)="addPizzaWithSize(plato, 'Grande', $event)" title="Grande" class="flex-1 py-1 px-0.5 text-[9px] font-bold bg-gray-800 hover:bg-orange-500 rounded text-center text-gray-300 hover:text-white transition-colors border border-gray-600">G</button>
+                      <button (click)="addPizzaWithSize(plato, 'Extragrande', $event)" title="Extragrande" class="flex-1 py-1 px-0.5 text-[9px] font-bold bg-gray-800 hover:bg-orange-500 rounded text-center text-gray-300 hover:text-white transition-colors border border-gray-600">EG</button>
+                      <button (click)="addPizzaWithSize(plato, 'Gigante', $event)" title="Gigante" class="flex-1 py-1 px-0.5 text-[9px] font-bold bg-gray-800 hover:bg-orange-500 rounded text-center text-gray-300 hover:text-white transition-colors border border-gray-600">GG</button>
+                      <button (click)="addPizzaWithSize(plato, 'Familiar', $event)" title="Familiar" class="flex-1 py-1 px-0.5 text-[9px] font-bold bg-gray-800 hover:bg-orange-500 rounded text-center text-gray-300 hover:text-white transition-colors border border-gray-600">F</button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Derecha: Ticket / Carrito -->
+      <div class="w-full lg:w-2/5 xl:w-1/3 bg-gray-900 p-4 flex flex-col">
+        <h3 class="text-white text-lg font-bold mb-4 border-b border-gray-700 pb-2">Ticket Actual</h3>
+        
+        <div class="flex-1 overflow-y-auto pr-2">
+          @if (orderItems().length === 0) {
+            <div class="flex flex-col items-center justify-center h-full text-gray-500">
+              <i class="fas fa-shopping-basket text-4xl mb-3"></i>
+              <p>El pedido está vacío</p>
+            </div>
+          } @else {
+            <div class="space-y-3">
+              @for (item of orderItems(); track item.id) {
+                <div class="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                  <div class="flex justify-between items-start">
+                    <div class="flex-1 pr-2">
+                      <div class="flex items-center gap-2 flex-wrap mb-1">
+                        <h4 class="text-white font-medium text-sm">{{ item.nombre }}</h4>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center gap-1">
+                          <i class="fas fa-box"></i> Para Llevar
+                        </span>
+                      </div>
+                      <p class="text-gray-400 text-xs">{{ item.precio | currency }} x {{ item.qty }} = <span class="text-white font-bold">{{ (item.precio * item.qty) | currency }}</span></p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button (click)="removePlato(item.id)" class="text-red-400 hover:text-red-300 w-7 h-7 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center text-xs">
+                        <i class="fas fa-minus"></i>
+                      </button>
+                      <span class="text-white font-bold min-w-[1.2rem] text-center text-sm">{{ item.qty }}</span>
+                      <button (click)="incrementQty(item.id)" class="text-green-400 hover:text-green-300 w-7 h-7 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center text-xs">
+                        <i class="fas fa-plus"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Input para notas/observaciones por plato -->
+                  <div class="mt-2.5 pt-2 border-t border-gray-700/60">
+                    <div class="flex items-center gap-2">
+                      <i class="fas fa-comment-dots text-orange-400 text-sm"></i>
+                      <input 
+                        type="text"
+                        [value]="item.notas || ''"
+                        (input)="updateItemNota(item.id, $any($event.target).value)"
+                        placeholder="Nota (ej. sin cebolla, salsa aparte...)"
+                        class="w-full bg-gray-900 border border-orange-500/60 focus:border-orange-400 rounded-lg px-3 py-2 text-sm text-yellow-300 font-bold outline-none placeholder-gray-500 transition-colors shadow-inner"
+                      />
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Totales -->
+        <div class="mt-4 pt-4 border-t border-gray-700 space-y-2">
+          <div class="flex justify-between text-gray-400">
+            <span>Subtotal:</span>
+            <span>{{ orderSubtotal() | currency }}</span>
+          </div>
+          <div class="flex justify-between text-white font-bold text-xl pt-2 border-t border-gray-700">
+            <span>Total:</span>
+            <span class="text-orange-500">{{ orderTotal() | currency }}</span>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row gap-2 mt-4">
+            @if (!activeOrderId()) {
+              <button (click)="iniciarPagoYDespachar()" [disabled]="orderItems().length === 0" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg">
+                <i class="fas fa-credit-card"></i> Registrar Pago y Crear Domicilio
+              </button>
+            } @else {
+              <button (click)="iniciarPagoYDespachar()" [disabled]="orderItems().length === 0" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg">
+                <i class="fas fa-credit-card"></i> Registrar Pago y Actualizar Domicilio
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+}
+
+<!-- Modal de Checkout (Resumen de venta) -->
+
+
+<!-- Modal de Detalle (Factura) -->
+@if (selectedHistoryOrder()) {
+  <div class="fixed inset-0 bg-black/80 z-[200] flex justify-center items-center backdrop-blur-sm p-3 sm:p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden relative border border-gray-200">
+      <!-- Textura superior del ticket -->
+      <div class="h-4 w-full flex-shrink-0" style="background-image: radial-gradient(circle at 10px 0, transparent 10px, #ffffff 11px); background-size: 20px 10px; background-position: top; background-repeat: repeat-x; transform: rotate(180deg); margin-top: -4px;"></div>
+      
+      <!-- Contenido Scrolleable del Ticket -->
+      <div class="p-6 sm:p-8 overflow-y-auto flex-1 custom-scrollbar">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <i class="fas fa-motorcycle text-3xl text-gray-700"></i>
+          </div>
+          <h2 class="text-2xl font-black text-gray-800 uppercase tracking-widest">Yiyo Burger</h2>
+          <p class="text-sm text-gray-500">Ticket de Domicilio</p>
+        </div>
+
+        <div class="border-t-2 border-dashed border-gray-300 py-4 mb-4">
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Nº Orden:</span>
+            <span class="font-bold text-gray-800">Orden #{{ selectedHistoryOrder().orderNumber || shortId(selectedHistoryOrder().id) }}</span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Cliente:</span>
+            <span class="font-bold text-gray-800">{{ selectedHistoryOrder().cliente_nombre }}</span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Teléfono:</span>
+            <span class="font-bold text-gray-800">{{ selectedHistoryOrder().cliente_telefono }}</span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-600 mb-1 text-right">
+            <span>Dirección:</span>
+            <span class="font-bold text-gray-800 w-1/2">{{ selectedHistoryOrder().cliente_direccion }}</span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Barrio:</span>
+            <span class="font-bold text-gray-800">{{ selectedHistoryOrder().cliente_barrio || 'Sin barrio' }}</span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Domiciliario:</span>
+            <span class="font-bold text-gray-800">{{ selectedHistoryOrder().domiciliario }}</span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-600 mt-2 pt-2 border-t border-gray-100">
+            <span>Fecha:</span>
+            <span class="font-bold text-gray-800">{{ selectedHistoryOrder().fecha | date:'short' }}</span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-600 mt-1">
+            <span>Estado:</span>
+            <span class="font-bold uppercase">{{ selectedHistoryOrder().estado }}</span>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex justify-between border-b border-gray-200 pb-1">
+            <span class="w-3/5">Descripción</span>
+            <span class="w-1/5 text-center">Cant</span>
+            <span class="w-1/5 text-right">Total</span>
+          </div>
+          <div class="space-y-2">
+            @for (item of selectedHistoryOrder().items; track item.id) {
+              <div class="flex flex-col text-sm text-gray-700 pb-1 border-b border-gray-100">
+                <div class="flex justify-between">
+                  <span class="w-3/5 font-medium pr-2">{{ item.nombre }}</span>
+                  <span class="w-1/5 text-center">x{{ item.qty }}</span>
+                  <span class="w-1/5 text-right">{{ (item.precio * item.qty) | currency }}</span>
+                </div>
+                @if (item.notas) {
+                  <div class="mt-1 bg-red-50 border border-red-200 rounded-lg p-1.5 flex items-start gap-1.5">
+                    <span class="text-xs font-black text-red-600 uppercase tracking-wider flex-shrink-0">⚠️ NOTA:</span>
+                    <span class="text-sm font-bold text-red-700 leading-tight uppercase">{{ item.notas }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="border-t-2 border-dashed border-gray-300 pt-4">
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Subtotal</span>
+            <span>{{ selectedHistoryOrder().subtotal | currency }}</span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>Impuestos ({{ selectedHistoryOrder().impuesto_porcentaje || 0 }}%)</span>
+            <span>{{ selectedHistoryOrder().impuesto_valor || 0 | currency }}</span>
+          </div>
+          @if (selectedHistoryOrder().propina_valor > 0) {
+            <div class="flex justify-between text-sm text-gray-600 mb-1">
+              <span>Propina</span>
+              <span>{{ selectedHistoryOrder().propina_valor | currency }}</span>
+            </div>
+          }
+          <div class="flex justify-between text-xl font-black text-gray-900 mt-2 pt-2 border-t border-gray-200">
+            <span>Total</span>
+            <span>{{ selectedHistoryOrder().total | currency }}</span>
+          </div>
+
+          <div class="flex justify-between items-center text-xs text-gray-700 mt-2 border-t border-gray-100 pt-2">
+            <span class="font-bold">Método de pago:</span>
+            <select [value]="getMetodoPagoValue(selectedHistoryOrder().metodo_pago)" (change)="cambiarMetodoPago(selectedHistoryOrder(), $any($event.target).value)" 
+                    class="bg-gray-100 text-gray-800 font-bold px-2 py-1 rounded border border-gray-300 focus:border-orange-500 focus:outline-none cursor-pointer">
+              <option value="Efectivo">💵 Efectivo</option>
+              <option value="Tarjeta">💳 Tarjeta</option>
+              <option value="Nequi">💜 Nequi</option>
+              <option value="Daviplata">🔴 Daviplata</option>
+              <option value="Bre-B">⚡ Bre-B</option>
+              <option value="Bold">🟦 Bold</option>
+              <option value="Crédito">📝 Crédito</option>
+              <option value="Transferencia">🏦 Transferencia</option>
+              <option value="Otros">📦 Otros</option>
+            </select>
+          </div>
+          @if (selectedHistoryOrder().metodo_pago === 'Efectivo' && selectedHistoryOrder().monto_entregado > 0) {
+            <div class="flex justify-between text-xs text-gray-500">
+              <span>Efectivo entregado: {{ selectedHistoryOrder().monto_entregado | currency }}</span>
+            </div>
+            <div class="flex justify-between text-xs text-gray-500">
+              <span>Vuelto: {{ selectedHistoryOrder().vuelto | currency }}</span>
+            </div>
+          }
+        </div>
+      </div>
+      
+      <!-- Footer Fijo con los Botones (Cerrar e Imprimir) siempre visibles -->
+      <div class="p-4 bg-gray-50 border-t border-gray-200 flex gap-3 flex-shrink-0">
+        <button (click)="closeOrderDetails()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-4 rounded-xl transition-colors">
+          Cerrar
+        </button>
+        <button (click)="imprimirTicketFactura(selectedHistoryOrder())" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-lg flex items-center justify-center gap-2">
+          <i class="fas fa-print"></i> Imprimir
+        </button>
+      </div>
+
+      <!-- Textura inferior del ticket -->
+      <div class="h-4 w-full flex-shrink-0" style="background-image: radial-gradient(circle at 10px 0, transparent 10px, #ffffff 11px); background-size: 20px 10px; background-position: top; background-repeat: repeat-x;"></div>
+    </div>
+  </div>
+}
+
+<!-- Modal Pizza Mitad y Mitad -->
+@if (showHalfAndHalfModal()) {
+  <div class="fixed inset-0 bg-black/80 z-[160] flex justify-center items-center backdrop-blur-sm p-4">
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fas fa-pizza-slice text-orange-500"></i>
+          Pizza Mitad y Mitad
+        </h3>
+        <button (click)="showHalfAndHalfModal.set(false)" class="text-gray-400 hover:text-white transition-colors">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="p-6 space-y-4">
+        <!-- Tamaño -->
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-2">Selecciona el Tamaño</label>
+          <div class="grid grid-cols-5 gap-2">
+            <button (click)="selectedHalfSize.set('Mediana')" 
+                    [class]="selectedHalfSize() === 'Mediana' ? 'bg-orange-500 text-white font-bold' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'" 
+                    class="py-2 px-3 rounded-lg text-sm transition-colors text-center">
+              Mediana
+            </button>
+            <button (click)="selectedHalfSize.set('Grande')" 
+                    [class]="selectedHalfSize() === 'Grande' ? 'bg-orange-500 text-white font-bold' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'" 
+                    class="py-2 px-3 rounded-lg text-sm transition-colors text-center">
+              Grande
+            </button>
+            <button (click)="selectedHalfSize.set('Extragrande')" 
+                    [class]="selectedHalfSize() === 'Extragrande' ? 'bg-orange-500 text-white font-bold' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'" 
+                    class="py-2 px-3 rounded-lg text-sm transition-colors text-center">
+              Extra G.
+            </button>
+            <button (click)="selectedHalfSize.set('Gigante')" 
+                    [class]="selectedHalfSize() === 'Gigante' ? 'bg-orange-500 text-white font-bold' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'" 
+                    class="py-2 px-3 rounded-lg text-sm transition-colors text-center">
+              Gigante
+            </button>
+            <button (click)="selectedHalfSize.set('Familiar')" 
+                    [class]="selectedHalfSize() === 'Familiar' ? 'bg-orange-500 text-white font-bold' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'" 
+                    class="py-2 px-3 rounded-lg text-sm transition-colors text-center">
+              Familiar
+            </button>
+          </div>
+        </div>
+
+        <!-- Sabor 1 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-2">Primer Sabor (Mitad A)</label>
+          <select [ngModel]="selectedFlavor1()" (ngModelChange)="selectedFlavor1.set($event)" 
+                  class="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2.5 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none text-sm">
+            <option [ngValue]="null" disabled selected>Selecciona primer sabor</option>
+            @for (plato of allPizzas(); track plato.plato_id) {
+              <option [ngValue]="plato">{{ cleanPizzaName(plato.nombre) }} ({{ getPizzaPrice(plato, selectedHalfSize()) | currency }})</option>
+            }
+          </select>
+        </div>
+
+        <!-- Sabor 2 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-400 mb-2">Segundo Sabor (Mitad B)</label>
+          <select [ngModel]="selectedFlavor2()" (ngModelChange)="selectedFlavor2.set($event)" 
+                  class="w-full bg-gray-700 border border-gray-600 text-white px-3 py-2.5 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none text-sm">
+            <option [ngValue]="null" disabled selected>Selecciona segundo sabor</option>
+            @for (plato of allPizzas(); track plato.plato_id) {
+              <option [ngValue]="plato">{{ cleanPizzaName(plato.nombre) }} ({{ getPizzaPrice(plato, selectedHalfSize()) | currency }})</option>
+            }
+          </select>
+        </div>
+
+        <!-- Resumen Precio -->
+        @if (selectedFlavor1() && selectedFlavor2()) {
+          <div class="bg-gray-900/50 border border-gray-700 rounded-xl p-4 flex justify-between items-center mt-6">
+            <div>
+              <p class="text-xs text-gray-400">Precio (Sabor más alto)</p>
+              <p class="text-white text-sm mt-0.5">
+                {{ cleanPizzaName(selectedFlavor1()!.nombre) }} vs {{ cleanPizzaName(selectedFlavor2()!.nombre) }}
+              </p>
+            </div>
+            <div class="text-right">
+              <span class="text-green-400 font-extrabold text-xl">{{ halfAndHalfPrice() | currency }}</span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-4 bg-gray-900/30 border-t border-gray-700 flex justify-end gap-3">
+        <button (click)="showHalfAndHalfModal.set(false)" 
+                class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-bold rounded-lg transition-colors">
+          Cancelar
+        </button>
+        <button (click)="addHalfAndHalfToCart()" 
+                [disabled]="!selectedFlavor1() || !selectedFlavor2()" 
+                class="px-5 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-black rounded-lg transition-colors flex items-center gap-2">
+          <i class="fas fa-plus"></i> Agregar al Pedido
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal para Configurar Barrios y Tarifas -->
+@if (showBarriosModal()) {
+  <div class="fixed inset-0 bg-gray-900/90 z-[100] flex flex-col justify-center items-center p-4 overflow-y-auto backdrop-blur-sm">
+    <div class="bg-gray-800 rounded-xl shadow-2xl p-6 sm:p-8 border border-gray-700 w-full max-w-3xl my-auto">
+      <!-- Modal Header -->
+      <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-orange-500/20 text-orange-500 rounded-lg flex items-center justify-center border border-orange-500/30">
+            <i class="fas fa-map-marked-alt text-xl"></i>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold text-white">Configuración de Barrios y Tarifas</h2>
+            <p class="text-xs text-gray-400">Administra los barrios habilitados y sus precios de envío para domicilios</p>
+          </div>
+        </div>
+        <button (click)="closeBarriosModal()" class="text-gray-400 hover:text-white transition-colors text-xl">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Formulario para Crear / Editar Barrio -->
+      <div class="bg-gray-900/60 p-4 rounded-xl border border-gray-700/80 mb-6">
+        <h3 class="text-sm font-bold text-gray-300 mb-3 flex items-center gap-2">
+          <i class="fas" [class]="editingBarrioId() ? 'fa-edit text-orange-400' : 'fa-plus-circle text-green-400'"></i>
+          {{ editingBarrioId() ? 'Editar Barrio / Tarifa' : 'Agregar Nuevo Barrio' }}
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+          <div class="sm:col-span-6">
+            <label class="block text-xs font-bold text-gray-400 mb-1">Nombre del Barrio</label>
+            <input type="text" [value]="barrioNombreInput()" (input)="barrioNombreInput.set($any($event.target).value)" 
+                   class="w-full bg-gray-800 text-white border border-gray-600 focus:border-orange-500 rounded-lg px-3 py-2 text-sm" 
+                   placeholder="Ej: El Poblado, Centro, Sur...">
+          </div>
+          <div class="sm:col-span-4">
+            <label class="block text-xs font-bold text-gray-400 mb-1">Precio Domicilio ($)</label>
+            <input type="number" [value]="barrioPrecioInput()" (input)="barrioPrecioInput.set(+$any($event.target).value)" 
+                   class="w-full bg-gray-800 text-white border border-gray-600 focus:border-orange-500 rounded-lg px-3 py-2 text-sm font-mono" 
+                   placeholder="0" min="0" step="500">
+          </div>
+          <div class="sm:col-span-2 flex gap-2">
+            <button (click)="saveBarrio()" 
+                    class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-1">
+              <i class="fas" [class]="editingBarrioId() ? 'fa-save' : 'fa-plus'"></i>
+              {{ editingBarrioId() ? 'Guardar' : 'Agregar' }}
+            </button>
+            @if (editingBarrioId()) {
+              <button (click)="resetBarrioForm()" title="Cancelar edición" 
+                      class="bg-gray-700 hover:bg-gray-600 text-gray-300 py-2 px-3 rounded-lg text-sm transition-colors">
+                <i class="fas fa-undo"></i>
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Buscador y Contador -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div class="relative flex-1">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <input type="text" [value]="barriosSearchTerm()" (input)="barriosSearchTerm.set($any($event.target).value)"
+                 placeholder="Buscar barrio..." 
+                 class="w-full bg-gray-700/80 text-white border border-gray-600 focus:border-orange-500 rounded-lg pl-9 pr-4 py-2 text-sm">
+        </div>
+        <span class="text-xs text-gray-400 font-medium">
+          Total Barrios: <strong class="text-orange-400 font-mono">{{ filteredBarrios().length }}</strong>
+        </span>
+      </div>
+
+      <!-- Lista / Tabla de Barrios -->
+      <div class="max-h-64 overflow-y-auto rounded-xl border border-gray-700 bg-gray-900/40">
+        @if (filteredBarrios().length === 0) {
+          <div class="p-8 text-center text-gray-400">
+            <i class="fas fa-map-marker-alt text-3xl mb-2 text-gray-600 block"></i>
+            <p class="text-sm">No se encontraron barrios configurados.</p>
+          </div>
+        } @else {
+          <table class="w-full text-left text-sm text-gray-300">
+            <thead class="bg-gray-700/60 text-gray-400 text-xs uppercase font-bold sticky top-0">
+              <tr>
+                <th class="px-4 py-2.5">Barrio</th>
+                <th class="px-4 py-2.5">Tarifa / Precio</th>
+                <th class="px-4 py-2.5 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-700/50">
+              @for (b of filteredBarrios(); track b.id) {
+                <tr class="hover:bg-gray-700/40 transition-colors">
+                  <td class="px-4 py-3 font-semibold text-white">
+                    <i class="fas fa-map-pin text-orange-400 mr-2 text-xs"></i>
+                    {{ b.nombre }}
+                  </td>
+                  <td class="px-4 py-3 font-mono font-bold text-green-400">
+                    {{ b.precio | currency }}
+                  </td>
+                  <td class="px-4 py-3 text-right space-x-2">
+                    <button (click)="editBarrio(b)" title="Editar" 
+                            class="text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 p-2 rounded-lg transition-colors">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button (click)="deleteBarrio(b.id)" title="Eliminar" 
+                            class="text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 p-2 rounded-lg transition-colors">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="mt-6 border-t border-gray-700 pt-4 flex justify-end">
+        <button (click)="closeBarriosModal()" 
+                class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2.5 px-6 rounded-lg transition-colors">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal de Despacho estilo Checkout (2 columnas) -->
+@if (showDespachoModal() && selectedDomicilioDespacho()) {
+  <div class="fixed inset-0 bg-black/80 z-[120] flex justify-center items-center backdrop-blur-sm p-4 animate-fadeIn">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col md:flex-row max-h-[90vh] border border-gray-200">
+      
+      <!-- Izquierda: Selección de Pago y Barrio -->
+      <div class="w-full md:w-1/2 p-6 bg-gray-50 border-r border-gray-200 flex flex-col justify-between overflow-y-auto max-h-[90vh]">
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              @if (isCompletingMode()) {
+                <i class="fas fa-check-circle text-teal-600"></i> Completar Domicilio
+              } @else {
+                <i class="fas fa-motorcycle text-blue-600"></i> Despachar Domicilio
+              }
+            </h2>
+            <span class="text-xs font-mono font-bold bg-blue-100 text-blue-800 px-2.5 py-1 rounded-full border border-blue-200">
+              #{{ selectedDomicilioDespacho().orderNumber ? 'Orden #' + selectedDomicilioDespacho().orderNumber : selectedDomicilioDespacho().id }}
+            </span>
+          </div>
+
+          <!-- Datos del cliente -->
+          <div class="bg-white p-3.5 rounded-xl border border-gray-200 mb-5 text-sm space-y-1 text-gray-700 shadow-sm">
+            <p><i class="fas fa-user text-orange-500 w-5"></i> <strong>Cliente:</strong> {{ selectedDomicilioDespacho().cliente_nombre || selectedDomicilioDespacho().cliente }}</p>
+            <p><i class="fas fa-phone text-green-600 w-5"></i> <strong>Teléfono:</strong> {{ selectedDomicilioDespacho().cliente_telefono || 'N/A' }}</p>
+            <p><i class="fas fa-map-marker-alt text-red-500 w-5"></i> <strong>Dirección:</strong> {{ selectedDomicilioDespacho().cliente_direccion || 'N/A' }}</p>
+            @if (selectedDomicilioDespacho().cliente_barrio || selectedDomicilioDespacho().barrio) {
+              <p><i class="fas fa-building text-purple-600 w-5"></i> <strong>Barrio:</strong> {{ selectedDomicilioDespacho().cliente_barrio || selectedDomicilioDespacho().barrio }}</p>
+            }
+            <p><i class="fas fa-motorcycle text-blue-500 w-5"></i> <strong>Repartidor:</strong> {{ selectedDomicilioDespacho().domiciliario || 'Sin asignar' }}</p>
+          </div>
+
+          <!-- Módulo de Selección de Barrio y Tarifa de Domicilio -->
+          <div class="mb-5">
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5 flex items-center justify-between">
+              <span class="flex items-center gap-1.5"><i class="fas fa-map-marked-alt text-orange-500"></i> Barrio y Tarifa de Domicilio</span>
+              <span class="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                +{{ despachoTarifaDomicilio() | currency }}
+              </span>
+            </h3>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-1 bg-white rounded-xl border border-gray-200">
+              @for (b of barrios(); track b.id) {
+                <button type="button" 
+                        (click)="seleccionarBarrioDespacho(b)"
+                        [class]="despachoBarrioSeleccionado()?.id === b.id 
+                          ? 'border-2 border-teal-600 bg-teal-50/80 text-teal-900 font-bold shadow-sm' 
+                          : 'border border-gray-200 bg-gray-50/50 text-gray-700 hover:border-teal-300 font-medium'"
+                        class="p-2.5 rounded-lg text-left transition-all flex flex-col justify-between">
+                  <span class="text-xs truncate w-full flex items-center gap-1">
+                    <i class="fas fa-map-pin text-orange-400 text-[10px]"></i>
+                    {{ b.nombre }}
+                  </span>
+                  <span class="text-xs font-mono font-bold text-teal-700 mt-1">
+                    {{ b.precio | currency }}
+                  </span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Métodos de pago -->
+          <div>
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Métodos de Pago</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+              <!-- Efectivo -->
+              <button 
+                (click)="setDespachoPaymentMethod('Efectivo')"
+                class="flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all bg-white"
+                [class]="despachoMetodoPago() === 'Efectivo' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+                <i class="fas fa-money-bill-wave text-2xl text-green-600 mb-1"></i>
+                <span class="font-bold text-xs text-gray-800">Efectivo</span>
+              </button>
+
+              <!-- Tarjeta -->
+              <button 
+                (click)="setDespachoPaymentMethod('Tarjeta')"
+                class="flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all bg-white"
+                [class]="despachoMetodoPago() === 'Tarjeta' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+                <i class="fas fa-credit-card text-2xl text-blue-600 mb-1"></i>
+                <span class="font-bold text-xs text-gray-800">Tarjeta</span>
+              </button>
+
+              <!-- Transferencia -->
+              <button 
+                (click)="setDespachoPaymentMethod('Transferencia')"
+                class="flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all bg-white"
+                [class]="despachoMetodoPago() === 'Transferencia' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+                <i class="fas fa-exchange-alt text-2xl text-purple-600 mb-1"></i>
+                <span class="font-bold text-xs text-gray-800">Transferencia</span>
+              </button>
+
+              <!-- Nequi -->
+              <button 
+                (click)="setDespachoPaymentMethod('Nequi')"
+                class="flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all bg-white"
+                [class]="despachoMetodoPago() === 'Nequi' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+                <span class="text-lg font-black text-purple-900 mb-0.5">Nequi</span>
+                <span class="font-bold text-xs text-gray-800">Nequi</span>
+              </button>
+
+              <!-- Daviplata -->
+              <button 
+                (click)="setDespachoPaymentMethod('Daviplata')"
+                class="flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all bg-white"
+                [class]="despachoMetodoPago() === 'Daviplata' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+                <span class="text-base font-black text-red-600 mb-0.5">Daviplata</span>
+                <span class="font-bold text-xs text-gray-800">Daviplata</span>
+              </button>
+
+              <!-- Bre-B -->
+              <button 
+                (click)="setDespachoPaymentMethod('Bre-B')"
+                class="flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all bg-white"
+                [class]="despachoMetodoPago() === 'Bre-B' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+                <span class="text-base font-black text-teal-500 mb-0.5">Bre-B</span>
+                <span class="font-bold text-xs text-gray-800">Bre-B</span>
+              </button>
+
+              <!-- Bold -->
+              <button 
+                (click)="setDespachoPaymentMethod('Bold')"
+                class="flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all bg-white"
+                [class]="despachoMetodoPago() === 'Bold' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+                <span class="text-base font-black text-blue-600 mb-0.5">Bold</span>
+                <span class="font-bold text-xs text-gray-800">Bold</span>
+              </button>
+
+              <!-- Crédito -->
+              <button 
+                (click)="setDespachoPaymentMethod('Crédito')"
+                class="flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all bg-white"
+                [class]="despachoMetodoPago() === 'Crédito' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+                <i class="fas fa-money-check text-2xl text-gray-600 mb-1"></i>
+                <span class="font-bold text-xs text-gray-800">Crédito</span>
+              </button>
+
+              <!-- Pago Mixto -->
+              <button 
+                (click)="setDespachoPaymentMethod('Pago Mixto')"
+                class="flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all bg-white"
+                [class]="despachoMetodoPago() === 'Pago Mixto' ? 'border-teal-600 bg-teal-50/50 shadow-md' : 'border-gray-200 hover:border-teal-300'">
+                <i class="fas fa-random text-xl text-orange-500 mb-0.5"></i>
+                <span class="font-bold text-xs text-gray-800">Pago Mixto</span>
+              </button>
+            </div>
+
+            @if (despachoMetodoPago() === 'Pago Mixto') {
+              <div class="bg-orange-50/80 border border-orange-200 rounded-xl p-3.5 mt-3 space-y-2.5 shadow-inner">
+                <div class="flex justify-between items-center border-b border-orange-200 pb-2">
+                  <h3 class="font-bold text-gray-900 text-xs flex items-center gap-1.5">
+                    <i class="fas fa-random text-orange-600"></i> Desglose de Pago Mixto
+                  </h3>
+                  <button type="button" (click)="addDespachoPagoMixtoFila()" class="text-[11px] bg-orange-500 hover:bg-orange-600 text-white font-bold px-2 py-0.5 rounded transition-colors flex items-center gap-1 shadow">
+                    <i class="fas fa-plus"></i> Agregar Método
+                  </button>
+                </div>
+
+                @for (pago of despachoPagosMixtosList(); track $index) {
+                  <div class="flex items-center gap-1.5">
+                    <select [ngModel]="pago.metodo" (ngModelChange)="updateDespachoPagoMixtoFila($index, 'metodo', $event)"
+                            class="flex-1 bg-white border border-gray-300 text-gray-900 text-xs font-bold rounded-lg px-2 py-1 focus:border-teal-500 outline-none">
+                      <option value="Efectivo">💵 Efectivo</option>
+                      <option value="Tarjeta">💳 Tarjeta</option>
+                      <option value="Nequi">💜 Nequi</option>
+                      <option value="Daviplata">🔴 Daviplata</option>
+                      <option value="Bre-B">⚡ Bre-B</option>
+                      <option value="Bold">🟦 Bold</option>
+                      <option value="Crédito">📝 Crédito</option>
+                      <option value="Transferencia">🏦 Transferencia</option>
+                    </select>
+                    
+                    <input type="number" [ngModel]="pago.monto" (ngModelChange)="updateDespachoPagoMixtoFila($index, 'monto', $event)"
+                           class="w-28 bg-white border border-gray-300 text-gray-900 font-mono font-bold text-right text-xs rounded-lg px-2 py-1 focus:border-teal-500 outline-none" placeholder="Monto $">
+                    
+                    @if (despachoPagosMixtosList().length > 1) {
+                      <button type="button" (click)="removeDespachoPagoMixtoFila($index)" class="text-red-500 hover:text-red-700 p-1 transition-colors text-xs">
+                        <i class="fas fa-trash-alt"></i>
+                      </button>
+                    }
+                  </div>
+                }
+
+                <div class="pt-1.5 border-t border-orange-200 text-[11px] font-bold space-y-1">
+                  <div class="flex justify-between text-gray-700">
+                    <span>Suma de Pagos:</span>
+                    <span class="font-mono text-xs text-gray-900">{{ despachoTotalPagadoMixto() | currency }}</span>
+                  </div>
+                  @if (despachoDiferenciaMixto() > 0) {
+                    <div class="flex justify-between text-red-600 bg-red-100 p-1 rounded">
+                      <span>Falta por asignar:</span>
+                      <span class="font-mono">${{ despachoDiferenciaMixto().toLocaleString() }}</span>
+                    </div>
+                  } @else if (despachoDiferenciaMixto() < 0) {
+                    <div class="flex justify-between text-amber-800 bg-amber-100 p-1 rounded">
+                      <span>Excedente asignado:</span>
+                      <span class="font-mono">${{ (-despachoDiferenciaMixto()).toLocaleString() }}</span>
+                    </div>
+                  } @else {
+                    <div class="flex justify-between text-green-800 bg-green-100 p-1 rounded">
+                      <span>¡Total exacto cubierto!</span>
+                      <i class="fas fa-check-circle text-green-600"></i>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Derecha: Resumen de Venta / Domicilio (Sin Propinas) -->
+      <div class="w-full md:w-1/2 p-6 bg-white flex flex-col justify-between overflow-y-auto max-h-[90vh]">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-4">Resumen del Domicilio</h2>
+          
+          <!-- Lista de productos mini -->
+          <div class="max-h-32 overflow-y-auto mb-4 border-b border-gray-200 pb-2">
+            <table class="w-full text-sm text-gray-600">
+              <thead>
+                <tr class="uppercase text-xs text-gray-400 border-b border-gray-200">
+                  <th class="text-left pb-2 font-medium">Producto</th>
+                  <th class="text-center pb-2 font-medium">Cant.</th>
+                  <th class="text-right pb-2 font-medium">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of selectedDomicilioDespacho().items || []; track $index) {
+                  <tr>
+                    <td class="py-2 truncate max-w-[150px] font-medium text-gray-900">{{ item.nombre }}</td>
+                    <td class="py-2 text-center font-bold text-orange-500">{{ item.qty }}</td>
+                    <td class="py-2 text-right font-mono">{{ (item.precio * item.qty) | currency }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Subtotal -->
+          <div class="flex justify-between text-gray-600 mb-2 font-medium">
+            <span>Subtotal</span>
+            <span class="text-gray-900 font-mono">{{ despachoSubtotal() | currency }}</span>
+          </div>
+
+          <!-- Impuestos Configurables -->
+          <div class="flex justify-between items-center mb-2 pb-2 border-b border-gray-200">
+            <span class="text-gray-600 font-medium">Impuestos (%)</span>
+            <div class="flex items-center gap-2">
+              <input type="number" min="0" max="100" 
+                     [ngModel]="despachoImpuestoPct()" 
+                     (ngModelChange)="despachoImpuestoPct.set($event)" 
+                     class="w-16 border border-gray-300 rounded px-2 py-1 text-right text-gray-900 outline-none focus:border-teal-500 font-mono">
+              <span class="text-gray-900 w-24 text-right font-mono">{{ despachoImpuestoMonto() | currency }}</span>
+            </div>
+          </div>
+
+          <!-- Tarifa Domicilio Sumada al Total -->
+          <div class="flex justify-between items-center mb-3 pb-3 border-b border-gray-200 bg-orange-50/60 p-2.5 rounded-xl border border-orange-200">
+            <span class="text-sm font-bold text-orange-800 flex items-center gap-1.5">
+              <i class="fas fa-motorcycle text-orange-500"></i>
+              Domicilio ({{ despachoBarrioSeleccionado()?.nombre || 'General' }})
+            </span>
+            <span class="font-bold font-mono text-orange-600 text-base">
+              +{{ despachoTarifaDomicilio() | currency }}
+            </span>
+          </div>
+
+          <!-- Repartidor / Domiciliario -->
+          <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-200 bg-blue-50/80 p-2.5 rounded-xl border border-blue-200">
+            <span class="text-sm font-bold text-blue-900 flex items-center gap-1.5">
+              <i class="fas fa-motorcycle text-blue-600"></i> Repartidor:
+            </span>
+            <select [ngModel]="despachoDomiciliario()" 
+                    (ngModelChange)="despachoDomiciliario.set($event)" 
+                    class="bg-white border border-blue-300 text-blue-950 font-bold text-sm rounded-lg px-2.5 py-1 outline-none focus:border-blue-600 shadow-sm cursor-pointer">
+              <option value="" disabled>Seleccionar repartidor...</option>
+              @for (domi of domiciliarios(); track domi.id) {
+                <option [value]="domi.name + ' ' + domi.surname">{{ domi.name }} {{ domi.surname }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Total Principal -->
+          <div class="flex justify-between items-end mb-1">
+            <span class="text-xl font-black text-gray-900">TOTAL</span>
+            <span class="text-3xl font-black text-teal-700 font-mono">{{ despachoTotal() | currency }}</span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-500 mb-4">
+            <span>Método de pago</span>
+            <span class="font-bold text-gray-900">{{ despachoMetodoPago() }}</span>
+          </div>
+
+          <!-- Efectivo / Vuelto -->
+          @if (despachoMetodoPago() === 'Efectivo' || (despachoMetodoPago() === 'Pago Mixto' && despachoMontoEfectivoMixto() > 0)) {
+            <div class="bg-teal-50 rounded-xl p-4 mb-4 flex flex-col gap-3 border border-teal-100">
+              <div class="flex justify-between items-center">
+                <span class="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <i class="fas fa-money-bill text-green-600"></i>
+                  {{ despachoMetodoPago() === 'Pago Mixto' ? 'Cliente entrega en efectivo' : 'Cliente entrega' }}
+                </span>
+                <input type="number" 
+                       [ngModel]="despachoEntrega()" 
+                       (ngModelChange)="despachoEntrega.set($event)" 
+                       class="w-36 border border-teal-200 rounded-lg px-3 py-2 text-right font-bold font-mono text-gray-900 outline-none focus:border-teal-500">
+              </div>
+              <div class="flex justify-between items-center text-lg">
+                <span class="font-bold text-gray-900">Vuelto (Cambio al Domiciliario)</span>
+                <span class="font-black text-teal-700 font-mono">
+                  {{ (despachoMetodoPago() === 'Pago Mixto' ? despachoVueltoMixto() : despachoVuelto()) | currency }}
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200 mt-4">
+          <button (click)="cerrarModalDespacho()" 
+                  class="px-6 py-3 rounded-lg border-2 border-red-400 text-red-500 font-bold hover:bg-red-50 transition-colors">
+            Cancelar
+          </button>
+
+          <button (click)="confirmarDespachoOrder()" 
+                  [class]="isCompletingMode() ? 'bg-teal-700 hover:bg-teal-800' : 'bg-blue-600 hover:bg-blue-700'"
+                  class="flex-1 px-4 py-3 rounded-lg text-white font-bold transition-colors flex items-center justify-center gap-2 shadow-lg text-base">
+            @if (isCompletingMode()) {
+              <i class="fas fa-check text-lg"></i> Confirmar y Completar
+            } @else if (selectedDomicilioDespacho()?.id && selectedDomicilioDespacho()?.estado) {
+              <i class="fas fa-motorcycle text-lg"></i> Despachar e Imprimir Recibo
+            } @else {
+              <i class="fas fa-credit-card text-lg"></i> Confirmar Pago y Enviar a Cocina
+            }
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- Modal para Editar Precio y Pago de Domicilio del Historial -->
+@if (showEditHistoryOrderModal() && editingHistoryOrder()) {
+  <div class="fixed inset-0 bg-black/80 z-[220] flex justify-center items-center backdrop-blur-sm p-4">
+    <div class="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-lg overflow-hidden flex flex-col p-6">
+      
+      <div class="flex justify-between items-center pb-4 border-b border-gray-700 mb-4">
+        <h3 class="text-xl font-bold text-orange-500 flex items-center gap-2">
+          <i class="fas fa-edit"></i> Editar Domicilio del Historial
+        </h3>
+        <button (click)="showEditHistoryOrderModal.set(false)" class="text-gray-400 hover:text-white transition-colors">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-sm text-gray-300">
+        <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-700 space-y-1">
+          <p><strong class="text-white">Cliente:</strong> {{ editingHistoryOrder().cliente_nombre || 'Cliente' }}</p>
+          <p><strong class="text-white">ID / Orden:</strong> #{{ editingHistoryOrder().orderNumber || shortId(editingHistoryOrder().id) }}</p>
+          <p><strong class="text-white">Fecha:</strong> {{ editingHistoryOrder().fecha | date:'medium' }}</p>
+        </div>
+
+        <!-- Editar Precio Total -->
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Precio Total del Domicilio ($)</label>
+          <input type="number" [ngModel]="editingHistoryTotal()" (ngModelChange)="editingHistoryTotal.set(+$event)"
+                 class="w-full bg-gray-700 text-white font-mono font-bold text-lg border border-gray-600 focus:border-orange-500 rounded-lg px-3 py-2 outline-none">
+          <p class="text-[11px] text-gray-400 mt-1">Modificar el precio total actualizará automáticamente el Cierre de Caja y los reportes diarios.</p>
+        </div>
+
+        <!-- Editar Método de Pago -->
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Método de Pago</label>
+          <select [ngModel]="editingHistoryMetodoPago()" (ngModelChange)="editingHistoryMetodoPago.set($event)"
+                  class="w-full bg-gray-700 text-white font-bold border border-gray-600 focus:border-orange-500 rounded-lg px-3 py-2 outline-none cursor-pointer">
+            <option value="Efectivo">💵 Efectivo</option>
+            <option value="Tarjeta">💳 Tarjeta</option>
+            <option value="Nequi">💜 Nequi</option>
+            <option value="Daviplata">🔴 Daviplata</option>
+            <option value="Bre-B">⚡ Bre-B</option>
+            <option value="Bold">🟦 Bold</option>
+            <option value="Crédito">📝 Crédito</option>
+            <option value="Transferencia">🏦 Transferencia</option>
+            <option value="Pago Mixto">🔀 Pago Mixto</option>
+            <option value="Otros">📦 Otros</option>
+          </select>
+        </div>
+
+        <!-- Si es Pago Mixto -->
+        @if (editingHistoryMetodoPago() === 'Pago Mixto') {
+          <div class="bg-gray-900/80 border border-orange-500/40 rounded-xl p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-gray-700 pb-2">
+              <span class="text-xs font-bold text-orange-400 flex items-center gap-1">
+                <i class="fas fa-random"></i> Desglose de Pago Mixto
+              </span>
+              <button type="button" (click)="addEditingHistoryPagoMixtoFila()" class="text-xs bg-orange-500 hover:bg-orange-600 text-white font-bold px-2 py-0.5 rounded">
+                + Añadir
+              </button>
+            </div>
+
+            @for (pago of editingHistoryPagosMixtos(); track $index) {
+              <div class="flex items-center gap-2">
+                <select [ngModel]="pago.metodo" (ngModelChange)="updateEditingHistoryPagoMixtoFila($index, 'metodo', $event)"
+                        class="flex-1 bg-gray-800 border border-gray-600 text-white text-xs font-bold rounded px-2 py-1.5 focus:border-orange-500">
+                  <option value="Efectivo">💵 Efectivo</option>
+                  <option value="Tarjeta">💳 Tarjeta</option>
+                  <option value="Nequi">💜 Nequi</option>
+                  <option value="Daviplata">🔴 Daviplata</option>
+                  <option value="Bre-B">⚡ Bre-B</option>
+                  <option value="Bold">🟦 Bold</option>
+                  <option value="Crédito">📝 Crédito</option>
+                  <option value="Transferencia">🏦 Transferencia</option>
+                </select>
+                <input type="number" [ngModel]="pago.monto" (ngModelChange)="updateEditingHistoryPagoMixtoFila($index, 'monto', $event)"
+                       class="w-28 bg-gray-800 border border-gray-600 text-white font-mono font-bold text-right text-xs rounded px-2 py-1.5 focus:border-orange-500" placeholder="Monto $">
+                @if (editingHistoryPagosMixtos().length > 1) {
+                  <button type="button" (click)="removeEditingHistoryPagoMixtoFila($index)" class="text-red-400 hover:text-red-300">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="flex gap-3 pt-6 mt-4 border-t border-gray-700">
+        <button (click)="showEditHistoryOrderModal.set(false)" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2.5 px-4 rounded-xl transition-colors">
+          Cancelar
+        </button>
+        <button (click)="guardarCambiosPedidoHistorial()" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg">
+          <i class="fas fa-save"></i> Guardar Cambios
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+

@@ -33,7 +33,7 @@
           </div>
           <div class="flex justify-between">
             <span class="text-gray-400">Costo Total:</span>
-            <span class="font-semibold text-green-600">${{ formatCurrency(row.original.costo_total) }}</span>
+            <span class="font-semibold text-green-600">{{ row.original.costo_total | currency }}</span>
           </div>
           @if (row.original.motivo) {
             <div class="flex justify-between">

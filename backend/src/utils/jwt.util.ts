@@ -6,8 +6,9 @@ export class JwtUtil {
   private static readonly JWT_SECRET: string =
     process.env.JWT_SECRET || 'aVerySecretString';
 
-  // Tiempo de expiración del token
-  private static readonly TOKEN_EXPIRATION: string = '1h';
+  // Tiempo de expiración del token (12h por defecto para turnos completos de trabajo)
+  private static readonly TOKEN_EXPIRATION: string =
+    process.env.JWT_EXPIRES_IN || '12h';
 
   /**
    * Genera un token JWT para un usuario.
@@ -50,8 +51,8 @@ export class JwtUtil {
       // Verificar el token
       const decoded = jwt.verify(token, this.JWT_SECRET) as jwt.JwtPayload;
 
-      // Validar el payload del token
-      if (!decoded?.data?.role_id || !decoded?.data?.user_id) {
+      // Validar el payload del token - debe tener user_id
+      if (!decoded?.data?.user_id) {
         throw new Error('Invalid token payload');
       }
 

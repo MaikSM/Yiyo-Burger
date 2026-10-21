@@ -4,15 +4,12 @@ import { VerifyIdMiddleware } from '../../../core/middlewares/verifyId.middlewar
 import multer from 'multer';
 import path from 'path';
 
+import { getUploadsDir } from '../../../core/config/uploads.config';
+
 // Configuración de multer para subir imágenes
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../../uploads');
-    // Crear el directorio si no existe
-    if (!require('fs').existsSync(uploadPath)) {
-      require('fs').mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath); // Directorio donde se guardarán las imágenes
+  destination: (_req, _file, cb) => {
+    cb(null, getUploadsDir());
   },
   filename: (req, file, cb) => {
     // Generar nombre único para el archivo

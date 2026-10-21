@@ -1,4 +1,4 @@
-import { DatabaseConnection } from '../database/DatabaseConnection';
+import { DatabaseConnection } from '../../core/database/DatabaseConnection';
 import { PlatoEntity } from '../menu/entities/plato.entity';
 import { CATEGORIAS_PLATO } from '../menu/services/platos.service';
 

@@ -4,7 +4,7 @@ import { validate, ValidationError } from 'class-validator';
 import { PlatosService } from '../services/platos.service';
 import { CreatePlatoDto } from '../dtos/create-plato.dto';
 import { PlatoEntity } from '../entities/plato.entity';
-import { DatabaseConnection } from '../../database/DatabaseConnection';
+import { DatabaseConnection } from '../../../core/database/DatabaseConnection';
 import { CATEGORIAS_PLATO } from '../services/platos.service';
 import path from 'path';
 import fs from 'fs';
@@ -31,9 +31,11 @@ export class PlatosController {
         precio: plato.precio,
         categoria: plato.categoria,
         imagen_url: plato.imagen_url,
+        es_especial: plato.es_especial,
         disponible: plato.disponible,
         tiempo_preparacion_minutos: plato.tiempo_preparacion_minutos,
         alergenos: plato.alergenos,
+        precios_por_tamano: plato.precios_por_tamano,
         created_at: plato.created_at,
       }));
 
@@ -60,9 +62,11 @@ export class PlatosController {
         precio: data.precio,
         categoria: data.categoria,
         imagen_url: data.imagen_url,
+        es_especial: data.es_especial,
         disponible: data.disponible,
         tiempo_preparacion_minutos: data.tiempo_preparacion_minutos,
         alergenos: data.alergenos,
+        precios_por_tamano: data.precios_por_tamano,
         created_at: data.created_at,
       });
     } catch (error) {
@@ -106,9 +110,11 @@ export class PlatosController {
         precio: newPlatoData.precio,
         categoria: newPlatoData.categoria,
         imagen_url: newPlatoData.imagen_url,
+        es_especial: newPlatoData.es_especial,
         disponible: newPlatoData.disponible,
         tiempo_preparacion_minutos: newPlatoData.tiempo_preparacion_minutos,
         alergenos: newPlatoData.alergenos,
+        precios_por_tamano: newPlatoData.precios_por_tamano,
         created_at: newPlatoData.created_at,
       });
     } catch (error) {
@@ -135,7 +141,7 @@ export class PlatosController {
       // No validar el DTO, solo actualizar directamente
       await this.service.update(plato_id, req.body);
 
-      const data: PlatoEntity | null = await this.service.findOne(plato_id);
+      const data: PlatoEntity | null = await this.service.findOne(plato_id, true);
 
       return res.status(200).json({
         plato_id: data.plato_id,
@@ -144,9 +150,11 @@ export class PlatosController {
         precio: data.precio,
         categoria: data.categoria,
         imagen_url: data.imagen_url,
+        es_especial: data.es_especial,
         disponible: data.disponible,
         tiempo_preparacion_minutos: data.tiempo_preparacion_minutos,
         alergenos: data.alergenos,
+        precios_por_tamano: data.precios_por_tamano,
         created_at: data.created_at,
       });
     } catch (error) {

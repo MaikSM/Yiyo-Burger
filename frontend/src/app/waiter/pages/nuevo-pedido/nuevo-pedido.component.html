@@ -1,230 +1,260 @@
-<div class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
-  <!-- Header -->
-  <header class="bg-gray-800 shadow">
-    <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-orange-400">➕ Nuevo Pedido</h1>
+<div class="space-y-6">
+  <!-- Cabecera -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gray-900 p-4 rounded-2xl border border-gray-800 shadow-lg">
+    <div>
+      <h1 class="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+        <span>📝</span> Tomar Pedido
+      </h1>
+      <p class="text-xs sm:text-sm text-gray-400 mt-1">
+        Selecciona la mesa, añade los platos del menú y envía la comanda a la cocina.
+      </p>
     </div>
-  </header>
 
-  <!-- Main -->
-  <main class="flex-1 max-w-6xl mx-auto px-6 py-8">
-    <div class="grid lg:grid-cols-3 gap-6">
-      <!-- Left: Mesa / Cliente / Notas -->
-      <section class="lg:col-span-1 bg-gray-800 p-6 rounded-xl shadow">
-        <h2 class="text-lg font-semibold text-gray-200 mb-4">Información</h2>
-        <form [formGroup]="form">
-          <label class="block text-sm text-gray-300 mb-1">Mesa</label>
-          <select
-            formControlName="mesa"
-            class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 mb-4"
-          >
-            <option value="">-- Selecciona mesa --</option>
-            <option
-              *ngFor="let mesa of mesas"
-              [value]="mesa.mesa_id"
-              [disabled]="hasActiveOrderForTable(mesa.mesa_id.toString())"
-              [class.text-gray-500]="hasActiveOrderForTable(mesa.mesa_id.toString())"
+    <div class="flex items-center gap-2">
+      <a
+        routerLink="/waiter/mesas"
+        class="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs rounded-xl font-medium border border-gray-700 transition-all flex items-center gap-1.5"
+      >
+        <span>🪑</span>
+        <span>Ver Mesas</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- Columna Izquierda: Datos de la Mesa y Cliente (lg:col-span-4) -->
+    <div class="lg:col-span-4 space-y-4">
+      <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 shadow-md">
+        <h2 class="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+          <span>📍</span> Mesa y Observaciones
+        </h2>
+
+        <form [formGroup]="form" class="space-y-3.5">
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1">
+              Mesa <span class="text-red-400">*</span>
+            </label>
+            <select
+              formControlName="mesa"
+              class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 font-medium"
             >
-              Mesa {{ mesa.numero }} ({{ mesa.estado }})
-              <span *ngIf="hasActiveOrderForTable(mesa.mesa_id.toString())" class="text-red-400">- PEDIDO ACTIVO</span>
-            </option>
-          </select>
+              <option value="">-- Selecciona una mesa --</option>
+              <option
+                *ngFor="let mesa of mesas"
+                [value]="mesa.numero"
+              >
+                Mesa {{ mesa.numero }} ({{ mesa.estado | titlecase }})
+                {{ hasActiveOrderForTable(mesa.numero.toString()) ? '🔴 CON PEDIDO ACTIVO' : '🟢 LIBRE' }}
+              </option>
+            </select>
+          </div>
 
-          <label class="block text-sm text-gray-300 mb-1">Cliente (opcional)</label>
-          <input
-            formControlName="cliente"
-            type="text"
-            placeholder="Nombre del cliente"
-            class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 mb-4"
-          />
+          <div *ngIf="form.value.mesa && hasActiveOrderForTable(form.value.mesa.toString())" class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-300">
+            ⚠️ <strong>Atención:</strong> La Mesa {{ form.value.mesa }} tiene un pedido en curso. Los platos que selecciones se sumarán como <strong>ADICIÓN</strong> y se enviará la comanda extra a cocina.
+          </div>
 
-          <label class="block text-sm text-gray-300 mb-1">Notas</label>
-          <textarea
-            formControlName="notas"
-            rows="4"
-            class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 mb-4"
-            placeholder="Ej. Sin picante, poco sal..."
-          ></textarea>
-        </form>
-
-        <button
-          (click)="saveDraft()"
-          class="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded mb-2 transition"
-        >
-          Guardar borrador
-        </button>
-        <button
-          (click)="clearDraft()"
-          class="w-full bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition"
-        >
-          Limpiar
-        </button>
-      </section>
-
-      <!-- Center: Menu -->
-      <section class="lg:col-span-1 bg-gray-800 p-6 rounded-xl shadow overflow-hidden flex flex-col h-[calc(100vh-8rem)]">
-        <div class="flex flex-col gap-4 mb-4">
-          <div class="flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-gray-200">Menú</h2>
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1">
+              Nombre del Cliente (opcional)
+            </label>
             <input
-              [(ngModel)]="searchTerm"
-              (input)="onSearch()"
-              type="search"
-              placeholder="Buscar platillo..."
-              class="bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm w-48 focus:w-64 transition-all"
+              formControlName="cliente"
+              type="text"
+              placeholder="Ej. Juan Gómez"
+              class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500"
             />
           </div>
 
-          <!-- Category Filters -->
-          <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1">
+              Notas para Cocina / Observaciones
+            </label>
+            <textarea
+              formControlName="notas"
+              rows="3"
+              class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500 placeholder-gray-600"
+              placeholder="Ej. Sin cebolla, carne bien cocida, salsas aparte..."
+            ></textarea>
+          </div>
+        </form>
+
+        <div class="flex gap-2 pt-3 mt-2 border-t border-gray-800">
+          <button
+            type="button"
+            (click)="saveDraft()"
+            class="flex-1 py-2 px-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-medium border border-gray-700 transition"
+          >
+            💾 Guardar Borrador
+          </button>
+          <button
+            type="button"
+            (click)="clearDraft()"
+            class="py-2 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl text-xs font-medium border border-rose-500/30 transition"
+          >
+            🗑️ Limpiar
+          </button>
+        </div>
+      </div>
+
+      <!-- Resumen del Carrito en Móvil y Desktop -->
+      <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 shadow-md">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <span>🛒</span> Carrito ({{ order.items.length }})
+          </h2>
+          <span class="text-xs text-orange-400 font-semibold" *ngIf="form.value.mesa">
+            Mesa {{ form.value.mesa }}
+          </span>
+        </div>
+
+        <div *ngIf="!order.items.length" class="text-center py-8 text-gray-500 text-xs">
+          Selecciona platillos del menú a la derecha para armar el pedido.
+        </div>
+
+        <div *ngIf="order.items.length" class="space-y-2.5 max-h-72 overflow-y-auto pr-1 divide-y divide-gray-800/80">
+          <div
+            *ngFor="let item of order.items"
+            class="pt-2 flex items-center justify-between gap-2 text-xs"
+          >
+            <div class="flex-1 min-w-0">
+              <p class="font-bold text-white truncate">{{ item.nombre }}</p>
+              <p class="text-gray-400 font-mono text-[11px]">${{ item.precio | number:'1.0-0' }} c/u</p>
+            </div>
+
+            <!-- Cantidad controls -->
+            <div class="flex items-center gap-1.5">
+              <button
+                type="button"
+                (click)="changeQty(item.id, item.qty - 1)"
+                class="w-6 h-6 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold flex items-center justify-center transition"
+              >
+                -
+              </button>
+              <span class="w-6 text-center font-bold text-white text-xs">{{ item.qty }}</span>
+              <button
+                type="button"
+                (click)="changeQty(item.id, item.qty + 1)"
+                class="w-6 h-6 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold flex items-center justify-center transition"
+              >
+                +
+              </button>
+            </div>
+
+            <div class="text-right w-16">
+              <p class="font-black text-emerald-400 font-mono">${{ (item.precio * item.qty) | number:'1.0-0' }}</p>
+              <button
+                type="button"
+                (click)="removeItem(item.id)"
+                class="text-[10px] text-rose-400 hover:underline"
+              >
+                Quitar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Totales y Botón Enviar -->
+        <div class="mt-4 pt-4 border-t border-gray-800 space-y-2">
+          <div class="flex justify-between items-center text-xs text-gray-400">
+            <span>Subtotal:</span>
+            <span class="font-mono text-gray-200">${{ order.subtotal | number:'1.0-0' }}</span>
+          </div>
+          <div class="flex justify-between items-center text-base font-black text-white pt-2 border-t border-gray-800">
+            <span>Total:</span>
+            <span class="font-mono text-emerald-400 text-lg">${{ order.total | number:'1.0-0' }}</span>
+          </div>
+
+          <button
+            type="button"
+            (click)="registerOrder()"
+            [disabled]="isSubmitting || !order.items.length || !form.value.mesa"
+            class="w-full mt-3 py-3 px-4 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-sm rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            <span *ngIf="!isSubmitting">🚀 Enviar Pedido a Cocina</span>
+            <span *ngIf="isSubmitting" class="flex items-center gap-2">
+              <span class="animate-spin">⏳</span> Guardando e Imprimiendo...
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Columna Derecha: Catálogo del Menú (lg:col-span-8) -->
+    <div class="lg:col-span-8 space-y-4">
+      <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 shadow-md">
+        <!-- Barra de búsqueda y categorías -->
+        <div class="space-y-3 mb-4">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <span>🍔</span> Menú Disponible ({{ filteredMenu.length }})
+            </h2>
+
+            <div class="relative w-full sm:w-64">
+              <input
+                [(ngModel)]="searchTerm"
+                (input)="onSearch()"
+                type="search"
+                placeholder="Buscar plato o bebida..."
+                class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
+              />
+            </div>
+          </div>
+
+          <!-- Filtro de Categorías horizontal con scroll suave -->
+          <div class="flex gap-2 overflow-x-auto pb-1.5 scrollbar-thin">
             <button
               *ngFor="let cat of categories"
+              type="button"
               (click)="selectCategory(cat)"
-              [class.bg-orange-500]="selectedCategory === cat"
+              class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors"
+              [class.bg-orange-600]="selectedCategory === cat"
               [class.text-white]="selectedCategory === cat"
-              [class.bg-gray-700]="selectedCategory !== cat"
+              [class.bg-gray-800]="selectedCategory !== cat"
               [class.text-gray-300]="selectedCategory !== cat"
-              class="px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap hover:bg-orange-600 hover:text-white transition-colors"
+              [class.hover:bg-gray-700]="selectedCategory !== cat"
             >
               {{ cat }}
             </button>
           </div>
         </div>
 
-        <div class="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1">
+        <!-- Cuadrícula de Platos -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
           <div
             *ngFor="let plato of filteredMenu"
-            class="bg-gradient-to-r from-gray-700/70 to-gray-800/70 border border-gray-600 p-4 rounded-2xl shadow-lg hover:shadow-2xl hover:border-orange-500/50 transition-all duration-300 group overflow-hidden flex items-center gap-4 transform hover:scale-102"
+            class="bg-gray-950/70 border border-gray-800 hover:border-orange-500/50 rounded-2xl p-3.5 transition-all flex flex-col justify-between group shadow-sm hover:shadow-md"
           >
-            <!-- Image placeholder or actual image if available -->
-            <div class="w-20 h-20 bg-gray-800 rounded-xl relative overflow-hidden flex-shrink-0">
-               <img
-                *ngIf="plato.imagen_url"
-                [src]="plato.imagen_url"
-                alt="{{ plato.nombre }}"
-                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                onerror="this.style.display='none'"
+            <div>
+              <div class="flex justify-between items-start gap-2 mb-1.5">
+                <h3 class="font-bold text-white text-sm group-hover:text-orange-400 transition-colors leading-snug">
+                  {{ plato.nombre }}
+                </h3>
+                <span class="text-xs font-black text-emerald-400 font-mono whitespace-nowrap">
+                  ${{ plato.precio | number:'1.0-0' }}
+                </span>
+              </div>
+              <p *ngIf="plato.descripcion" class="text-[11px] text-gray-400 line-clamp-2 mb-3">
+                {{ plato.descripcion }}
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2 border-t border-gray-900">
+              <button
+                type="button"
+                (click)="addItem(plato, 1)"
+                class="flex-1 py-1.5 px-3 bg-orange-600/90 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center gap-1 shadow-sm"
               >
-              <div *ngIf="!plato.imagen_url" class="w-full h-full flex items-center justify-center text-gray-600">
-                <span class="text-2xl">🍽️</span>
-              </div>
-            </div>
-
-            <div class="flex-1 min-w-0">
-              <div class="flex items-start justify-between mb-2">
-                <h3 class="font-bold text-gray-100 text-lg leading-tight truncate">{{ plato.nombre }}</h3>
-                <span class="font-bold text-orange-400 text-lg ml-2 flex-shrink-0">{{ plato.precio | copCurrency }}</span>
-              </div>
-              <p class="text-sm text-gray-400 mb-3 line-clamp-2">{{ plato.descripcion }}</p>
-
-              <div class="flex items-center gap-3">
-                <input
-                  [value]="quantities.get(plato.plato_id) || 1"
-                  (input)="onQtyChange(plato.plato_id, $event)"
-                  type="number"
-                  min="1"
-                  class="w-16 bg-gray-900 border border-gray-600 rounded-lg px-2 py-1.5 text-center text-sm text-gray-200 focus:border-orange-500 focus:outline-none"
-                />
-                <button
-                  (click)="addItem(plato, quantities.get(plato.plato_id) || 1)"
-                  class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95 flex-1"
-                >
-                  Agregar
-                </button>
-              </div>
+                <span>➕</span>
+                <span>Agregar</span>
+              </button>
             </div>
           </div>
         </div>
-      </section>
 
-      <!-- Right: Resumen pedido -->
-      <aside class="lg:col-span-1 bg-gray-800 p-6 rounded-xl shadow flex flex-col">
-        <h2 class="text-lg font-semibold text-gray-200 mb-4">Resumen del pedido</h2>
-        <div class="flex-1 overflow-auto">
-          <table class="w-full text-sm text-gray-300">
-            <thead class="text-gray-400">
-              <tr>
-                <th class="text-left py-2">Item</th>
-                <th class="text-right py-2">Cant</th>
-                <th class="text-right py-2">Subtotal</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngIf="!order.items.length">
-                <td class="py-4 px-2 text-gray-400" colspan="4">No hay artículos en el pedido</td>
-              </tr>
-              <tr *ngFor="let item of order.items">
-                <td class="py-2 px-2">{{ item.nombre }}</td>
-                <td class="py-2 px-2 text-right">
-                  <input
-                    [value]="item.qty"
-                    (change)="onQtyChangeOrder(item.id, $event)"
-                    class="qtyField w-14 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-right text-sm"
-                    type="number"
-                    min="1"
-                  />
-                </td>
-                <td class="py-2 px-2 text-right">{{ (item.precio * item.qty) | copCurrency }}</td>
-                <td class="py-2 px-2 text-right">
-                  <button
-                    (click)="removeItem(item.id)"
-                    class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-sm"
-                  >
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div *ngIf="!filteredMenu.length" class="text-center py-12 text-gray-500 text-xs">
+          No se encontraron platos que coincidan con la búsqueda.
         </div>
-
-        <div class="mt-4 border-t border-gray-700 pt-4">
-          <div class="flex justify-between text-gray-300 mb-2">
-            <span>Subtotal</span>
-            <span>{{ order.subtotal | copCurrency }}</span>
-          </div>
-          <div class="flex justify-between text-gray-300 mb-4">
-            <span>Impuesto (10%)</span>
-            <span>{{ order.tax | copCurrency }}</span>
-          </div>
-          <div class="flex justify-between text-orange-400 text-lg font-bold mb-4">
-            <span>Total</span>
-            <span>{{ order.total | copCurrency }}</span>
-          </div>
-
-          <div class="flex gap-3 mb-4">
-            <button
-              (click)="printReceipt()"
-              class="flex-1 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded transition"
-            >
-              Imprimir Comprobante
-            </button>
-          </div>
-          <div class="flex gap-3">
-            <button
-              (click)="registerOrder()"
-              class="flex-1 bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded transition transform hover:scale-105"
-            >
-              Registrar Pedido
-            </button>
-            <a
-              routerLink="/waiter/pedidos"
-              class="flex-1 text-center bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded transition"
-            >
-              Volver
-            </a>
-          </div>
-        </div>
-      </aside>
+      </div>
     </div>
-  </main>
-
-  <!-- Footer -->
-  <footer class="bg-gray-800 py-4">
-    <div class="max-w-6xl mx-auto px-6 flex justify-between items-center text-sm text-gray-400">
-      <span>© 2025 RestauSync</span>
-      <span>Hecho con ❤️ y TailwindCSS</span>
-    </div>
-  </footer>
+  </div>
 </div>

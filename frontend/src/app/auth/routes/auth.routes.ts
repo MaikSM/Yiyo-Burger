@@ -19,6 +19,18 @@ export const appRoutes: Routes = [
           import('../pages/register/auth-register-page.component').then(m => m.AuthRegisterPageComponent),
       },
       {
+        path: 'recuperar-contrasena',
+        title: 'Recuperar Contraseña',
+        loadComponent: () =>
+          import('../pages/recuperar-contrasena/auth-recuperar-contrasena-page.component').then(m => m.AuthRecuperarContrasenaPageComponent),
+      },
+      {
+        path: 'restablecer-contrasena',
+        title: 'Restablecer Contraseña',
+        loadComponent: () =>
+          import('../pages/restablecer-contrasena/auth-restablecer-contrasena-page.component').then(m => m.AuthRestablecerContrasenaPageComponent),
+      },
+      {
         path: '',
         title: 'Redirecting',
         redirectTo: 'login',

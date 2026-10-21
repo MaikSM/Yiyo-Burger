@@ -13,7 +13,7 @@ exports.AuthService = void 0;
 // Importación de la entidad UserEntity, que representa la estructura de un usuario en la base de datos.
 const user_entity_1 = require("../../user/entities/user.entity");
 // Importación de la clase DatabaseConnection, utilizada para obtener la conexión a la base de datos.
-const DatabaseConnection_1 = require("../../database/DatabaseConnection");
+const DatabaseConnection_1 = require("../../../core/database/DatabaseConnection");
 // Importación de JwtUtil, una utilidad para la generación de tokens JWT.
 const jwt_util_1 = require("../../../utils/jwt.util");
 // Definición de la clase AuthService que implementa la interfaz IAuthRepository.
@@ -80,6 +80,46 @@ class AuthService {
     updateById(id, data) {
         return __awaiter(this, void 0, void 0, function* () {
             return yield this.repository.update(id, data);
+        });
+    }
+    // Genera un token temporal para la recuperación de contraseña
+    generatePasswordRecoveryToken(userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const data = {
+                user_id: userId,
+                type: 'password_recovery',
+                exp: Math.floor(Date.now() / 1000) + (15 * 60), // Expira en 15 minutos
+            };
+            return yield jwt_util_1.JwtUtil.generateToken(data);
+        });
+    }
+    // Verifica un token de recuperación de contraseña
+    verifyPasswordRecoveryToken(token) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
+            try {
+                const decoded = yield jwt_util_1.JwtUtil.verifyToken(token);
+                if (((_a = decoded === null || decoded === void 0 ? void 0 : decoded.data) === null || _a === void 0 ? void 0 : _a.type) === 'password_recovery' && ((_b = decoded === null || decoded === void 0 ? void 0 : decoded.data) === null || _b === void 0 ? void 0 : _b.user_id)) {
+                    return Number(decoded.data.user_id);
+                }
+                return null;
+            }
+            catch (error) {
+                return null;
+            }
+        });
+    }
+    // Invalida un token de recuperación de contraseña (opcional)
+    invalidatePasswordRecoveryToken(token) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // En una implementación real, podrías almacenar tokens inválidos en una base de datos
+            // Por ahora, simplemente no hacer nada ya que JWT es stateless
+        });
+    }
+    // Actualiza la contraseña de un usuario
+    updatePassword(userId, hashedPassword) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this.repository.update(userId, { password: hashedPassword });
         });
     }
 }

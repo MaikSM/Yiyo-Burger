@@ -23,6 +23,7 @@ export class IngredientesController {
 
       const formattedData = data.map((item) => ({
         ingrediente_id: item.ingrediente_id,
+        id: item.ingrediente_id,
         nombre: item.nombre,
         categoria: item.categoria,
         unidad_medida: item.unidad_medida,
@@ -31,7 +32,7 @@ export class IngredientesController {
         stock_maximo: item.stock_maximo,
         costo_unitario: item.costo_unitario,
         valor_total: item.valor_total,
-        estado_stock: item.estado_stock,
+        stock: item.stock,
         necesita_reposicion: item.necesita_reposicion,
         descripcion: item.descripcion,
         activo: item.activo,
@@ -65,7 +66,8 @@ export class IngredientesController {
         stock_maximo: data?.stock_maximo,
         costo_unitario: data?.costo_unitario,
         valor_total: data?.valor_total,
-        estado_stock: data?.estado_stock,
+        stock: data?.stock,
+        estado: data?.estado,
         necesita_reposicion: data?.necesita_reposicion,
         descripcion: data?.descripcion,
         activo: data?.activo,
@@ -122,7 +124,7 @@ export class IngredientesController {
         stock_maximo: newIngredienteData?.stock_maximo,
         costo_unitario: newIngredienteData?.costo_unitario,
         valor_total: newIngredienteData?.valor_total,
-        estado_stock: newIngredienteData?.estado_stock,
+        stock: newIngredienteData?.stock,
         necesita_reposicion: newIngredienteData?.necesita_reposicion,
         descripcion: newIngredienteData?.descripcion,
         activo: newIngredienteData?.activo,
@@ -140,6 +142,9 @@ export class IngredientesController {
     try {
       const ingrediente_id = parseInt(req.params.id);
 
+      console.log('📝 Update request - ID:', ingrediente_id);
+      console.log('📝 Update request - Body:', JSON.stringify(req.body));
+
       const toUpdate: IngredienteEntity | null =
         await this.service.findOne(ingrediente_id);
 
@@ -153,6 +158,7 @@ export class IngredientesController {
       const errors: ValidationError[] = await validate(dto);
 
       if (errors.length > 0) {
+        console.log('❌ Validation errors:', JSON.stringify(errors));
         return res.status(400).json({
           message: 'Validation Error | IngredientesController UpdateById',
           errors: errors.map((err) => {
@@ -182,7 +188,8 @@ export class IngredientesController {
         stock_maximo: data?.stock_maximo,
         costo_unitario: data?.costo_unitario,
         valor_total: data?.valor_total,
-        estado_stock: data?.estado_stock,
+        stock: data?.stock,
+        estado: data?.estado,
         necesita_reposicion: data?.necesita_reposicion,
         descripcion: data?.descripcion,
         activo: data?.activo,
@@ -199,16 +206,18 @@ export class IngredientesController {
   public async deleteById(req: Request, res: Response): Promise<Response> {
     try {
       const ingrediente_id = parseInt(req.params.id);
+      console.log('🗑️ Controller deleteById - ingrediente_id:', ingrediente_id);
 
       const data: IngredienteEntity | null =
         await this.service.findOne(ingrediente_id);
 
-      if (!data) return res.status(404).json('Ingredient Not Found');
+      if (!data) return res.status(404).json({ message: 'Ingredient Not Found' });
 
       await this.service.remove(ingrediente_id);
 
-      return res.status(200).json('Ingredient Deleted Successfully');
+      return res.status(200).json({ message: 'Ingredient Deleted Successfully' });
     } catch (error) {
+      console.error('❌ Error in deleteById:', error);
       return res.status(500).json({
         message: 'Error Deleting Ingredient | IngredientesController',
         data: error instanceof Error ? error.message : String(error),

@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReservaEntity = void 0;
 const typeorm_1 = require("typeorm");
 const mesa_entity_1 = require("../../mesas/entities/mesa.entity");
+const user_entity_1 = require("../../user/entities/user.entity");
 let ReservaEntity = class ReservaEntity extends typeorm_1.BaseEntity {
 };
 exports.ReservaEntity = ReservaEntity;
@@ -25,6 +26,12 @@ __decorate([
     }),
     __metadata("design:type", Number)
 ], ReservaEntity.prototype, "mesa_id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        nullable: true,
+    }),
+    __metadata("design:type", Number)
+], ReservaEntity.prototype, "user_id", void 0);
 __decorate([
     (0, typeorm_1.Column)({
         length: 100,
@@ -70,7 +77,7 @@ __decorate([
 ], ReservaEntity.prototype, "notas", void 0);
 __decorate([
     (0, typeorm_1.Column)({
-        type: 'enum',
+        type: 'simple-enum',
         enum: ['pendiente', 'confirmado', 'cancelada', 'completada'],
         default: 'pendiente',
         nullable: false,
@@ -83,22 +90,27 @@ __decorate([
     __metadata("design:type", mesa_entity_1.MesaEntity)
 ], ReservaEntity.prototype, "mesa", void 0);
 __decorate([
+    (0, typeorm_1.ManyToOne)(() => user_entity_1.UserEntity, { nullable: true }),
+    (0, typeorm_1.JoinColumn)({ name: 'user_id' }),
+    __metadata("design:type", user_entity_1.UserEntity)
+], ReservaEntity.prototype, "user", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)({
-        type: 'timestamp',
+        type: 'datetime',
         nullable: false,
     }),
     __metadata("design:type", Date)
 ], ReservaEntity.prototype, "created_at", void 0);
 __decorate([
     (0, typeorm_1.UpdateDateColumn)({
-        type: 'timestamp',
+        type: 'datetime',
         nullable: false,
     }),
     __metadata("design:type", Date)
 ], ReservaEntity.prototype, "updated_at", void 0);
 __decorate([
     (0, typeorm_1.DeleteDateColumn)({
-        type: 'timestamp',
+        type: 'datetime',
         nullable: true,
     }),
     __metadata("design:type", Date)

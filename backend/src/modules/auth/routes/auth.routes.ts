@@ -28,7 +28,7 @@ export class AuthRoutes {
   // Método para definir todas las rutas del módulo de autenticación.
   public initializeRoutes(): void {
     // Desestructuración para obtener los métodos del controlador de autenticación.
-    const { register, login, profile, updateById, checkToken } =
+    const { register, login, profile, updateById, checkToken, requestPasswordRecovery, resetPassword } =
       this.controller;
 
     // Define la ruta para registrar un nuevo usuario.
@@ -56,6 +56,18 @@ export class AuthRoutes {
       '/check-token',
       TokenExistsMiddleware.check,
       checkToken.bind(this.controller),
+    );
+
+    // Ruta para solicitar recuperación de contraseña
+    this.router.post(
+      '/request-password-recovery',
+      requestPasswordRecovery.bind(this.controller),
+    );
+
+    // Ruta para restablecer la contraseña con el token
+    this.router.post(
+      '/reset-password',
+      resetPassword.bind(this.controller),
     );
   }
 }

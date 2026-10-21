@@ -90,17 +90,22 @@ export class AdminReservasEditPageComponent implements OnInit {
     this._reservasService.getReservaById(reservaId).subscribe({
       next: (reserva) => {
         console.log('📥 Reserva recibida del backend:', reserva);
+        console.log('📧 cliente_email:', reserva.cliente_email);
+        console.log('📝 notas:', reserva.notas);
         console.log(
           '🔢 mesa_id original:',
           reserva.mesa_id,
           typeof reserva.mesa_id,
         );
 
-        // Asegurarse de que la reserva tenga el ID
+        // Asegurarse de que la reserva tenga el ID y los campos opcionales
         this.reserva = {
           ...reserva,
           reserva_id: reservaId, // Garantizar que el ID esté presente
           mesa_id: reserva.mesa_id, // Asegurar que mesa_id esté presente como número
+          cliente_email: reserva.cliente_email || '', // Valor por defecto para email
+          cliente_telefono: reserva.cliente_telefono || '', // Valor por defecto para teléfono
+          notas: reserva.notas || '', // Valor por defecto para notas
         };
 
         console.log('📤 Reserva asignada al componente:', this.reserva);
@@ -181,13 +186,29 @@ export class AdminReservasEditPageComponent implements OnInit {
     this.isSaving = true;
     this.errorMessage = '';
 
+    // Convertir la fecha formateada a ISO
+    let fechaHoraISO: string;
+    if (this._fechaHoraFormateada) {
+      fechaHoraISO = new Date(this._fechaHoraFormateada + ':00').toISOString();
+    } else if (this.reserva.fecha_hora) {
+      // Si fecha_hora es string, usarla directamente, si es Date, convertirla
+      fechaHoraISO = typeof this.reserva.fecha_hora === 'string' 
+        ? this.reserva.fecha_hora 
+        : this.reserva.fecha_hora.toISOString();
+    } else {
+      this.errorMessage = 'La fecha y hora son obligatorias';
+      this.isSaving = false;
+      this._cdr.markForCheck();
+      return;
+    }
+
     // Crear objeto de actualización con tipos correctos
     const reservaActualizada = {
       cliente_nombre: this.reserva.cliente_nombre.trim(),
       cliente_email: this.reserva.cliente_email?.trim() || undefined,
       cliente_telefono: this.reserva.cliente_telefono?.trim() || undefined,
       mesa_id: mesaId, // Usar el ID convertido a número
-      fecha_hora: this.reserva.fecha_hora?.toISOString(),
+      fecha_hora: fechaHoraISO,
       numero_personas: this.reserva.numero_personas,
       estado: this.reserva.estado || 'pendiente',
       notas: this.reserva.notas?.trim() || undefined,

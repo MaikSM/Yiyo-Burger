@@ -87,21 +87,21 @@ __decorate([
 ], InventarioEntity.prototype, "costo_total", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({
-        type: 'timestamp', // Guarda la fecha como timestamp en la base de datos.
+        type: 'datetime', // Guarda la fecha como timestamp en la base de datos.
         nullable: false, // No permite valores nulos.
     }),
     __metadata("design:type", Date)
 ], InventarioEntity.prototype, "created_at", void 0);
 __decorate([
     (0, typeorm_1.UpdateDateColumn)({
-        type: 'timestamp', // Guarda la fecha como timestamp.
+        type: 'datetime', // Guarda la fecha como timestamp.
         nullable: false, // No permite valores nulos.
     }),
     __metadata("design:type", Date)
 ], InventarioEntity.prototype, "updated_at", void 0);
 __decorate([
     (0, typeorm_1.DeleteDateColumn)({
-        type: 'timestamp', // Guarda la fecha de eliminación lógica.
+        type: 'datetime', // Guarda la fecha de eliminación lógica.
         nullable: true, // Permite valores nulos porque el registro puede no haber sido eliminado.
     }),
     __metadata("design:type", Date)

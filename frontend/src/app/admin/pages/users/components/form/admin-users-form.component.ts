@@ -52,12 +52,17 @@ export class AdminUsersFormComponent {
       const roles = this.rolesResource.value();
 
       if (!this.isCreateMode() && user && roles) {
+        // En modo edición, las contraseñas son opcionales (para cambiar solo cuando el usuario lo desee)
+        this.form.get('password')?.clearValidators();
+        this.form.get('password')?.updateValueAndValidity();
+        this.form.get('confirmation')?.clearValidators();
+        this.form.get('confirmation')?.updateValueAndValidity();
+
         this.form.patchValue({
           name: user.name,
           surname: user.surname,
           email: user.email,
-          password: user.password,
-          role_id: user.role?.id, // esto ahora sí se aplica bien al <select>
+          role_id: user.role?.id,
         });
       }
     });
@@ -96,11 +101,11 @@ export class AdminUsersFormComponent {
   public form: FormGroup = this._formBuilder.group({
     name: this._formBuilder.control('', [
       Validators.required,
-      Validators.minLength(4),
+      Validators.minLength(2),
     ]),
     surname: this._formBuilder.control('', [
       Validators.required,
-      Validators.minLength(4),
+      Validators.minLength(2),
     ]),
     email: this._formBuilder.control('', [
       Validators.required,
@@ -126,46 +131,142 @@ export class AdminUsersFormComponent {
 
   onSubmit() {
     try {
+      this.form.markAllAsTouched();
+
       if (this.form.invalid) {
-        toast.error('Error al Crear el Registro', {
-          description: 'Por Favor Verifique los Campos',
+        if (this.form.get('name')?.invalid) {
+          toast.error('Nombre inválido', {
+            description: 'El nombre es obligatorio y debe tener al menos 2 caracteres.',
+            duration: 4000,
+          });
+          return;
+        }
+        if (this.form.get('surname')?.invalid) {
+          toast.error('Apellido inválido', {
+            description: 'El apellido es obligatorio y debe tener al menos 2 caracteres.',
+            duration: 4000,
+          });
+          return;
+        }
+        if (this.form.get('email')?.invalid) {
+          toast.error('Correo electrónico inválido', {
+            description: 'Por favor ingrese un correo electrónico válido.',
+            duration: 4000,
+          });
+          return;
+        }
+        if (this.form.get('password')?.invalid) {
+          toast.error('Contraseña corta', {
+            description: 'La contraseña es requerida y debe tener al menos 8 caracteres.',
+            duration: 4000,
+          });
+          return;
+        }
+        if (this.form.get('confirmation')?.invalid) {
+          toast.error('Confirmación corta', {
+            description: 'La confirmación debe tener al menos 8 caracteres.',
+            duration: 4000,
+          });
+          return;
+        }
+        if (this.form.get('role_id')?.invalid) {
+          toast.error('Rol requerido', {
+            description: 'Por favor seleccione un rol válido para el usuario.',
+            duration: 4000,
+          });
+          return;
+        }
+
+        toast.error('Error en el Formulario', {
+          description: 'Por Favor Verifique los Campos Obligatorios',
           duration: 3000,
         });
         return;
       }
 
-      if (this.form.value.password !== this.form.value.confirmation) {
-        toast.error('Error al Crear el Registro', {
-          description: 'Las contraseñas no coinciden',
-          duration: 3000,
-        });
-        return;
+      const pass = this.form.value.password;
+      const conf = this.form.value.confirmation;
+
+      if (this.isCreateMode()) {
+        if (!pass || pass.length < 8) {
+          toast.error('Error en la Contraseña', {
+            description: 'La contraseña es requerida y debe tener al menos 8 caracteres',
+            duration: 3000,
+          });
+          return;
+        }
+        if (pass !== conf) {
+          toast.error('Error en la Contraseña', {
+            description: 'Las contraseñas no coinciden',
+            duration: 3000,
+          });
+          return;
+        }
+      } else {
+        // En modo edición: si se llena alguno de los campos de contraseña, validamos
+        if (pass || conf) {
+          if ((pass || '').length < 8) {
+            toast.error('Error en la Contraseña', {
+              description: 'La nueva contraseña debe tener al menos 8 caracteres',
+              duration: 3000,
+            });
+            return;
+          }
+          if (pass !== conf) {
+            toast.error('Error en la Contraseña', {
+              description: 'Las contraseñas no coinciden',
+              duration: 3000,
+            });
+            return;
+          }
+        }
       }
 
-      const data: iUser = {
-        id: this.isCreateMode() ? 0 : this.userId()!,
-        name: this.form.value.name,
-        surname: this.form.value.surname,
-        email: this.form.value.email,
+      const data: any = {
+        name: (this.form.value.name || '').trim(),
+        surname: (this.form.value.surname || '').trim(),
+        email: (this.form.value.email || '').trim(),
         role_id: Number(this.form.value.role_id),
-        password: this.form.value.password,
       };
+
+      if (!this.isCreateMode()) {
+        data.id = this.userId()!;
+      }
+
+      if (pass) {
+        data.password = pass;
+      }
 
       if (this.isCreateMode()) {
         this._usersService.create(data).subscribe({
           next: () => {
             toast.success('Registro Creado', {
-              description: `El registro: ${data.name}, se creó correctamente `,
+              description: `El usuario ${data.name} se creó correctamente.`,
               duration: 3000,
             });
             this._router.navigate(['/admin/users']);
           },
           error: (err) => {
-            console.error(err);
-            toast.error('Error al Crear el Registro', {
-              description:
-                'Error al crear el registro, por favor intente nuevamente.',
-              duration: 3000,
+            console.error('Error al crear usuario:', err);
+            let detail = 'Error al crear el usuario en el servidor.';
+            if (typeof err.error === 'string') {
+              if (err.error.includes('Already Exists')) {
+                detail = 'El correo electrónico ingresado ya se encuentra registrado.';
+              } else {
+                detail = err.error;
+              }
+            } else if (err.error?.errors && Array.isArray(err.error.errors)) {
+              const firstErr = err.error.errors[0];
+              if (firstErr?.constraints) {
+                detail = Object.values(firstErr.constraints).join('. ');
+              }
+            } else if (err.error?.message) {
+              detail = err.error.message;
+            }
+
+            toast.error('Error al Crear Usuario', {
+              description: detail,
+              duration: 5000,
             });
           },
         });
@@ -173,17 +274,32 @@ export class AdminUsersFormComponent {
         this._usersService.updateById(this.userId()!, data).subscribe({
           next: () => {
             toast.success('Registro Actualizado', {
-              description: `El registro: ${data.name}, se actualizó correctamente `,
+              description: `El usuario ${data.name} se actualizó correctamente.`,
               duration: 3000,
             });
             this._router.navigate(['/admin/users']);
           },
           error: (err) => {
-            console.error(err);
-            toast.error('Error al Actualizar el Registro', {
-              description:
-                'Error al actualizar el registro, por favor intente nuevamente.',
-              duration: 3000,
+            console.error('Error al actualizar usuario:', err);
+            let detail = 'Error al actualizar el usuario en el servidor.';
+            if (typeof err.error === 'string') {
+              if (err.error.includes('Already Exists')) {
+                detail = 'El correo electrónico ingresado ya pertenece a otro usuario.';
+              } else {
+                detail = err.error;
+              }
+            } else if (err.error?.errors && Array.isArray(err.error.errors)) {
+              const firstErr = err.error.errors[0];
+              if (firstErr?.constraints) {
+                detail = Object.values(firstErr.constraints).join('. ');
+              }
+            } else if (err.error?.message) {
+              detail = err.error.message;
+            }
+
+            toast.error('Error al Actualizar Usuario', {
+              description: detail,
+              duration: 5000,
             });
           },
         });
@@ -192,7 +308,7 @@ export class AdminUsersFormComponent {
       console.error(error);
       toast.error('Error al Procesar el Registro', {
         description:
-          'Error al crear el registro, por favor intente nuevamente.',
+          'Error al procesar el registro, por favor intente nuevamente.',
         duration: 3000,
       });
     }

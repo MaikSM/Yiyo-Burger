@@ -63,14 +63,14 @@ __decorate([
 ], AsistenciaEntity.prototype, "user", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({
-        type: 'timestamp',
+        type: 'datetime',
         nullable: false,
     }),
     __metadata("design:type", Date)
 ], AsistenciaEntity.prototype, "created_at", void 0);
 __decorate([
     (0, typeorm_1.UpdateDateColumn)({
-        type: 'timestamp',
+        type: 'datetime',
         nullable: false,
     }),
     __metadata("design:type", Date)

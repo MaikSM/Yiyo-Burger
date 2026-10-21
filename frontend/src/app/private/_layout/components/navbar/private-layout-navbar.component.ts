@@ -1,5 +1,6 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   computed,
   inject,
@@ -21,15 +22,30 @@ import { iMenuItem } from '@shared/interfaces/menu-item.interface';
 export class PrivateLayoutNavbarComponent {
   private _authService: AuthService = inject(AuthService);
   private _router: Router = inject(Router);
+  private _cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
 
   appName = computed<string>(() => environment.appName);
   showChat = signal(false);
+
+  constructor() {
+    // Ensure auth status is checked when navbar loads
+    this._authService.checkAuthStatus().subscribe({
+      next: (isAuthenticated) => {
+        console.log('🔐 Navbar: Auth status checked:', isAuthenticated);
+        console.log('📷 Navbar: User photo:', this._authService.user()?.photo);
+        this._cdr.detectChanges();
+      },
+      error: (err) => console.error('Error checking auth status:', err),
+    });
+  }
 
   public authStatus = computed(() => this._authService.authStatus());
   public userName = computed(() => {
     const name = this._authService.user()?.name;
     return name === 'Administrator' ? 'Administracion' : name;
   });
+
+  public userPhoto = computed(() => this._authService.user()?.photo);
 
   public displayName = computed(() => {
     const user = this._authService.user();
@@ -46,7 +62,7 @@ export class PrivateLayoutNavbarComponent {
 
   menuItems = signal<iMenuItem[]>([
     { path: '/', label: 'Home', icon: 'fas fa-home' },
-    { path: '/perfil', label: 'Perfíl', icon: 'fas fa-cogs' },
+    { path: '/private/profile', label: 'Perfíl', icon: 'fas fa-cogs' },
   ]);
 
   openChat() {
@@ -56,6 +72,14 @@ export class PrivateLayoutNavbarComponent {
   logout() {
     this._authService.logout();
     this._router.navigate(['/']);
+  }
+
+  getInitials(): string {
+    const user = this._authService.user();
+    if (!user) return '?';
+    const firstName = user.name?.charAt(0) || '';
+    const lastName = user.surname?.charAt(0) || '';
+    return (firstName + lastName).toUpperCase() || '?';
   }
 }
 

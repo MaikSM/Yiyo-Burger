@@ -8,9 +8,15 @@ export const adminRoutes: Routes = [
     children: [
       {
         path: '',
-        title: 'Dashboard',
+        title: 'Mesas',
         loadComponent: () =>
-          import('@admin/pages/_dashboard/admin-dashboard-page.component'),
+          import('@admin/pages/mesas/admin-mesas-page.component'),
+      },
+      {
+        path: 'domicilios',
+        title: 'Domicilios',
+        loadComponent: () =>
+          import('@admin/pages/domicilios/admin-domicilios-page.component'),
       },
       {
         path: 'roles',
@@ -48,6 +54,18 @@ export const adminRoutes: Routes = [
         title: 'Edit Users',
         loadComponent: () =>
           import('@admin/pages/users/edit/admin-users-edit-page.component'),
+      },
+      {
+        path: 'clientes',
+        title: 'Historial de Clientes',
+        loadComponent: () =>
+          import('@admin/pages/clientes/admin-clientes-page.component'),
+      },
+      {
+        path: 'menu',
+        title: 'Menú',
+        loadComponent: () =>
+          import('@admin/pages/inventario/admin-inventario-page.component'),
       },
       {
         path: 'inventario',
@@ -110,16 +128,41 @@ export const adminRoutes: Routes = [
           ),
       },
       {
-        path: 'asistencia',
-        title: 'Asistencia',
+        path: 'nomina',
+        title: 'Nómina',
         loadComponent: () =>
-          import('@admin/pages/asistencia/admin-asistencia-page.component'),
+          import('@admin/pages/nomina/admin-nomina-page.component'),
+      },
+      {
+        path: 'asistencia',
+        title: 'Asistencia y Nómina',
+        loadComponent: () =>
+          import('@admin/pages/nomina/admin-nomina-page.component'),
       },
       {
         path: 'asistencia/historial',
         title: 'Historial de Asistencia',
         loadComponent: () =>
           import('@admin/pages/asistencia/admin-asistencia-historial-page.component').then(m => m.AdminAsistenciaHistorialPageComponent),
+      },
+      {
+        path: 'reportes',
+        title: 'Reportes',
+        loadComponent: () => 
+          import('@admin/pages/reportes/admin-reportes-page.component'),
+      },
+
+      {
+        path: 'impresoras',
+        title: 'Impresoras',
+        loadComponent: () =>
+          import('@admin/pages/impresoras/admin-impresoras-page.component'),
+      },
+      {
+        path: 'profile',
+        title: 'Perfil',
+        loadComponent: () =>
+          import('@private/pages/profile/private-profile-page.component'),
       },
       {
         path: '**',

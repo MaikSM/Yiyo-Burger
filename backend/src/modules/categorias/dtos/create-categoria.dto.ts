@@ -16,4 +16,8 @@ export class CreateCategoriaDto {
   @IsOptional()
   @IsBoolean()
   activo?: boolean;
+
+  @IsOptional()
+  @IsIn(['Parrilla', 'Pizzas', 'Bebidas'])
+  seccion?: 'Parrilla' | 'Pizzas' | 'Bebidas';
 }

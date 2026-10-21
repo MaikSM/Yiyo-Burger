@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Production builds
+dist/
+dist-*/
+*/dist/
+.angular/
+
+# SQLite databases, journals & local backups (Data privacy)
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-wal
+*.db-shm
+backend/backups/
+backups/
+backend/backend/
+
+# Local state & logs
+backend/order-sequence.json
+*.log
+npm-debug.log*
+
+# Environment configs & secrets
+.env
+.env.*
+!.env.example
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
+
+# Test reports
+playwright-report/
+test-results/

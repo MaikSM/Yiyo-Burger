@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MesasSeeder = void 0;
-const DatabaseConnection_1 = require("../database/DatabaseConnection");
+const DatabaseConnection_1 = require("../../core/database/DatabaseConnection");
 const mesa_entity_1 = require("../mesas/entities/mesa.entity");
 class MesasSeeder {
     static run() {

@@ -5,7 +5,7 @@ import { DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { IInventarioRepository } from '../repositories/iinventario.repository';
 
 // Importa la clase DatabaseConnection para obtener la conexión a la base de datos.
-import { DatabaseConnection } from '../../database/DatabaseConnection';
+import { DatabaseConnection } from '../../../core/database/DatabaseConnection';
 import { InventarioEntity } from '../entities/inventario.entity';
 
 // Define la clase InventarioService que implementa la interfaz IInventarioRepository.

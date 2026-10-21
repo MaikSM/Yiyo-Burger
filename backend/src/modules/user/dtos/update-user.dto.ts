@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 // Importa los decoradores de validación de la librería "class-validator".
 import {
   IsEmail,
@@ -16,7 +17,7 @@ export class UpdateUserDto {
   // Valida que el campo "name" sea una cadena de texto.
   @IsString()
   // Restringe la longitud del nombre entre 4 y 100 caracteres.
-  @Length(4, 200)
+  @Length(2, 200)
   name: string;
 
   // Indica que el campo "surname" es opcional en la solicitud.
@@ -26,7 +27,7 @@ export class UpdateUserDto {
   // Valida que el campo "surname" sea una cadena de texto.
   @IsString()
   // Restringe la longitud del nombre entre 4 y 100 caracteres.
-  @Length(4, 200)
+  @Length(2, 200)
   surname: string;
 
   // Indica que el campo "email" es opcional en la solicitud.
@@ -54,6 +55,7 @@ export class UpdateUserDto {
   // Indica que el campo "role" es opcional en la solicitud.
   @IsOptional()
   @IsNotEmpty()
+  @Type(() => Number)
   @IsInt() // Asegura que sea un número entero
   @Min(1) // Evita valores menores que 1
   role_id: number;

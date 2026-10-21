@@ -88,17 +88,27 @@
                     >
                       Editar
                     </button>
-                    <button
+                    <!-- <button
                       class="!bg-blue-500 !hover:bg-blue-600 !text-white !px-3 !py-1 !rounded !text-sm !transition !duration-200"
                       (click)="onGenerateQR(row)"
                     >
                       QR
-                    </button>
+                    </button> -->
                     <button
                       class="!bg-red-600 !hover:bg-red-700 !text-white !px-3 !py-1 !rounded !text-sm !transition !duration-200"
                       (click)="onDelete(row)"
                     >
-                      Eliminar
+                      🗑️ Eliminar
+                    </button>
+                    <button
+                      class="!text-white !px-3 !py-1 !rounded !text-sm !transition !duration-200"
+                      [class.bg-gray-600]="row.original.is_active"
+                      [class.hover:bg-gray-700]="row.original.is_active"
+                      [class.bg-green-600]="!row.original.is_active"
+                      [class.hover:bg-green-700]="!row.original.is_active"
+                      (click)="onToggleStatus(row)"
+                    >
+                      {{ row.original.is_active ? 'Desactivar' : 'Activar' }}
                     </button>
                   </div>
                 } @else {

@@ -43,14 +43,14 @@ export class MesaRepository implements IMesaRepository {
   }
 
   async delete(id: number): Promise<void> {
-    await this.repository.delete(id);
+    await this.repository.delete({ mesa_id: id });
   }
 
   async cambiarEstado(
     id: number,
     estado: 'libre' | 'reservada' | 'ocupada' | 'mantenimiento',
   ): Promise<MesaEntity> {
-    await this.repository.update(id, { estado });
+    await this.repository.update({ mesa_id: id }, { estado });
     const updatedMesa = await this.findById(id);
     if (!updatedMesa) {
       throw new Error('Mesa no encontrada después de cambiar estado');
@@ -65,15 +65,14 @@ export class MesaRepository implements IMesaRepository {
   }
 
   async hasActiveReservations(id: number): Promise<boolean> {
-    const reservaRepository =
-      this.repository.manager.getRepository('ReservaEntity');
-    const count = await reservaRepository.count({
-      where: {
-        mesa_id: id,
-        deleted_at: null,
-        estado: ['pendiente', 'confirmado'] as any,
-      },
-    });
-    return count > 0;
+    try {
+      const count = await this.repository.manager.query(
+        `SELECT COUNT(*) as cnt FROM reservas WHERE mesa_id = ? AND (estado = 'pendiente' OR estado = 'confirmado') AND deleted_at IS NULL`,
+        [id]
+      );
+      return count && count[0] && Number(count[0].cnt || count[0]['COUNT(*)']) > 0;
+    } catch (error) {
+      return false;
+    }
   }
 }

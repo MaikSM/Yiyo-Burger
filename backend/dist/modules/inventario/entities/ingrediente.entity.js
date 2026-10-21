@@ -21,8 +21,8 @@ let IngredienteEntity = class IngredienteEntity extends typeorm_1.BaseEntity {
     get necesita_reposicion() {
         return this.stock_actual <= this.stock_minimo;
     }
-    // Propiedad calculada para el estado del stock
-    get estado_stock() {
+    // Propiedad calculada para el estado automático del stock
+    get stock() {
         if (this.stock_actual <= this.stock_minimo * 0.5)
             return 'CRITICO';
         if (this.stock_actual <= this.stock_minimo)
@@ -112,26 +112,33 @@ __decorate([
     __metadata("design:type", Boolean)
 ], IngredienteEntity.prototype, "activo", void 0);
 __decorate([
+    (0, typeorm_1.Column)({
+        length: 20,
+        nullable: true,
+    }),
+    __metadata("design:type", String)
+], IngredienteEntity.prototype, "estado", void 0);
+__decorate([
     (0, typeorm_1.OneToMany)(() => inventario_entity_1.InventarioEntity, movimiento => movimiento.ingrediente_id, { cascade: true }),
     __metadata("design:type", Array)
 ], IngredienteEntity.prototype, "movimientos", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({
-        type: 'timestamp',
+        type: 'datetime',
         nullable: false,
     }),
     __metadata("design:type", Date)
 ], IngredienteEntity.prototype, "created_at", void 0);
 __decorate([
     (0, typeorm_1.UpdateDateColumn)({
-        type: 'timestamp',
+        type: 'datetime',
         nullable: false,
     }),
     __metadata("design:type", Date)
 ], IngredienteEntity.prototype, "updated_at", void 0);
 __decorate([
     (0, typeorm_1.DeleteDateColumn)({
-        type: 'timestamp',
+        type: 'datetime',
         nullable: true,
     }),
     __metadata("design:type", Date)

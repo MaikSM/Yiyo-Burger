@@ -8,7 +8,7 @@ import { IAuthRepository } from '../repositories/iauth.repository';
 import { UserEntity } from '../../user/entities/user.entity';
 
 // Importación de la clase DatabaseConnection, utilizada para obtener la conexión a la base de datos.
-import { DatabaseConnection } from '../../database/DatabaseConnection';
+import { DatabaseConnection } from '../../../core/database/DatabaseConnection';
 
 // Importación de JwtUtil, una utilidad para la generación de tokens JWT.
 import { JwtUtil } from '../../../utils/jwt.util';
@@ -78,5 +78,39 @@ export class AuthService implements IAuthRepository {
     data: UserEntity,
   ): Promise<UpdateResult | null> {
     return await this.repository.update(id, data);
+  }
+
+  // Genera un token temporal para la recuperación de contraseña
+  public async generatePasswordRecoveryToken(userId: number): Promise<string> {
+    const data = {
+      user_id: userId,
+      type: 'password_recovery',
+      exp: Math.floor(Date.now() / 1000) + (15 * 60), // Expira en 15 minutos
+    };
+    return await JwtUtil.generateToken(data);
+  }
+
+  // Verifica un token de recuperación de contraseña
+  public async verifyPasswordRecoveryToken(token: string): Promise<number | null> {
+    try {
+      const decoded = await JwtUtil.verifyToken(token);
+      if (decoded?.data?.type === 'password_recovery' && decoded?.data?.user_id) {
+        return Number(decoded.data.user_id);
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Invalida un token de recuperación de contraseña (opcional)
+  public async invalidatePasswordRecoveryToken(token: string): Promise<void> {
+    // En una implementación real, podrías almacenar tokens inválidos en una base de datos
+    // Por ahora, simplemente no hacer nada ya que JWT es stateless
+  }
+
+  // Actualiza la contraseña de un usuario
+  public async updatePassword(userId: number, hashedPassword: string): Promise<UpdateResult | null> {
+    return await this.repository.update(userId, { password: hashedPassword });
   }
 }

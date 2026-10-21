@@ -56,6 +56,21 @@ export class UserEntity extends BaseEntity {
   })
   password: string;
 
+  // Columna para almacenar la URL de la foto de perfil del usuario (puede ser base64 o URL).
+  @Column({
+    type: 'text', // Usar tipo text para SQLite en lugar de longtext
+    nullable: true, // Permite valores nulos.
+    default: null,
+  })
+  photo: string;
+
+  // Columna para activar o desactivar al usuario.
+  @Column({
+    type: 'boolean',
+    default: true, // Por defecto el usuario está activo.
+  })
+  is_active: boolean;
+
   // Columna para almacenar la hora de entrada del empleado.
   @Column({
     type: 'time',
@@ -77,21 +92,21 @@ export class UserEntity extends BaseEntity {
 
   // Columna que almacena automáticamente la fecha y hora de creación del registro.
   @CreateDateColumn({
-    type: 'timestamp', // Guarda la fecha como timestamp en la base de datos.
+    type: 'datetime', // Guarda la fecha como timestamp en la base de datos.
     nullable: false, // No permite valores nulos.
   })
   created_at: Date;
 
   // Columna que almacena automáticamente la fecha y hora de la última actualización del registro.
   @UpdateDateColumn({
-    type: 'timestamp', // Guarda la fecha como timestamp.
+    type: 'datetime', // Guarda la fecha como timestamp.
     nullable: false, // No permite valores nulos.
   })
   updated_at: Date;
 
   // Columna para la eliminación lógica (soft delete), almacena la fecha de eliminación si el registro es borrado.
   @DeleteDateColumn({
-    type: 'timestamp', // Guarda la fecha de eliminación lógica.
+    type: 'datetime', // Guarda la fecha de eliminación lógica.
     nullable: true, // Permite valores nulos porque el registro puede no haber sido eliminado.
   })
   deleted_at: Date;

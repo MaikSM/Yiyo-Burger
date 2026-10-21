@@ -1,5 +1,5 @@
 import { Repository } from 'typeorm';
-import { DatabaseConnection } from '../../database/DatabaseConnection';
+import { DatabaseConnection } from '../../../core/database/DatabaseConnection';
 import { CategoriaEntity } from '../entities/categoria.entity';
 import { CreateCategoriaDto } from '../dtos/create-categoria.dto';
 import { UpdateCategoriaDto } from '../dtos/update-categoria.dto';

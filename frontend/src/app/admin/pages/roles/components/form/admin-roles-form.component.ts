@@ -109,9 +109,9 @@ export class AdminRolesFormComponent {
           },
           error: (err) => {
             console.error(err);
+            const serverMsg = err.error?.message || err.error?.data || (typeof err.error === 'string' ? err.error : null);
             toast.error('Error al Crear el Registro', {
-              description:
-                'Error al crear el registro, por favor intente nuevamente.',
+              description: serverMsg || 'Error al crear el registro, por favor intente nuevamente.',
               duration: 3000,
             });
           },
@@ -127,9 +127,9 @@ export class AdminRolesFormComponent {
           },
           error: (err) => {
             console.error(err);
+            const serverMsg = err.error?.message || err.error?.data || (typeof err.error === 'string' ? err.error : null);
             toast.error('Error al Actualizar el Registro', {
-              description:
-                'Error al actualizar el registro, por favor intente nuevamente.',
+              description: serverMsg || 'Error al actualizar el registro, por favor intente nuevamente.',
               duration: 3000,
             });
           },

@@ -29,6 +29,7 @@ class IngredientesController {
                     return res.status(404).json('No Ingredients Found');
                 const formattedData = data.map((item) => ({
                     ingrediente_id: item.ingrediente_id,
+                    id: item.ingrediente_id,
                     nombre: item.nombre,
                     categoria: item.categoria,
                     unidad_medida: item.unidad_medida,
@@ -37,7 +38,7 @@ class IngredientesController {
                     stock_maximo: item.stock_maximo,
                     costo_unitario: item.costo_unitario,
                     valor_total: item.valor_total,
-                    estado_stock: item.estado_stock,
+                    stock: item.stock,
                     necesita_reposicion: item.necesita_reposicion,
                     descripcion: item.descripcion,
                     activo: item.activo,
@@ -70,7 +71,8 @@ class IngredientesController {
                     stock_maximo: data === null || data === void 0 ? void 0 : data.stock_maximo,
                     costo_unitario: data === null || data === void 0 ? void 0 : data.costo_unitario,
                     valor_total: data === null || data === void 0 ? void 0 : data.valor_total,
-                    estado_stock: data === null || data === void 0 ? void 0 : data.estado_stock,
+                    stock: data === null || data === void 0 ? void 0 : data.stock,
+                    estado: data === null || data === void 0 ? void 0 : data.estado,
                     necesita_reposicion: data === null || data === void 0 ? void 0 : data.necesita_reposicion,
                     descripcion: data === null || data === void 0 ? void 0 : data.descripcion,
                     activo: data === null || data === void 0 ? void 0 : data.activo,
@@ -117,7 +119,7 @@ class IngredientesController {
                     stock_maximo: newIngredienteData === null || newIngredienteData === void 0 ? void 0 : newIngredienteData.stock_maximo,
                     costo_unitario: newIngredienteData === null || newIngredienteData === void 0 ? void 0 : newIngredienteData.costo_unitario,
                     valor_total: newIngredienteData === null || newIngredienteData === void 0 ? void 0 : newIngredienteData.valor_total,
-                    estado_stock: newIngredienteData === null || newIngredienteData === void 0 ? void 0 : newIngredienteData.estado_stock,
+                    stock: newIngredienteData === null || newIngredienteData === void 0 ? void 0 : newIngredienteData.stock,
                     necesita_reposicion: newIngredienteData === null || newIngredienteData === void 0 ? void 0 : newIngredienteData.necesita_reposicion,
                     descripcion: newIngredienteData === null || newIngredienteData === void 0 ? void 0 : newIngredienteData.descripcion,
                     activo: newIngredienteData === null || newIngredienteData === void 0 ? void 0 : newIngredienteData.activo,
@@ -136,12 +138,15 @@ class IngredientesController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const ingrediente_id = parseInt(req.params.id);
+                console.log('📝 Update request - ID:', ingrediente_id);
+                console.log('📝 Update request - Body:', JSON.stringify(req.body));
                 const toUpdate = yield this.service.findOne(ingrediente_id);
                 if (!toUpdate)
                     return res.status(404).json('Ingredient Not Found');
                 const dto = (0, class_transformer_1.plainToInstance)(update_ingrediente_dto_1.UpdateIngredienteDto, req.body);
                 const errors = yield (0, class_validator_1.validate)(dto);
                 if (errors.length > 0) {
+                    console.log('❌ Validation errors:', JSON.stringify(errors));
                     return res.status(400).json({
                         message: 'Validation Error | IngredientesController UpdateById',
                         errors: errors.map((err) => {
@@ -164,7 +169,8 @@ class IngredientesController {
                     stock_maximo: data === null || data === void 0 ? void 0 : data.stock_maximo,
                     costo_unitario: data === null || data === void 0 ? void 0 : data.costo_unitario,
                     valor_total: data === null || data === void 0 ? void 0 : data.valor_total,
-                    estado_stock: data === null || data === void 0 ? void 0 : data.estado_stock,
+                    stock: data === null || data === void 0 ? void 0 : data.stock,
+                    estado: data === null || data === void 0 ? void 0 : data.estado,
                     necesita_reposicion: data === null || data === void 0 ? void 0 : data.necesita_reposicion,
                     descripcion: data === null || data === void 0 ? void 0 : data.descripcion,
                     activo: data === null || data === void 0 ? void 0 : data.activo,
@@ -183,13 +189,15 @@ class IngredientesController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const ingrediente_id = parseInt(req.params.id);
+                console.log('🗑️ Controller deleteById - ingrediente_id:', ingrediente_id);
                 const data = yield this.service.findOne(ingrediente_id);
                 if (!data)
-                    return res.status(404).json('Ingredient Not Found');
+                    return res.status(404).json({ message: 'Ingredient Not Found' });
                 yield this.service.remove(ingrediente_id);
-                return res.status(200).json('Ingredient Deleted Successfully');
+                return res.status(200).json({ message: 'Ingredient Deleted Successfully' });
             }
             catch (error) {
+                console.error('❌ Error in deleteById:', error);
                 return res.status(500).json({
                     message: 'Error Deleting Ingredient | IngredientesController',
                     data: error instanceof Error ? error.message : String(error),

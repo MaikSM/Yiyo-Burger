@@ -9,15 +9,11 @@ const platos_controller_1 = require("../controllers/platos.controller");
 const verifyId_middleware_1 = require("../../../core/middlewares/verifyId.middleware");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
+const uploads_config_1 = require("../../../core/config/uploads.config");
 // Configuración de multer para subir imágenes
 const storage = multer_1.default.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadPath = path_1.default.join(__dirname, '../../uploads');
-        // Crear el directorio si no existe
-        if (!require('fs').existsSync(uploadPath)) {
-            require('fs').mkdirSync(uploadPath, { recursive: true });
-        }
-        cb(null, uploadPath); // Directorio donde se guardarán las imágenes
+    destination: (_req, _file, cb) => {
+        cb(null, (0, uploads_config_1.getUploadsDir)());
     },
     filename: (req, file, cb) => {
         // Generar nombre único para el archivo

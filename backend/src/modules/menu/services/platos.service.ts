@@ -1,5 +1,6 @@
 import { Repository } from 'typeorm';
 import { PlatoEntity } from '../entities/plato.entity';
+import { realTimeEmitter } from '../../../core/events/realtime.events';
 
 // Definir las categorías permitidas
 export const CATEGORIAS_PLATO = [
@@ -50,13 +51,14 @@ export class PlatosService {
     }
 
     const plato = this.platoRepository.create(platoData);
-    return await this.platoRepository.save(plato);
+    const saved = await this.platoRepository.save(plato);
+    realTimeEmitter.broadcast('platos_changed', saved);
+    return saved;
   }
 
   // Obtener todos los platos disponibles
   async findAll(): Promise<PlatoEntity[]> {
     return await this.platoRepository.find({
-      where: { disponible: true },
       order: { nombre: 'ASC' }
     });
   }
@@ -64,15 +66,22 @@ export class PlatosService {
   // Obtener platos por categoría
   async findByCategoria(categoria: string): Promise<PlatoEntity[]> {
     return await this.platoRepository.find({
-      where: { categoria, disponible: true },
+      where: { categoria },
       order: { nombre: 'ASC' }
     });
   }
 
   // Obtener plato por ID
-  async findOne(id: number): Promise<PlatoEntity> {
+  async findOne(id: number, includeUnavailable: boolean = true): Promise<PlatoEntity> {
+    const whereClause: any = { plato_id: id };
+    
+    if (!includeUnavailable) {
+      whereClause.disponible = true;
+    }
+
     const plato = await this.platoRepository.findOne({
-      where: { plato_id: id, disponible: true }
+      where: whereClause,
+      withDeleted: includeUnavailable
     });
 
     if (!plato) {
@@ -84,7 +93,7 @@ export class PlatosService {
 
   // Actualizar plato
   async update(id: number, updateData: any): Promise<PlatoEntity> {
-    const plato = await this.findOne(id);
+    const plato = await this.findOne(id, true);
 
     // Validar nombre único si se está actualizando
     if (updateData.nombre && updateData.nombre !== plato.nombre) {
@@ -92,7 +101,7 @@ export class PlatosService {
         where: { nombre: updateData.nombre }
       });
 
-      if (existingPlato) {
+      if (existingPlato && existingPlato.plato_id !== id) {
         throw this.createBadRequestException(`Ya existe un plato con el nombre: ${updateData.nombre}`);
       }
     }
@@ -103,14 +112,24 @@ export class PlatosService {
     }
 
     Object.assign(plato, updateData);
-    return await this.platoRepository.save(plato);
+    const saved = await this.platoRepository.save(plato);
+    realTimeEmitter.broadcast('platos_changed', saved);
+    return saved;
   }
 
-  // Eliminar plato (soft delete)
+  // Eliminar plato
   async remove(id: number): Promise<void> {
-    const plato = await this.findOne(id);
-    plato.disponible = false;
-    await this.platoRepository.save(plato);
+    const plato = await this.findOne(id, true);
+    if (!plato) {
+      throw this.createNotFoundException(`Plato con ID ${id} no encontrado`);
+    }
+
+    try {
+      await this.platoRepository.softDelete(id);
+    } catch (e) {
+      await this.platoRepository.delete(id);
+    }
+    realTimeEmitter.broadcast('platos_changed', { id });
   }
 
   // Obtener estadísticas del menú
@@ -244,8 +263,7 @@ export class PlatosService {
   async search(query: string): Promise<PlatoEntity[]> {
     return await this.platoRepository
       .createQueryBuilder('plato')
-      .where('plato.disponible = :disponible', { disponible: true })
-      .andWhere('(plato.nombre LIKE :query OR plato.descripcion LIKE :query)')
+      .where('(plato.nombre LIKE :query OR plato.descripcion LIKE :query)')
       .setParameters({ query: `%${query}%` })
       .orderBy('plato.nombre', 'ASC')
       .getMany();

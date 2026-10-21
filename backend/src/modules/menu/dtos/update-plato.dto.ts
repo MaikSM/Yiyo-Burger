@@ -19,7 +19,13 @@ export class UpdatePlatoDto {
   categoria?: string;
 
   @IsOptional()
+  @IsString()
   imagen_url?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  es_especial?: boolean;
+
 
   @IsOptional()
   @IsBoolean()
@@ -34,4 +40,7 @@ export class UpdatePlatoDto {
   @IsArray()
   @IsString({ each: true })
   alergenos?: string[];
+
+  @IsOptional()
+  precios_por_tamano?: Record<string, number>;
 }

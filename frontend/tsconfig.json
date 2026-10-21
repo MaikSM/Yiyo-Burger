@@ -8,6 +8,7 @@
       "@env/*": ["environments/*"],
       "@admin/*": ["app/admin/*"],
       "@auth/*": ["app/auth/*"],
+      "@cook/*": ["app/cook/*"],
       "@front/*": ["app/front/*"],
       "@private/*": ["app/private/*"],
       "@shared/*": ["app/shared/*"],

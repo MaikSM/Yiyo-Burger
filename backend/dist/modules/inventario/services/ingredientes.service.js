@@ -51,11 +51,10 @@ class IngredientesService {
             return yield this.ingredienteRepository.save(ingrediente);
         });
     }
-    // Obtener todos los ingredientes activos
+    // Obtener todos los ingredientes
     findAll() {
         return __awaiter(this, void 0, void 0, function* () {
             return yield this.ingredienteRepository.find({
-                where: { activo: true },
                 order: { nombre: 'ASC' }
             });
         });
@@ -66,7 +65,7 @@ class IngredientesService {
             return yield this.ingredienteRepository.find({
                 where: { activo: true },
                 order: {
-                    estado_stock: 'DESC',
+                    stock: 'DESC',
                     stock_actual: 'ASC'
                 }
             });
@@ -78,7 +77,7 @@ class IngredientesService {
             return yield this.ingredienteRepository.find({
                 where: {
                     activo: true,
-                    estado_stock: 'CRITICO'
+                    stock: 'CRITICO'
                 },
                 order: { stock_actual: 'ASC' }
             });
@@ -88,7 +87,7 @@ class IngredientesService {
     findOne(id) {
         return __awaiter(this, void 0, void 0, function* () {
             const ingrediente = yield this.ingredienteRepository.findOne({
-                where: { ingrediente_id: id, activo: true }
+                where: { ingrediente_id: id }
             });
             if (!ingrediente) {
                 throw this.createNotFoundException(`Ingrediente con ID ${id} no encontrado`);
@@ -122,12 +121,11 @@ class IngredientesService {
             return yield this.ingredienteRepository.save(ingrediente);
         });
     }
-    // Eliminar ingrediente (soft delete)
+    // Eliminar ingrediente (hard delete)
     remove(id) {
         return __awaiter(this, void 0, void 0, function* () {
             const ingrediente = yield this.findOne(id);
-            ingrediente.activo = false;
-            yield this.ingredienteRepository.save(ingrediente);
+            yield this.ingredienteRepository.remove(ingrediente);
         });
     }
     // Actualizar stock de un ingrediente

@@ -4,9 +4,16 @@ import {
   IsAdminGuard,
   IsWaiterGuard,
   IsAuthenticatedGuard,
+  RootRedirectGuard,
 } from '@shared/guards/';
 
 export const appRoutes: Routes = [
+  {
+    path: '',
+    pathMatch: 'full',
+    canMatch: [RootRedirectGuard],
+    redirectTo: 'auth/login',
+  },
   {
     canMatch: [NotAuthenticatedGuard],
     path: 'auth',
@@ -35,3 +42,4 @@ export const appRoutes: Routes = [
       import('@shared/pages/not-found/shared-not-found-page.component'),
   },
 ];
+

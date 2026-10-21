@@ -1,73 +1,277 @@
-<div
-  class="min-h-[70vh] flex items-center justify-center bg-base-200 py-2 px-4"
->
-  <div class="card w-full max-w-lg bg-base-100 shadow-md">
-    <div class="card-body">
-      <!-- Título -->
-      <h2 class="text-2xl font-bold text-center text-base-content">Registro</h2>
+<div class="min-h-screen bg-gray-900 py-8 px-4">
+  <div class="max-w-2xl mx-auto">
+    <!-- Header Card -->
+    <div class="bg-gray-800/50 backdrop-blur-sm shadow-2xl rounded-3xl overflow-hidden border border-orange-500/20">
+      <!-- Gradient Header -->
+      <div class="px-6 py-8 bg-gradient-to-r from-orange-500 to-orange-600 text-white relative">
+        <div class="absolute inset-0 bg-black/10"></div>
+        <div class="relative z-10 text-center">
+          <h1 class="text-3xl font-bold">Mi Perfil</h1>
+          <p class="text-orange-100 mt-2">Gestiona tu información personal</p>
+        </div>
+      </div>
 
-      <!-- Formulario -->
-      <form
-        class="mt-4 space-y-4"
-        [formGroup]="profileForm"
-        (ngSubmit)="onSubmit()"
-      >
-        <div class="flex gap-1 justify-between">
-          <!-- Name -->
-          <div class="form-control">
-            <label class="label" for="name">
-              <span class="label-text">Nombre</span>
-            </label>
-            <input
-              type="text"
-              placeholder="Juan"
-              class="input input-bordered w-full"
-              formControlName="name"
-            />
+      <!-- Profile Photo Section -->
+      <div class="relative -mt-16 flex justify-center z-10">
+        <div class="relative group">
+          <!-- Photo Container -->
+          <div class="w-32 h-32 rounded-full border-4 border-gray-800 overflow-hidden shadow-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+            @if (photoPreview()) {
+              <img 
+                [src]="photoPreview()!" 
+                alt="Foto de perfil" 
+                class="w-full h-full object-cover"
+              />
+            } @else {
+              <span class="text-4xl font-bold text-white">{{ getInitials() }}</span>
+            }
           </div>
-          <!-- surname -->
-          <div class="form-control">
-            <label class="label" for="surname">
-              <span class="label-text">Apellido</span>
+          
+          <!-- Upload Overlay -->
+          <label class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer">
+            <div class="text-center text-white">
+              <i class="fas fa-camera text-2xl"></i>
+              <p class="text-xs mt-1">Cambiar</p>
+            </div>
+            <input 
+              type="file" 
+              class="hidden" 
+              accept="image/*"
+              (change)="onFileSelected($event)"
+            />
+          </label>
+
+          <!-- Remove Photo Button -->
+          @if (photoPreview()) {
+            <button 
+              type="button"
+              (click)="removePhoto()"
+              class="absolute -top-1 -right-1 w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white shadow-lg transition-colors duration-300"
+            >
+              <i class="fas fa-times text-sm"></i>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Form Section -->
+      <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="p-8 space-y-6">
+        <!-- User Info Display -->
+        <div class="text-center mb-6">
+          <h2 class="text-xl font-semibold text-gray-100">
+            {{ currentUser()?.name }} {{ currentUser()?.surname }}
+          </h2>
+          <p class="text-gray-400 text-sm mt-1">
+            <i class="fas fa-user-tag mr-1"></i>
+            {{ currentUser()?.role?.name || 'Usuario' }}
+          </p>
+        </div>
+
+        <!-- Name Fields -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Name -->
+          <div>
+            <label for="name" class="block text-sm font-semibold text-orange-400 mb-2">
+              <i class="fas fa-user mr-2"></i>Nombre
             </label>
             <input
               type="text"
-              placeholder="Benjumea"
-              class="input input-bordered w-full"
-              formControlName="surname"
+              id="name"
+              formControlName="name"
+              class="w-full px-4 py-3 bg-gray-700/50 border border-orange-500/30 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300"
+              placeholder="Tu nombre"
             />
+            @if (profileForm.get('name')?.invalid && profileForm.get('name')?.touched) {
+              <p class="text-red-400 text-xs mt-1">El nombre es requerido (mín. 2 caracteres)</p>
+            }
+          </div>
+
+          <!-- Surname -->
+          <div>
+            <label for="surname" class="block text-sm font-semibold text-orange-400 mb-2">
+              <i class="fas fa-user mr-2"></i>Apellido
+            </label>
+            <input
+              type="text"
+              id="surname"
+              formControlName="surname"
+              class="w-full px-4 py-3 bg-gray-700/50 border border-orange-500/30 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300"
+              placeholder="Tu apellido"
+            />
+            @if (profileForm.get('surname')?.invalid && profileForm.get('surname')?.touched) {
+              <p class="text-red-400 text-xs mt-1">El apellido es requerido (mín. 2 caracteres)</p>
+            }
           </div>
         </div>
 
         <!-- Email -->
-        <div class="form-control">
-          <label class="label" for="email">
-            <span class="label-text">Correo Electronico</span>
+        <div>
+          <label for="email" class="block text-sm font-semibold text-orange-400 mb-2">
+            <i class="fas fa-envelope mr-2"></i>Correo Electrónico
           </label>
           <input
             type="email"
-            placeholder="tu@email.com"
-            class="input input-bordered w-full"
+            id="email"
             formControlName="email"
+            class="w-full px-4 py-3 bg-gray-700/50 border border-orange-500/30 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300"
+            placeholder="tu@email.com"
           />
+          @if (profileForm.get('email')?.invalid && profileForm.get('email')?.touched) {
+            <p class="text-red-400 text-xs mt-1">Ingresa un correo electrónico válido</p>
+          }
         </div>
 
-        <!-- Password -->
-        <div class="form-control">
-          <label class="label" for="password">
-            <span class="label-text">Contraseña</span>
-          </label>
-          <input
-            type="password"
-            class="input input-bordered w-full"
-            formControlName="password"
-          />
+        <!-- Password Section -->
+        <div class="bg-gray-700/30 rounded-xl p-4 border border-gray-600/30">
+          <h3 class="text-sm font-semibold text-gray-300 mb-3">
+            <i class="fas fa-lock mr-2 text-orange-400"></i>Cambiar Contraseña (Opcional)
+          </h3>
+          <p class="text-gray-500 text-xs mb-4">Deja los campos vacíos para mantener tu contraseña actual</p>
+          
+          <!-- Current Password - Full Width -->
+          <div class="mb-4">
+            <label for="currentPassword" class="block text-sm font-medium text-gray-300 mb-2">
+              Contraseña Actual
+            </label>
+            <div class="relative max-w-md">
+              <input
+                [type]="showCurrentPassword() ? 'text' : 'password'"
+                id="currentPassword"
+                formControlName="currentPassword"
+                class="w-full px-4 py-3 pr-12 bg-gray-700/50 border border-gray-600/50 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300"
+                placeholder="Tu contraseña actual"
+              />
+              <button
+                type="button"
+                (click)="toggleCurrentPasswordVisibility()"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-400 transition-colors"
+              >
+                <i [class]="showCurrentPassword() ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+              </button>
+            </div>
+            <p class="text-gray-500 text-xs mt-1">Required para cambiar la contraseña</p>
+          </div>
+
+          <!-- New Password and Confirm - Same Row -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Password -->
+            <div>
+              <label for="password" class="block text-sm font-medium text-gray-300 mb-2">
+                Nueva Contraseña
+              </label>
+              <div class="relative">
+                <input
+                  [type]="showPassword() ? 'text' : 'password'"
+                  id="password"
+                  formControlName="password"
+                  class="w-full px-4 py-3 pr-12 bg-gray-700/50 border border-gray-600/50 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300"
+                  placeholder="Mínimo 8 caracteres"
+                />
+                <button
+                  type="button"
+                  (click)="togglePasswordVisibility()"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-400 transition-colors"
+                >
+                  <i [class]="showPassword() ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                </button>
+              </div>
+              @if (profileForm.get('password')?.invalid && profileForm.get('password')?.touched && profileForm.get('password')?.value) {
+                <p class="text-red-400 text-xs mt-1">La contraseña debe tener al menos 8 caracteres</p>
+              }
+            </div>
+
+            <!-- Confirm Password -->
+            <div>
+              <label for="confirmPassword" class="block text-sm font-medium text-gray-300 mb-2">
+                Confirmar Contraseña
+              </label>
+              <div class="relative">
+                <input
+                  [type]="showConfirmPassword() ? 'text' : 'password'"
+                  id="confirmPassword"
+                  formControlName="confirmPassword"
+                  class="w-full px-4 py-3 pr-12 bg-gray-700/50 border border-gray-600/50 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300"
+                  placeholder="Repite la contraseña"
+                />
+                <button
+                  type="button"
+                  (click)="toggleConfirmPasswordVisibility()"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-400 transition-colors"
+                >
+                  <i [class]="showConfirmPassword() ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                </button>
+              </div>
+              @if (profileForm.errors?.['passwordMismatch'] && profileForm.get('confirmPassword')?.touched) {
+                <p class="text-red-400 text-xs mt-1">
+                  <i class="fas fa-exclamation-circle mr-1"></i>Las contraseñas no coinciden
+                </p>
+              }
+              @if (profileForm.get('confirmPassword')?.touched && profileForm.get('password')?.value && !profileForm.get('confirmPassword')?.value) {
+                <p class="text-yellow-400 text-xs mt-1">
+                  <i class="fas fa-info-circle mr-1"></i>Por favor confirma tu contraseña
+                </p>
+              }
+            </div>
+          </div>
+          
+          <!-- Password Match Indicator -->
+          @if (profileForm.get('password')?.value || profileForm.get('confirmPassword')?.value) {
+            <div class="mt-3 flex items-center gap-2">
+              @if (passwordsMatch() && profileForm.get('password')?.value === profileForm.get('confirmPassword')?.value && profileForm.get('password')?.value) {
+                <span class="text-green-400 text-xs flex items-center gap-1">
+                  <i class="fas fa-check-circle"></i>Las contraseñas coinciden
+                </span>
+              } @else if (!passwordsMatch()) {
+                <span class="text-red-400 text-xs flex items-center gap-1">
+                  <i class="fas fa-times-circle"></i>Las contraseñas no coinciden
+                </span>
+              }
+            </div>
+          }
         </div>
 
-        <!-- Botón Submit -->
-        <div class="form-control mt-4">
-          <button class="btn btn-primary w-full" type="submit">
-            Actualizar
+        <!-- Account Info -->
+        <div class="bg-gray-700/30 rounded-xl p-4 border border-gray-600/30">
+          <h3 class="text-sm font-semibold text-gray-300 mb-3">
+            <i class="fas fa-info-circle mr-2 text-orange-400"></i>Información de la Cuenta
+          </h3>
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span class="text-gray-500">Miembro desde:</span>
+              <p class="text-gray-300">{{ currentUser()?.created_at | date:'dd/MM/yyyy' }}</p>
+            </div>
+            <div>
+              <span class="text-gray-500">Rol:</span>
+              <p class="text-gray-300">{{ currentUser()?.role?.name || 'Usuario' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 pt-4">
+          <button
+            type="button"
+            routerLink="/admin"
+            class="flex-1 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 hover:border-gray-500/50 text-gray-300 hover:text-gray-200 py-4 px-6 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg"
+          >
+            <i class="fas fa-arrow-left mr-2"></i>Volver
+          </button>
+          <button
+            type="submit"
+            [disabled]="isPosting() || profileForm.invalid"
+            class="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-2xl font-bold shadow-2xl hover:shadow-orange-500/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+          >
+            @if (isPosting()) {
+              <span class="flex items-center justify-center">
+                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                Guardando...
+              </span>
+            } @else {
+              <span class="flex items-center justify-center gap-2">
+                <i class="fas fa-save"></i>
+                Guardar Cambios
+              </span>
+            }
           </button>
         </div>
       </form>

@@ -53,7 +53,7 @@ echo "========================================"
 echo "   SERVICIOS INICIADOS!"
 echo "========================================"
 echo
-echo "Backend: http://localhost:4001/api/v1"
+echo "Backend: http://localhost:4003/api/v1"
 echo "Frontend: http://localhost:4200"
 echo
 echo "Presiona Ctrl+C para detener todos los servicios"

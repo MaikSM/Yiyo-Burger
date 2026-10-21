@@ -28,7 +28,7 @@ export class UserRoutes {
   // Método para definir todas las rutas del controlador de usuarios.
   public initializeRoutes(): void {
     // Desestructuración para obtener los métodos del controlador.
-    const { getAll, getById, createNew, updateById, deleteById } =
+    const { getAll, getById, createNew, updateById, deleteById, toggleStatus } =
       this.controller;
 
     // Define la ruta GET para obtener todos los usuarios.
@@ -46,6 +46,13 @@ export class UserRoutes {
     // Define la ruta POST para crear un nuevo usuario.
     // Cuando se accede a `/usuarios`, llama a `createNew` del controlador.
     this.router.post('/', createNew.bind(this.controller));
+
+    // Define la ruta PATCH para alternar el estado (activo/desactivado) de un usuario.
+    this.router.patch(
+      '/:id/toggle-status',
+      VerifyIdMiddleware.validate,
+      toggleStatus.bind(this.controller),
+    );
 
     // Define la ruta PATCH para actualizar un usuario por su ID.
     // Esta ruta valida el ID con el middleware antes de llamar a `updateById`.

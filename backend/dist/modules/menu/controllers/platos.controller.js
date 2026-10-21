@@ -15,7 +15,7 @@ const class_validator_1 = require("class-validator");
 const platos_service_1 = require("../services/platos.service");
 const create_plato_dto_1 = require("../dtos/create-plato.dto");
 const plato_entity_1 = require("../entities/plato.entity");
-const DatabaseConnection_1 = require("../../database/DatabaseConnection");
+const DatabaseConnection_1 = require("../../../core/database/DatabaseConnection");
 class PlatosController {
     constructor() {
         // El servicio se inyectará con el repositorio correcto en el módulo
@@ -35,9 +35,11 @@ class PlatosController {
                     precio: plato.precio,
                     categoria: plato.categoria,
                     imagen_url: plato.imagen_url,
+                    es_especial: plato.es_especial,
                     disponible: plato.disponible,
                     tiempo_preparacion_minutos: plato.tiempo_preparacion_minutos,
                     alergenos: plato.alergenos,
+                    precios_por_tamano: plato.precios_por_tamano,
                     created_at: plato.created_at,
                 }));
                 return res.status(200).json(platos);
@@ -62,9 +64,11 @@ class PlatosController {
                     precio: data.precio,
                     categoria: data.categoria,
                     imagen_url: data.imagen_url,
+                    es_especial: data.es_especial,
                     disponible: data.disponible,
                     tiempo_preparacion_minutos: data.tiempo_preparacion_minutos,
                     alergenos: data.alergenos,
+                    precios_por_tamano: data.precios_por_tamano,
                     created_at: data.created_at,
                 });
             }
@@ -103,9 +107,11 @@ class PlatosController {
                     precio: newPlatoData.precio,
                     categoria: newPlatoData.categoria,
                     imagen_url: newPlatoData.imagen_url,
+                    es_especial: newPlatoData.es_especial,
                     disponible: newPlatoData.disponible,
                     tiempo_preparacion_minutos: newPlatoData.tiempo_preparacion_minutos,
                     alergenos: newPlatoData.alergenos,
+                    precios_por_tamano: newPlatoData.precios_por_tamano,
                     created_at: newPlatoData.created_at,
                 });
             }
@@ -130,7 +136,7 @@ class PlatosController {
                 // No validar categoría para actualizaciones - permitir cualquier valor o mantener el existente
                 // No validar el DTO, solo actualizar directamente
                 yield this.service.update(plato_id, req.body);
-                const data = yield this.service.findOne(plato_id);
+                const data = yield this.service.findOne(plato_id, true);
                 return res.status(200).json({
                     plato_id: data.plato_id,
                     nombre: data.nombre,
@@ -138,9 +144,11 @@ class PlatosController {
                     precio: data.precio,
                     categoria: data.categoria,
                     imagen_url: data.imagen_url,
+                    es_especial: data.es_especial,
                     disponible: data.disponible,
                     tiempo_preparacion_minutos: data.tiempo_preparacion_minutos,
                     alergenos: data.alergenos,
+                    precios_por_tamano: data.precios_por_tamano,
                     created_at: data.created_at,
                 });
             }

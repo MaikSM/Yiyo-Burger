@@ -15,6 +15,7 @@ export class MesaEntity extends BaseEntity {
 
   @Column({
     nullable: false,
+    unique: true,
   })
   numero: number;
 
@@ -24,7 +25,7 @@ export class MesaEntity extends BaseEntity {
   capacidad: number;
 
   @Column({
-    type: 'enum',
+    type: 'simple-enum',
     enum: ['libre', 'reservada', 'ocupada', 'mantenimiento'],
     default: 'libre',
     nullable: false,
@@ -38,19 +39,19 @@ export class MesaEntity extends BaseEntity {
   ubicacion?: string;
 
   @CreateDateColumn({
-    type: 'timestamp',
+    type: 'datetime',
     nullable: false,
   })
   created_at: Date;
 
   @UpdateDateColumn({
-    type: 'timestamp',
+    type: 'datetime',
     nullable: false,
   })
   updated_at: Date;
 
   @DeleteDateColumn({
-    type: 'timestamp',
+    type: 'datetime',
     nullable: true,
   })
   deleted_at: Date;

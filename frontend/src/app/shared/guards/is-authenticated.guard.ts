@@ -13,11 +13,9 @@ export const IsAuthenticatedGuard: CanMatchFn = async (route, segments) => {
 
     // Redirigir al login con el returnUrl
     const returnUrl = segments.map(segment => segment.path).join('/');
-    router.navigate(['/auth/login'], {
+    return router.createUrlTree(['/auth/login'], {
       queryParams: { returnUrl: `/${returnUrl}` }
     });
-
-    return false;
   };
 
 export default IsAuthenticatedGuard;

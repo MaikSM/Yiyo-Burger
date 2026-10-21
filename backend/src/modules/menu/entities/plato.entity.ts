@@ -17,8 +17,11 @@ export class PlatoEntity {
   @Column({ type: 'varchar', length: 50, nullable: true })
   categoria: string;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
+  @Column({ type: 'text', nullable: true })
   imagen_url: string;
+
+  @Column({ type: 'boolean', default: false })
+  es_especial: boolean;
 
   @Column({ type: 'boolean', default: true })
   disponible: boolean;
@@ -28,6 +31,9 @@ export class PlatoEntity {
 
   @Column({ type: 'json', nullable: true })
   alergenos: string[];
+
+  @Column({ type: 'json', nullable: true })
+  precios_por_tamano: Record<string, number>;
 
   @CreateDateColumn()
   created_at: Date;

@@ -50,12 +50,12 @@ class JwtUtil {
      */
     static verifyToken(token) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b;
+            var _a;
             try {
                 // Verificar el token
                 const decoded = jsonwebtoken_1.default.verify(token, this.JWT_SECRET);
-                // Validar el payload del token
-                if (!((_a = decoded === null || decoded === void 0 ? void 0 : decoded.data) === null || _a === void 0 ? void 0 : _a.role_id) || !((_b = decoded === null || decoded === void 0 ? void 0 : decoded.data) === null || _b === void 0 ? void 0 : _b.user_id)) {
+                // Validar el payload del token - debe tener user_id
+                if (!((_a = decoded === null || decoded === void 0 ? void 0 : decoded.data) === null || _a === void 0 ? void 0 : _a.user_id)) {
                     throw new Error('Invalid token payload');
                 }
                 return decoded;
@@ -70,5 +70,5 @@ class JwtUtil {
 exports.JwtUtil = JwtUtil;
 // Clave secreta para firmar los tokens
 JwtUtil.JWT_SECRET = process.env.JWT_SECRET || 'aVerySecretString';
-// Tiempo de expiración del token
-JwtUtil.TOKEN_EXPIRATION = '1h';
+// Tiempo de expiración del token (12h por defecto para turnos completos de trabajo)
+JwtUtil.TOKEN_EXPIRATION = process.env.JWT_EXPIRES_IN || '12h';

@@ -42,21 +42,21 @@ __decorate([
 ], RoleEntity.prototype, "users", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({
-        type: 'timestamp', // Guarda la fecha como timestamp en la base de datos.
+        type: 'datetime', // Guarda la fecha como timestamp en la base de datos.
         nullable: false, // No permite valores nulos.
     }),
     __metadata("design:type", Date)
 ], RoleEntity.prototype, "created_at", void 0);
 __decorate([
     (0, typeorm_1.UpdateDateColumn)({
-        type: 'timestamp',
+        type: 'datetime',
         nullable: false,
     }),
     __metadata("design:type", Date)
 ], RoleEntity.prototype, "updated_at", void 0);
 __decorate([
     (0, typeorm_1.DeleteDateColumn)({
-        type: 'timestamp',
+        type: 'datetime',
         nullable: true, // Permite valores nulos porque el registro puede no estar eliminado.
     }),
     __metadata("design:type", Date)

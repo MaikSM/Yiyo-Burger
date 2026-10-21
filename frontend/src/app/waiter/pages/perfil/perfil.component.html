@@ -1,50 +1,42 @@
-<!doctype html>
-<html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Perfil - Mesero</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-  <body class="bg-gray-900 text-gray-100 flex flex-col min-h-screen">
-    <header class="bg-gray-800 shadow-md">
-      <div
-        class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center"
-      >
-        <h1 class="text-2xl font-bold text-orange-500">👨‍🍳 Perfil</h1>
+<div class="max-w-2xl mx-auto space-y-6">
+  <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
+    <div class="flex items-center gap-4 mb-6">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-3xl shadow-lg">
+        👤
       </div>
-    </header>
-
-    <main class="flex-1 max-w-7xl mx-auto px-6 py-8">
-      <h2 class="text-xl font-semibold text-gray-200 mb-6">
-        Información del Mesero
-      </h2>
-
-      <div class="bg-gray-800 p-6 rounded-xl shadow-md">
-        <p><span class="font-bold text-orange-400">Nombre:</span> Juan Pérez</p>
-        <p>
-          <span class="font-bold text-orange-400">Correo:</span>
-          juanperez&#64;restausync.com
+      <div>
+        <h1 class="text-xl font-black text-white">
+          {{ authService.user()?.name }} {{ authService.user()?.surname || '' }}
+        </h1>
+        <p class="text-xs text-orange-400 font-bold uppercase tracking-wider mt-0.5">
+          Rol: Mesero / Atención en Mesa
         </p>
-        <p><span class="font-bold text-orange-400">Turno:</span> Noche</p>
       </div>
+    </div>
 
-      <div class="mt-6">
-        <button
-          class="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded shadow transition"
-        >
-          Editar Perfil
-        </button>
+    <div class="space-y-3 divide-y divide-gray-800 text-xs">
+      <div class="pt-2 flex justify-between">
+        <span class="text-gray-400">Correo Electrónico:</span>
+        <span class="text-gray-200 font-medium">{{ authService.user()?.email }}</span>
       </div>
-    </main>
+      <div class="pt-3 flex justify-between">
+        <span class="text-gray-400">ID de Usuario:</span>
+        <span class="text-gray-200 font-mono font-medium">#{{ authService.user()?.id }}</span>
+      </div>
+      <div class="pt-3 flex justify-between">
+        <span class="text-gray-400">Estado de Cuenta:</span>
+        <span class="text-emerald-400 font-bold">Activo</span>
+      </div>
+    </div>
 
-    <footer class="bg-gray-800 py-4 mt-6">
-      <div
-        class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-gray-400"
+    <div class="mt-8 pt-6 border-t border-gray-800 flex gap-3">
+      <button
+        (click)="logout()"
+        class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
       >
-        <span>© 2025 RestauSync. Todos los derechos reservados.</span>
-        <span>Desarrollado con ❤️ y TailwindCSS</span>
-      </div>
-    </footer>
-  </body>
-</html>
+        <span>🚪</span>
+        <span>Cerrar Sesión</span>
+      </button>
+    </div>
+  </div>
+</div>

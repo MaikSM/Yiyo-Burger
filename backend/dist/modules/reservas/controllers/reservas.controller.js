@@ -131,9 +131,15 @@ class ReservasController {
     }
     crearReserva(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 // Convertir el cuerpo de la solicitud a una instancia del DTO
                 const createReservaDto = (0, class_transformer_1.plainToInstance)(create_reserva_dto_1.CreateReservaDto, req.body);
+                // Obtener el userId del token JWT y agregarlo al DTO
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.user_id;
+                if (userId) {
+                    createReservaDto.user_id = userId;
+                }
                 // Validar los datos del DTO
                 const errors = yield (0, class_validator_1.validate)(createReservaDto);
                 // Si hay errores de validación, devolverlos
@@ -243,6 +249,38 @@ class ReservasController {
                 res.status(statusCode).json({
                     success: false,
                     message: 'Error al eliminar la reserva',
+                    error: errorMessage,
+                });
+            }
+        });
+    }
+    obtenerMisReservas(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                // Obtener el userId del token JWT
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.user_id;
+                if (!userId) {
+                    console.log('❌ No user_id found in token. User object:', req.user);
+                    res.status(401).json({
+                        success: false,
+                        message: 'No autorizado. Token de usuario no encontrado.',
+                    });
+                    return;
+                }
+                console.log('🔐 Fetching reservations for user_id:', userId);
+                const reservas = yield this.reservasService.obtenerReservasPorUsuario(userId);
+                res.status(200).json({
+                    success: true,
+                    message: 'Mis reservas obtenidas exitosamente',
+                    data: reservas,
+                });
+            }
+            catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+                res.status(500).json({
+                    success: false,
+                    message: 'Error al obtener mis reservas',
                     error: errorMessage,
                 });
             }

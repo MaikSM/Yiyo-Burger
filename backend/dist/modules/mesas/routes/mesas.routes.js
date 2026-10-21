@@ -15,7 +15,7 @@ const mesa_entity_1 = require("../entities/mesa.entity");
 const mesas_controller_1 = require("../controllers/mesas.controller");
 const mesas_service_1 = require("../services/mesas.service");
 const mesa_repository_1 = require("../repositories/mesa.repository");
-const DatabaseConnection_1 = require("../../database/DatabaseConnection");
+const DatabaseConnection_1 = require("../../../core/database/DatabaseConnection");
 class MesasRoutes {
     constructor() {
         this.router = (0, express_1.Router)();
@@ -60,7 +60,12 @@ class MesasRoutes {
                 res.status(201).json(mesa);
             }
             catch (error) {
-                res.status(500).json({ error: 'Error al crear la mesa' });
+                if (error.message && error.message.includes('Ya existe')) {
+                    res.status(400).json({ error: error.message });
+                }
+                else {
+                    res.status(500).json({ error: 'Error al crear la mesa' });
+                }
             }
         }));
         // PATCH /api/v1/mesas/:id - Actualizar una mesa
@@ -85,14 +90,18 @@ class MesasRoutes {
             try {
                 const id = parseInt(req.params.id);
                 yield this.mesasController.delete(id);
-                res.status(204).send();
+                res.status(200).json({ message: 'Mesa eliminada correctamente' });
             }
             catch (error) {
-                if (error.message.includes('no encontrada')) {
-                    res.status(404).json({ error: error.message });
+                const msg = error.message || 'Error al eliminar la mesa';
+                if (msg.includes('no encontrada')) {
+                    res.status(404).json({ error: msg });
+                }
+                else if (msg.includes('No se puede eliminar')) {
+                    res.status(400).json({ error: msg });
                 }
                 else {
-                    res.status(500).json({ error: 'Error al eliminar la mesa' });
+                    res.status(500).json({ error: msg });
                 }
             }
         }));
@@ -130,6 +139,77 @@ class MesasRoutes {
                 res
                     .status(500)
                     .json({ error: 'Error al obtener las mesas por estado' });
+            }
+        }));
+        // POST /api/v1/mesas/confirmar-pedido
+        this.router.post('/confirmar-pedido', (req, res) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { pedidoInfo, items } = req.body;
+                if (!pedidoInfo || !items || !Array.isArray(items)) {
+                    return res.status(400).json({ error: 'Faltan datos de pedidoInfo o items' });
+                }
+                const result = yield this.mesasController.confirmarPedido(pedidoInfo, items);
+                res.status(200).json(result);
+            }
+            catch (error) {
+                console.error('Error al confirmar pedido:', error);
+                res.status(500).json({ error: 'Error al confirmar pedido e imprimir ticket' });
+            }
+        }));
+        // POST /api/v1/mesas/imprimir-factura
+        this.router.post('/imprimir-factura', (req, res) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { pedidoInfo, tipo } = req.body;
+                if (!pedidoInfo) {
+                    return res.status(400).json({ error: 'Faltan datos de pedidoInfo' });
+                }
+                const result = yield this.mesasController.imprimirFactura(pedidoInfo, tipo);
+                res.status(200).json(result);
+            }
+            catch (error) {
+                console.error('Error al imprimir factura:', error);
+                res.status(500).json({ error: 'Error al imprimir factura' });
+            }
+        }));
+        // POST /api/v1/mesas/imprimir-precuenta
+        this.router.post('/imprimir-precuenta', (req, res) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { pedidoInfo, tipo } = req.body;
+                if (!pedidoInfo) {
+                    return res.status(400).json({ error: 'Faltan datos de pedidoInfo' });
+                }
+                const result = yield this.mesasController.imprimirPrecuenta(pedidoInfo, tipo);
+                res.status(200).json(result);
+            }
+            catch (error) {
+                console.error('Error al imprimir pre-cuenta:', error);
+                res.status(500).json({ error: 'Error al imprimir pre-cuenta de mesa' });
+            }
+        }));
+        // POST /api/v1/mesas/confirmar-domicilio
+        this.router.post('/confirmar-domicilio', (req, res) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { pedidoInfo, items } = req.body;
+                if (!pedidoInfo || !items || !Array.isArray(items)) {
+                    return res.status(400).json({ error: 'Faltan datos de pedidoInfo o items' });
+                }
+                const result = yield this.mesasController.confirmarDomicilio(pedidoInfo, items);
+                res.status(200).json(result);
+            }
+            catch (error) {
+                console.error('Error al confirmar domicilio:', error);
+                res.status(500).json({ error: 'Error al confirmar domicilio e imprimir ticket' });
+            }
+        }));
+        // POST /api/v1/mesas/abrir-caja
+        this.router.post('/abrir-caja', (req, res) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const result = yield this.mesasController.abrirCaja();
+                res.status(200).json(result);
+            }
+            catch (error) {
+                console.error('Error al abrir caja:', error);
+                res.status(500).json({ error: 'Error al abrir caja' });
             }
         }));
     }

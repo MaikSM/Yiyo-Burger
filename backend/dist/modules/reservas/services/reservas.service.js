@@ -72,6 +72,11 @@ class ReservasService {
             return yield this.reservaRepository.findByFecha(fecha);
         });
     }
+    obtenerReservasPorUsuario(userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this.reservaRepository.findByUserId(userId);
+        });
+    }
     crearReserva(createReservaDto) {
         return __awaiter(this, void 0, void 0, function* () {
             // Validación manual de los datos
@@ -101,10 +106,20 @@ class ReservasService {
             // Convertir string a Date si es necesario con validación
             let fechaHora;
             try {
-                fechaHora =
-                    typeof createReservaDto.fecha_hora === 'string'
-                        ? new Date(createReservaDto.fecha_hora)
-                        : createReservaDto.fecha_hora;
+                const fechaInput = createReservaDto.fecha_hora;
+                // Manejar diferentes formatos de fecha
+                if (typeof fechaInput === 'string') {
+                    // Si es formato datetime-local (YYYY-MM-DDTHH:MM), convertir a ISO
+                    if (fechaInput.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)) {
+                        fechaHora = new Date(fechaInput + ':00.000Z');
+                    }
+                    else {
+                        fechaHora = new Date(fechaInput);
+                    }
+                }
+                else {
+                    fechaHora = fechaInput;
+                }
                 // Validar que la fecha sea válida
                 if (isNaN(fechaHora.getTime())) {
                     throw new Error('Fecha y hora inválida');
@@ -115,6 +130,9 @@ class ReservasService {
                 }
             }
             catch (error) {
+                if (error instanceof Error && error.message.includes('pasado')) {
+                    throw error;
+                }
                 throw new Error('Formato de fecha y hora inválido. Use formato ISO 8601 (ej: 2025-09-22T20:00:00.000Z)');
             }
             // Validar que la mesa esté disponible

@@ -4,7 +4,7 @@ import { iRole } from '@auth/interfaces';
 import { environment } from '@env/environment';
 import { catchError, Observable, tap } from 'rxjs';
 
-const API_URL = ` ${environment.apiUrl}/roles`;
+const API_URL = `${environment.apiUrl}/roles`;
 
 @Injectable({
   providedIn: 'root',

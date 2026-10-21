@@ -73,6 +73,7 @@ class RoleController {
     // Método para crear un nuevo rol.
     createNew(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 // Convierte el cuerpo de la solicitud (req.body) a una instancia del DTO de creación de rol.
                 const dto = (0, class_transformer_1.plainToInstance)(create_role_dto_1.CreateRoleDto, req.body);
@@ -90,11 +91,22 @@ class RoleController {
                         }),
                     });
                 }
-                // Verifica si el rol ya existe en la base de datos por su nombre.
-                const exists = yield this.service.getByName(dto.name);
-                // Si el rol ya existe, devuelve un mensaje de error.
-                if (exists)
-                    return res.status(400).json(`Role Already Exists: ${exists.name}`);
+                // Verifica si el rol ya existe en la base de datos por su nombre (incluyendo deshabilitados/eliminados).
+                const exists = yield this.service.getByName(dto.name, true);
+                if (exists) {
+                    // Si el rol ya existe pero estaba deshabilitado (soft-deleted), lo restauramos
+                    if (exists.deleted_at) {
+                        exists.deleted_at = null;
+                        exists.description = dto.description || exists.description;
+                        exists.name = dto.name;
+                        const restored = yield this.service.createNew(exists);
+                        return res.status(201).json(restored);
+                    }
+                    // Si el rol ya existe activo, devuelve un mensaje 400 claro
+                    return res.status(400).json({
+                        message: `Ya existe un rol registrado con el nombre "${dto.name}".`,
+                    });
+                }
                 // Crea el nuevo rol usando el servicio y el DTO.
                 const data = yield this.service.createNew((0, class_transformer_1.plainToInstance)(role_entity_1.RoleEntity, dto));
                 // Si hubo un error al crear el rol, devuelve un mensaje de error.
@@ -105,10 +117,16 @@ class RoleController {
                 return res.status(201).json(data);
             }
             catch (error) {
-                // Maneja cualquier error inesperado y devuelve un mensaje de error.
+                console.error('Error in createNew role:', error);
+                const errorMsg = (error === null || error === void 0 ? void 0 : error.message) || String(error);
+                if (errorMsg.includes('UNIQUE constraint failed')) {
+                    return res.status(400).json({
+                        message: `Ya existe un rol registrado con el nombre "${(_a = req.body) === null || _a === void 0 ? void 0 : _a.name}".`,
+                    });
+                }
                 return res.status(500).json({
-                    message: 'Error Fetching Roles | RoleController',
-                    data: error instanceof Error ? error.message : String(error),
+                    message: 'Error al crear el rol en el servidor',
+                    data: errorMsg,
                 });
             }
         });
@@ -116,6 +134,7 @@ class RoleController {
     // Método para actualizar un rol por su ID.
     updateById(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 // Extrae el ID del rol de los parámetros de la solicitud.
                 const id = parseInt(req.params.id);
@@ -141,6 +160,15 @@ class RoleController {
                         }),
                     });
                 }
+                // Si se está modificando el nombre, verificar que no choque con otro rol
+                if (dto.name && dto.name.toLowerCase().trim() !== toUpdate.name.toLowerCase().trim()) {
+                    const existing = yield this.service.getByName(dto.name, true);
+                    if (existing && existing.id !== id) {
+                        return res.status(400).json({
+                            message: `Ya existe otro rol registrado con el nombre "${dto.name}".`,
+                        });
+                    }
+                }
                 // Actualiza el rol por su ID usando el servicio.
                 const updatedData = yield this.service.updateById(id, (0, class_transformer_1.plainToInstance)(role_entity_1.RoleEntity, dto));
                 // Si hubo un error al actualizar, devuelve un mensaje de error.
@@ -151,10 +179,16 @@ class RoleController {
                 return res.status(200).json(yield this.service.getById(id));
             }
             catch (error) {
-                // Maneja cualquier error inesperado y devuelve un mensaje de error.
+                console.error('Error in updateById role:', error);
+                const errorMsg = (error === null || error === void 0 ? void 0 : error.message) || String(error);
+                if (errorMsg.includes('UNIQUE constraint failed')) {
+                    return res.status(400).json({
+                        message: `Ya existe otro rol registrado con el nombre "${(_a = req.body) === null || _a === void 0 ? void 0 : _a.name}".`,
+                    });
+                }
                 return res.status(500).json({
-                    message: 'Error Fetching Roles | RoleController',
-                    data: error instanceof Error ? error.message : String(error),
+                    message: 'Error al actualizar el rol en el servidor',
+                    data: errorMsg,
                 });
             }
         });

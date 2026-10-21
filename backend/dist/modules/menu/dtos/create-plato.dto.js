@@ -38,8 +38,15 @@ __decorate([
 ], CreatePlatoDto.prototype, "categoria", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(3000000),
     __metadata("design:type", String)
 ], CreatePlatoDto.prototype, "imagen_url", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreatePlatoDto.prototype, "es_especial", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsBoolean)(),
@@ -57,3 +64,7 @@ __decorate([
     (0, class_validator_1.IsString)({ each: true }),
     __metadata("design:type", Array)
 ], CreatePlatoDto.prototype, "alergenos", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], CreatePlatoDto.prototype, "precios_por_tamano", void 0);

@@ -3,7 +3,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { iLoginRequest, iRegisterRequest, iUser } from '@auth/interfaces';
 import { environment } from '@env/environment';
-import { catchError, map, Observable, of } from 'rxjs';
+import { catchError, finalize, map, Observable, of, shareReplay } from 'rxjs';
 
 //
 const RESOLVED_API_URL = environment.apiUrl;
@@ -20,9 +20,7 @@ export class AuthService {
   private _user = signal<iUser | null>(null);
   private _token = signal<string | null>(localStorage.getItem('token'));
 
-  checkStatusResource = rxResource({
-    loader: () => this.checkAuthStatus(),
-  });
+
 
   logPrivateProperties() {
     console.log({
@@ -103,6 +101,9 @@ export class AuthService {
       );
   }
 
+  // Cache for in-flight checkAuthStatus to prevent concurrent duplicate requests
+  private _checkAuthStatusCache$: Observable<boolean> | null = null;
+
   checkAuthStatus(): Observable<boolean> {
     const token: string | null = localStorage.getItem('token');
 
@@ -110,8 +111,19 @@ export class AuthService {
       this._authStatus.set('not-authenticated');
       return of(false);
     }
-    // check-token
-    return this._http
+
+    // If already authenticated with a user loaded, skip the HTTP call
+    if (this._authStatus() === 'authenticated' && this._user()) {
+      return of(true);
+    }
+
+    // If there's already an in-flight request, reuse it
+    if (this._checkAuthStatusCache$) {
+      return this._checkAuthStatusCache$;
+    }
+
+    // Fire one request and share it across all concurrent callers
+    this._checkAuthStatusCache$ = this._http
       .post<iUser>(
         `${AUTH_API_URL}/check-token`,
         {},
@@ -122,7 +134,14 @@ export class AuthService {
       .pipe(
         map((res) => this.handleAuthSuccess(res)),
         catchError((error: unknown) => this.handleAuthError(error)),
+        finalize(() => {
+          // Clear the cache once the request finishes so the next call is fresh
+          this._checkAuthStatusCache$ = null;
+        }),
+        shareReplay(1),
       );
+
+    return this._checkAuthStatusCache$;
   }
 
   logout() {
@@ -132,22 +151,58 @@ export class AuthService {
     localStorage.removeItem('token');
   }
 
+  // Solicitar recuperación de contraseña
+  requestPasswordRecovery(email: string): Observable<{ success: boolean; message: string }> {
+    return this._http
+      .post<{ message: string }>(`${AUTH_API_URL}/request-password-recovery`, { email })
+      .pipe(
+        map((res) => ({
+          success: true,
+          message: res.message,
+        })),
+        catchError((error: unknown) => {
+          const httpError = error as { error?: { message?: string } };
+          return of({
+            success: false,
+            message: httpError.error?.message || 'Error al solicitar recuperación de contraseña',
+          });
+        }),
+      );
+  }
+
+  // Restablecer contraseña con token
+  resetPassword(token: string, password: string): Observable<{ success: boolean; message: string }> {
+    return this._http
+      .post<{ message: string }>(`${AUTH_API_URL}/reset-password`, { token, password })
+      .pipe(
+        map((res) => ({
+          success: true,
+          message: res.message,
+        })),
+        catchError((error: unknown) => {
+          const httpError = error as { error?: { message?: string } };
+          return of({
+            success: false,
+            message: httpError.error?.message || 'Error al restablecer contraseña',
+          });
+        }),
+      );
+  }
+
   private handleAuthSuccess(res: iUser) {
     // Normalizar role_id desde role.id si no viene presente en la respuesta
     const normalizedUser: iUser = {
       ...res,
-      role_id: (res.role_id ?? res.role?.id) as number | undefined,
+      role_id: Number(res.role_id ?? res.role?.id) || undefined,
     };
 
     this._user.set(normalizedUser);
-    this._token.set(res.token ?? null);
     this._authStatus.set('authenticated');
 
-    // Persistencia del token: guarda sólo si existe; si no, limpia
+    // Persistencia del token: sólo actualizar si la respuesta incluye un nuevo token
     if (res.token) {
+      this._token.set(res.token);
       localStorage.setItem('token', res.token);
-    } else {
-      localStorage.removeItem('token');
     }
 
     return true;

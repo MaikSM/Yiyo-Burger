@@ -380,6 +380,38 @@ export class AdminUsersTableComponent {
       });
     }
   }
+
+  onToggleStatus(row: Row<iUser>) {
+    try {
+      const user = row.original;
+      if (this._usersService.forbidenUsers().includes(user.id!)) {
+        toast.error('Este usuario no puede ser desactivado', {
+          description: 'Los usuarios de sistema deben permanecer activos.'
+        });
+        return;
+      }
+
+      const newStatus = !user.is_active;
+      const action = newStatus ? 'Activar' : 'Desactivar';
+
+      if (confirm(`¿Está seguro de ${action.toLowerCase()} a ${user.name}?`)) {
+        this._usersService.toggleStatus(user.id!, newStatus).subscribe({
+          next: () => {
+            toast.success(`Usuario ${newStatus ? 'Activado' : 'Desactivado'}`, {
+              description: `El usuario ha sido ${newStatus ? 'activado' : 'desactivado'} correctamente.`
+            });
+            location.reload();
+          },
+          error: (err) => {
+            console.error(err);
+            toast.error(`Error al ${action.toLowerCase()} el usuario`);
+          }
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
 }
 
 export default AdminUsersTableComponent;

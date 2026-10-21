@@ -19,7 +19,7 @@ export function authInterceptor(
  */
 
 import { HttpHandlerFn, HttpRequest } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { inject, untracked } from '@angular/core';
 import { AuthService } from '@auth/services/auth.service';
 import { environment } from '@env/environment';
 
@@ -28,18 +28,15 @@ export function authInterceptor(
   next: HttpHandlerFn,
 ) {
   const authService = inject(AuthService);
-  const token = authService.token();
+  const token = untracked(() => authService.token()) || localStorage.getItem('token');
 
-  // Skip token for authentication endpoints and public menu
+  // Skip token only for endpoints that do not require authentication.
   if (
     req.url.includes(`${environment.apiUrl}/auth/login`) ||
-    req.url.includes(`${environment.apiUrl}/auth/check-token`) ||
-    req.url.includes(`${environment.apiUrl}/platos-public`)
+    req.url.includes(`${environment.apiUrl}/auth/register`) ||
+    req.url.includes(`${environment.apiUrl}/platos-public`) ||
+    req.url.includes(`${environment.apiUrl}/system-security`)
   ) {
-    console.log(
-      '🔐 AuthInterceptor: Skipping token for auth or public endpoint:',
-      req.url,
-    );
     return next(req);
   }
 
@@ -51,11 +48,12 @@ export function authInterceptor(
     return next(req);
   }
 
+  console.log('🔐 AuthInterceptor: Adding token to request:', req.url);
+  console.log('🔑 Token exists:', !!token);
+  
   const newReq = req.clone({
     headers: req.headers.set('Authorization', `Bearer ${token}`),
   });
 
-  console.log('🔐 AuthInterceptor: Adding token to request:', req.url);
-  console.log('🔑 Token length:', token.length);
   return next(newReq);
 }

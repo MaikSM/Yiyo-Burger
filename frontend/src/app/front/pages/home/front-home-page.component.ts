@@ -1,15 +1,19 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, signal, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ChatComponent } from '../../../pages/chat/chat.component';
+import { PlatosService, Plato } from '../../../admin/services/platos.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-front-home-page',
   standalone: true,
-  imports: [RouterLink, ChatComponent],
+  imports: [RouterLink, ChatComponent, CommonModule],
   templateUrl: './front-home-page.component.html',
   styles: ``,
 })
 export class FrontHomePageComponent implements OnInit, OnDestroy, AfterViewInit {
+  private platosService = inject(PlatosService);
+  specialDishes = signal<Plato[]>([]);
   showChatModal = signal(false);
 
   openChat() {
@@ -53,6 +57,22 @@ export class FrontHomePageComponent implements OnInit, OnDestroy, AfterViewInit 
 
   ngOnInit(): void {
     this.startBackgroundCarousel();
+    this.loadSpecialDishes();
+  }
+
+  private loadSpecialDishes(): void {
+    this.platosService.getAll().subscribe({
+      next: (platos) => {
+        const special = platos.slice(0, 8); // Máximo 8 para el carrusel
+        this.specialDishes.set(special);
+        this.totalSlides = special.length;
+        if (this.totalSlides > 0) {
+          // Re-inicializar si ya se cargó la vista
+          setTimeout(() => this.initializeCarousel(), 100);
+        }
+      },
+      error: (err) => console.error('Error cargando platos especiales:', err)
+    });
   }
 
   ngAfterViewInit(): void {
@@ -138,16 +158,18 @@ export class FrontHomePageComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private nextSlide(): void {
-    this.currentSlide = (this.currentSlide + 1) % 5;
+    if (this.totalSlides === 0) return;
+    this.currentSlide = (this.currentSlide + 1) % this.totalSlides;
     this.updateCarousel();
   }
 
   private prevSlide(): void {
-    this.currentSlide = (this.currentSlide - 1 + 5) % 5;
+    if (this.totalSlides === 0) return;
+    this.currentSlide = (this.currentSlide - 1 + this.totalSlides) % this.totalSlides;
     this.updateCarousel();
   }
 
-  private goToSlide(slideIndex: number): void {
+  goToSlide(slideIndex: number): void {
     this.currentSlide = slideIndex;
     this.updateCarousel();
   }

@@ -2,11 +2,17 @@
   <!-- Encabezado responsivo -->
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b-2 border-orange-500 p-4 bg-gray-800 shadow-md mb-6 rounded-lg">
     <h1 class="text-center sm:text-left text-2xl sm:text-3xl font-bold text-white">
-      📦 Inventario
+      📦 Menú
     </h1>
+    <!-- <button 
+      class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-all shadow-lg flex items-center gap-2"
+      routerLink="/admin/platos-especiales"
+    >
+      ⭐ Platos especiales
+    </button> -->
   </div>
 
-  <!-- Pestañas para web -->
+  <!-- Pestañas para web (desactivadas, se manejan desde la barra lateral)
   <div class="hidden md:flex mb-6 bg-gray-800 rounded-lg p-1">
     <button
       class="flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all"
@@ -29,8 +35,9 @@
       📦 Inventario
     </button>
   </div>
+  -->
 
-  <!-- Pestañas para móvil -->
+  <!-- Pestañas para móvil (desactivadas, se manejan desde la barra lateral)
   <div class="md:hidden mb-6">
     <select
       [value]="activeTab()"
@@ -41,6 +48,7 @@
       <option value="inventario">📦 Inventario</option>
     </select>
   </div>
+  -->
 
   <!-- Contenido de pestañas -->
   @if (activeTab() === 'menu') {
@@ -51,55 +59,84 @@
      <!-- Filtros de categoría -->
      @if (platosResource.hasValue()) {
        <div class="bg-gray-800 rounded-lg p-4">
-         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
-           <h3 class="text-lg font-semibold text-orange-400">Filtrar por Categoría</h3>
-           <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+            <!-- Categorías Madres (Secciones) -->
+            <div class="flex gap-2 sm:gap-4 border-b border-gray-700 pb-2 overflow-x-auto">
+              <button (click)="activeSeccion.set('Todos'); selectCategoria(null)" [class]="activeSeccion() === 'Todos' ? 'text-orange-500 border-b-2 border-orange-500 font-bold px-3 pb-2 flex items-center gap-1.5' : 'text-gray-400 px-3 pb-2 hover:text-gray-300 flex items-center gap-1.5'"><i class="fas fa-utensils"></i> Todos</button>
+              <button (click)="activeSeccion.set('Parrilla'); selectCategoria(null)" [class]="activeSeccion() === 'Parrilla' ? 'text-orange-500 border-b-2 border-orange-500 font-bold px-3 pb-2' : 'text-gray-400 px-3 pb-2 hover:text-gray-300'">Parrilla</button>
+              <button (click)="activeSeccion.set('Pizzas'); selectCategoria(null)" [class]="activeSeccion() === 'Pizzas' ? 'text-red-500 border-b-2 border-red-500 font-bold px-3 pb-2 flex items-center gap-2' : 'text-gray-400 px-4 pb-2 hover:text-gray-300 flex items-center gap-2'"><i class="fas fa-pizza-slice"></i> Pizzas</button>
+              <button (click)="activeSeccion.set('Bebidas'); selectCategoria(null)" [class]="activeSeccion() === 'Bebidas' ? 'text-blue-500 border-b-2 border-blue-500 font-bold px-3 pb-2 flex items-center gap-2' : 'text-gray-400 px-4 pb-2 hover:text-gray-300 flex items-center gap-2'"><i class="fas fa-glass-martini-alt"></i> Bebidas</button>
+            </div>
+
+            <!-- Buscador -->
+            <div class="relative w-full sm:w-64">
+              <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+              <input type="text" 
+                     [value]="searchTerm()" 
+                     (input)="searchTerm.set($any($event.target).value)" 
+                     placeholder="Buscar plato..." 
+                     class="w-full bg-gray-700 text-white border border-gray-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-full pl-10 pr-4 py-2 text-sm outline-none transition-all">
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <button
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
+                (click)="openAddPlatoModal()"
+              >
+                🍽️ Crear Plato
+              </button>
              <button
-               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
-               (click)="openAddPlatoModal()"
-             >
-               🍽️ Crear Plato
-             </button>
-             <button
-               class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
-               (click)="openAddCategoriaModal('menu')"
-             >
-               ➕ Agregar Categoría
-             </button>
-             <button
-               class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
-               (click)="openDeleteCategoriaModal()"
-             >
-               🗑️ Eliminar Categoría
-             </button>
+                class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
+                (click)="openAddCategoriaModal('menu')"
+              >
+                ➕ Agregar Categoría
+              </button>
+              <button
+                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
+                (click)="openDeleteCategoriaModal()"
+              >
+                🗑️ Eliminar Categoría
+              </button>
            </div>
          </div>
-         <div class="flex flex-wrap gap-2 overflow-x-auto">
-           <button
-             class="px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
-             [class.bg-orange-500]="selectedCategoria() === null"
-             [class.text-white]="selectedCategoria() === null"
-             [class.bg-gray-700]="selectedCategoria() !== null"
-             [class.text-gray-300]="selectedCategoria() !== null"
-             [class.hover:bg-gray-600]="selectedCategoria() !== null"
-             (click)="selectCategoria(null)"
-           >
-             📋 Todas las Categorías
-           </button>
-           @for (categoria of categoriasKeys; track categoria) {
-             <button
-               class="px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
-               [class.bg-orange-500]="selectedCategoria() === categoria"
-               [class.text-white]="selectedCategoria() === categoria"
-               [class.bg-gray-700]="selectedCategoria() !== categoria"
-               [class.text-gray-300]="selectedCategoria() !== categoria"
-               [class.hover:bg-gray-600]="selectedCategoria() !== categoria"
-               (click)="selectCategoria(categoria)"
-             >
-               {{ categoria }}
-             </button>
-           }
-         </div>
+
+          <div class="relative group mt-2">
+            <!-- Botón Scroll Izquierda -->
+            <button 
+              type="button" 
+              (click)="catList.scrollBy({ left: -200, behavior: 'smooth' })"
+              class="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 items-center justify-center bg-gray-900/90 text-white rounded-full shadow-lg hover:bg-orange-500 transition-all opacity-0 group-hover:opacity-100">
+              <i class="fas fa-chevron-left text-xs"></i>
+            </button>
+
+            <div 
+              #catList
+              (wheel)="onWheelScroll($event, catList)"
+              class="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
+              <button 
+                (click)="selectCategoria(null)" 
+                class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
+                [class]="selectedCategoria() === null ? (activeSeccion() === 'Pizzas' ? 'bg-red-500 text-white shadow-md' : (activeSeccion() === 'Bebidas' ? 'bg-blue-500 text-white shadow-md' : 'bg-orange-500 text-white shadow-md')) : 'bg-gray-700 text-gray-300 hover:bg-gray-600'">
+                📋 Todas las Categorías
+              </button>
+
+              @for (categoria of categoriasKeys; track categoria) {
+                <button 
+                  (click)="selectCategoria(categoria)" 
+                  class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
+                  [class]="selectedCategoria() === categoria ? (activeSeccion() === 'Pizzas' ? 'bg-red-500 text-white shadow-md' : (activeSeccion() === 'Bebidas' ? 'bg-blue-500 text-white shadow-md' : 'bg-orange-500 text-white shadow-md')) : 'bg-gray-700 text-gray-300 hover:bg-gray-600'">
+                  {{ categoria }}
+                </button>
+              }
+            </div>
+
+            <!-- Botón Scroll Derecha -->
+            <button 
+              type="button" 
+              (click)="catList.scrollBy({ left: 200, behavior: 'smooth' })"
+              class="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 items-center justify-center bg-gray-900/90 text-white rounded-full shadow-lg hover:bg-orange-500 transition-all opacity-0 group-hover:opacity-100">
+              <i class="fas fa-chevron-right text-xs"></i>
+            </button>
+          </div>
        </div>
      }
 
@@ -127,25 +164,31 @@
                    </span>
                  </div>
 
-                 @if (plato.imagen_url) {
-                   <img
-                     [src]="plato.imagen_url"
-                     [alt]="plato.nombre"
-                     class="w-full h-32 object-cover rounded-lg mb-2"
-                   />
-                 } @else {
-                   <div class="w-full h-32 bg-gray-600 rounded-lg mb-2 flex items-center justify-center">
-                     <span class="text-gray-400 text-sm">Sin imagen</span>
-                   </div>
-                 }
-
                  @if (plato.descripcion) {
                    <p class="text-gray-300 text-sm mb-2">{{ plato.descripcion }}</p>
                  }
 
                  <div class="flex justify-between items-center text-sm">
-                   <span class="text-gray-400">
-                     Precio: <span class="font-semibold text-orange-400">${{ plato.precio }}</span>
+                   <span class="text-gray-400 w-full">
+                     @if (plato.categoria === 'Pizzas' || (plato.categoria && plato.categoria.toLowerCase().includes('pizza'))) {
+                       <div class="mt-1 border-t border-gray-700/60 pt-2 w-full">
+                         <span class="text-orange-400 font-bold block mb-1">🍕 Precios por Tamaño:</span>
+                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-2 gap-y-1 text-gray-300 font-medium text-[11px]">
+                           @if (getPreciosPorTamano(plato)) {
+                             <span>P: {{ (getPreciosPorTamano(plato)['Personal'] || 0) | currency }}</span>
+                             <span>M: {{ (getPreciosPorTamano(plato)['Mediana'] || 0) | currency }}</span>
+                             <span>G: {{ (getPreciosPorTamano(plato)['Grande'] || 0) | currency }}</span>
+                             <span>EG: {{ (getPreciosPorTamano(plato)['Extragrande'] || 0) | currency }}</span>
+                             <span>GG: {{ (getPreciosPorTamano(plato)['Gigante'] || 0) | currency }}</span>
+                             <span>F: {{ (getPreciosPorTamano(plato)['Familiar'] || 0) | currency }}</span>
+                           } @else {
+                             <span class="col-span-3 text-gray-500 italic">No configurados</span>
+                           }
+                         </div>
+                       </div>
+                     } @else {
+                        Precio: <span class="font-semibold text-orange-400">{{ plato.precio | currency }}</span>
+                     }
                    </span>
                    @if (plato.tiempo_preparacion_minutos) {
                      <span class="text-gray-400">
@@ -190,36 +233,69 @@
                @for (plato of getPlatosByCategoria()[categoria]; track plato.plato_id) {
                  <div class="bg-gray-700 rounded-lg p-4 border border-gray-600 hover:border-orange-500 transition-colors">
                    <div class="flex justify-between items-start mb-2">
-                     <h4 class="text-lg font-semibold text-white">{{ plato.nombre }}</h4>
-                     <span
-                       class="px-2 py-1 rounded-full text-xs font-semibold"
-                       [class.bg-green-600]="plato.disponible"
-                       [class.bg-red-600]="!plato.disponible"
-                       [class.text-white]="true"
-                     >
-                       {{ plato.disponible ? 'Disponible' : 'No disponible' }}
-                     </span>
-                   </div>
-
-                   @if (plato.imagen_url) {
-                     <img
-                       [src]="plato.imagen_url"
-                       [alt]="plato.nombre"
-                       class="w-full h-32 object-cover rounded-lg mb-2"
-                     />
-                   } @else {
-                     <div class="w-full h-32 bg-gray-600 rounded-lg mb-2 flex items-center justify-center">
-                       <span class="text-gray-400 text-sm">Sin imagen</span>
+                      @if (isQuickEditMode()) {
+                      <input
+                        type="text"
+                        [value]="plato.nombre"
+                        (blur)="updatePlatoQuick(plato, 'nombre', $event)"
+                        class="bg-gray-800 border-b border-orange-500 text-white font-semibold focus:outline-none w-full mr-2"
+                      />
+                    } @else {
+                      <h4 class="text-lg font-semibold text-white flex items-center gap-2">
+                        {{ plato.nombre }}
+                      </h4>
+                    }
+                     <div class="flex flex-col items-end gap-1">
+                       <span
+                         class="px-2 py-1 rounded-full text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity"
+                         [class.bg-green-600]="plato.disponible"
+                         [class.bg-red-600]="!plato.disponible"
+                         [class.text-white]="true"
+                         (click)="toggleEstadoPlato(plato, $event)"
+                         title="Cambiar disponibilidad"
+                       >
+                         {{ plato.disponible ? 'Disponible' : 'Agotado' }}
+                       </span>
                      </div>
-                   }
+                   </div>
 
                    @if (plato.descripcion) {
                      <p class="text-gray-300 text-sm mb-2">{{ plato.descripcion }}</p>
                    }
 
                    <div class="flex justify-between items-center text-sm">
-                     <span class="text-gray-400">
-                       Precio: <span class="font-semibold text-orange-400">${{ plato.precio }}</span>
+                    <span class="text-gray-400 w-full">
+                       @if (plato.categoria === 'Pizzas' || (plato.categoria && plato.categoria.toLowerCase().includes('pizza'))) {
+                         <div class="mt-1 border-t border-gray-700/60 pt-2 w-full">
+                           <span class="text-orange-400 font-bold block mb-1">🍕 Precios por Tamaño:</span>
+                           <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-2 gap-y-1 text-gray-300 font-medium text-[11px]">
+                             @if (getPreciosPorTamano(plato)) {
+                               <span>P: {{ (getPreciosPorTamano(plato)['Personal'] || 0) | currency }}</span>
+                               <span>M: {{ (getPreciosPorTamano(plato)['Mediana'] || 0) | currency }}</span>
+                               <span>G: {{ (getPreciosPorTamano(plato)['Grande'] || 0) | currency }}</span>
+                               <span>EG: {{ (getPreciosPorTamano(plato)['Extragrande'] || 0) | currency }}</span>
+                               <span>GG: {{ (getPreciosPorTamano(plato)['Gigante'] || 0) | currency }}</span>
+                               <span>F: {{ (getPreciosPorTamano(plato)['Familiar'] || 0) | currency }}</span>
+                             } @else {
+                               <span class="col-span-3 text-gray-500 italic">No configurados</span>
+                             }
+                           </div>
+                         </div>
+                       } @else {
+                         Precio: 
+                         @if (isQuickEditMode()) {
+                           <span class="ml-1 text-orange-400">$</span>
+                           <input
+                             type="number"
+                             step="0.01"
+                             [value]="plato.precio"
+                             (blur)="updatePlatoQuick(plato, 'precio', $event)"
+                             class="bg-transparent border-b border-orange-500 text-orange-400 font-semibold focus:outline-none w-20 ml-1"
+                           />
+                         } @else {
+                           <span class="font-semibold text-orange-400 ml-1">{{ plato.precio | currency }}</span>
+                         }
+                       }
                      </span>
                      @if (plato.tiempo_preparacion_minutos) {
                        <span class="text-gray-400">
@@ -234,203 +310,26 @@
                      </div>
                    }
  
-                   <!-- Botones de acción -->
-                   <div class="mt-3 flex gap-2">
-                     <button
-                       class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-xs font-medium transition-all"
-                       (click)="editPlato(plato)"
-                     >
-                       ✏️ Editar
-                     </button>
-                     <button
-                       class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-all"
-                       (click)="deletePlato(plato)"
-                     >
-                       🗑️ Eliminar
-                     </button>
-                   </div>
+                    <!-- Botones de acción -->
+                    <div class="mt-3 flex gap-2">
+                      <button
+                        class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-xs font-medium transition-all"
+                        (click)="editPlato(plato)"
+                      >
+                        ✏️ Editar
+                      </button>
+                      <button
+                        class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-all"
+                        (click)="deletePlato(plato)"
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    </div>
                  </div>
                }
              </div>
            </div>
          }
-
-
-         <!-- Modal para crear plato -->
-         @if (showAddPlatoModal()) {
-           <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-             <div class="bg-gray-800 rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-               <h3 class="text-lg font-semibold text-blue-400 mb-4">{{ editingPlatoId() ? 'Editar Plato' : 'Crear Nuevo Plato' }}</h3>
-
-               <form class="space-y-4">
-                 <div>
-                   <label class="block text-sm font-medium text-gray-300 mb-2">
-                     Nombre del Plato *
-                   </label>
-                   <input
-                     type="text"
-                     [value]="nombre()"
-                     (input)="updateNombre($event)"
-                     class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                     placeholder="Ej: Pasta Carbonara"
-                   />
-                 </div>
-
-                 <div>
-                   <label class="block text-sm font-medium text-gray-300 mb-2">
-                     Descripción
-                   </label>
-                   <textarea
-                     [value]="descripcion()"
-                     (input)="updateDescripcion($event)"
-                     class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 h-20 resize-none"
-                     placeholder="Descripción del plato..."
-                   ></textarea>
-                 </div>
-
-                 <div class="grid grid-cols-2 gap-4">
-                   <div>
-                     <label class="block text-sm font-medium text-gray-300 mb-2">
-                       Precio *
-                     </label>
-                     <input
-                       type="number"
-                       step="0.01"
-                       min="0"
-                       [value]="precio()"
-                       (input)="updatePrecio($event)"
-                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                       placeholder="0.00"
-                     />
-                   </div>
-
-                   @if (!editingPlatoId()) {
-                   <div>
-                     <label class="block text-sm font-medium text-gray-300 mb-2">
-                       Categoría
-                     </label>
-                     <select
-                       [value]="categoria()"
-                       (change)="updateCategoria($event)"
-                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                     >
-                       <option value="">Seleccionar categoría...</option>
-                       @for (categoria of (activeTab() === 'menu' ? categoriasKeys : categoriasInventarioKeys); track categoria) {
-                         <option [value]="categoria">{{ categoria }}</option>
-                       }
-                     </select>
-                   </div>
-                   }
-                 </div>
-
-                 <div>
-                   <label class="block text-sm font-medium text-gray-300 mb-2">
-                     Imagen del Plato
-                   </label>
-                   <div class="grid grid-cols-2 gap-4 mb-4">
-                     <button
-                       type="button"
-                       (click)="takePhoto()"
-                       class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                     >
-                       📷 Tomar Foto
-                     </button>
-                     <button
-                       type="button"
-                       (click)="selectFromGallery()"
-                       class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                     >
-                       🖼️ Galería
-                     </button>
-                   </div>
-
-                   @if (imagen_url()) {
-                     <div class="mb-4">
-                       <p class="text-sm text-gray-400 mb-2">Vista previa:</p>
-                       <img
-                         [src]="imagen_url()"
-                         [alt]="nombre() || 'Vista previa del plato'"
-                         class="w-full h-32 object-cover rounded-lg border border-gray-600"
-                       />
-                       <button
-                         type="button"
-                         (click)="clearImage()"
-                         class="mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-all"
-                       >
-                         ❌ Quitar Imagen
-                       </button>
-                     </div>
-                   } @else {
-                     <div class="mb-4 p-8 border-2 border-dashed border-gray-600 rounded-lg text-center text-gray-400">
-                       <p class="text-sm">No hay imagen seleccionada</p>
-                       <p class="text-xs">Usa la cámara o selecciona de la galería</p>
-                     </div>
-                   }
-                 </div>
-
-                 <div class="grid grid-cols-2 gap-4">
-                   <div>
-                     <label class="block text-sm font-medium text-gray-300 mb-2">
-                       Tiempo de Preparación (min)
-                     </label>
-                     <input
-                       type="number"
-                       min="1"
-                       [value]="tiempo_preparacion_minutos()"
-                       (input)="updateTiempoPreparacion($event)"
-                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                       placeholder="15"
-                     />
-                   </div>
-
-                 </div>
-
-                 <div>
-                   <label class="block text-sm font-medium text-gray-300 mb-2">
-                     Alérgenos (separados por coma)
-                   </label>
-                   <input
-                     type="text"
-                     [value]="alergenos().join(', ')"
-                     (input)="updateAlergenos($event)"
-                     class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                     placeholder="lácteos, gluten, huevos"
-                   />
-                 </div>
-
-                 <div class="flex items-center">
-                   <input
-                     type="checkbox"
-                     id="disponible"
-                     [checked]="disponible()"
-                     (change)="updateDisponible($event)"
-                     class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
-                   />
-                   <label for="disponible" class="ml-2 text-sm font-medium text-gray-300">
-                     Plato disponible
-                   </label>
-                 </div>
-               </form>
-
-               <div class="flex justify-end gap-3 mt-6">
-                 <button
-                   class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                   (click)="closeAddPlatoModal()"
-                 >
-                   Cancelar
-                 </button>
-                 <button
-                   class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                   (click)="createPlato()"
-                   [disabled]="!nombre().trim() || !precio()"
-                 >
-                   {{ editingPlatoId() ? 'Actualizar Plato' : 'Crear Plato' }}
-                 </button>
-               </div>
-             </div>
-           </div>
-         }
-
        }
      } @else {
        <is-empty />
@@ -514,428 +413,1365 @@
          </div>
        </div>
      }
-   </div>
-  } @else if (activeTab() === 'inventario') {
-    <!-- Vista de Inventario -->
-    <div class="space-y-6">
-      <h2 class="text-xl font-semibold text-orange-400">📦 Gestión de Inventario</h2>
 
+     <!-- Modal para crear plato -->
+     @if (showAddPlatoModal()) {
+       <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+         <div class="bg-gray-800 rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+           <h3 class="text-lg font-semibold text-blue-400 mb-4">{{ editingPlatoId() ? 'Editar Plato' : 'Crear Nuevo Plato' }}</h3>
 
-      <!-- Botones de acción -->
-      <div class="bg-gray-800 rounded-lg p-4">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
-          <h3 class="text-lg font-semibold text-orange-400">Ingredientes</h3>
-          <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <input
-              type="text"
-              placeholder="Buscar ingredientes..."
-              class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm w-full sm:w-64"
-              #searchInput
-            />
-            <button
-              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
-              (click)="openAddIngredienteModal()"
-            >
-              ➕ Crear Ingrediente
-            </button>
-            <button
-              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
-              (click)="openAddCategoriaModal('inventario')"
-            >
-              ➕ Agregar Categoría
-            </button>
-            <button
-              class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
-              (click)="openDeleteCategoriaModal(); $event.stopPropagation();"
-            >
-              🗑️ Eliminar Categoría
-            </button>
-          </div>
-        </div>
+           <form class="space-y-4">
+             <div>
+               <label class="block text-sm font-medium text-gray-300 mb-2">
+                 Nombre del Plato *
+               </label>
+               <input
+                 type="text"
+                 [value]="nombre()"
+                 (input)="updateNombre($event)"
+                 class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                 placeholder="Ej: Pasta Carbonara"
+               />
+             </div>
 
+             <div>
+               <label class="block text-sm font-medium text-gray-300 mb-2">
+                 Descripción
+               </label>
+               <textarea
+                 [value]="descripcion()"
+                 (input)="updateDescripcion($event)"
+                 class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 h-20 resize-none"
+                 placeholder="Descripción del plato..."
+               ></textarea>
+             </div>
 
-        <!-- Tabla de ingredientes -->
-        @if (ingredientesResource.error()) {
-          <is-error />
-        } @else if (ingredientesResource.isLoading()) {
-          <is-loading />
-        } @else if (ingredientesResource.hasValue()) {
-          <div class="overflow-x-auto">
-            <table class="w-full bg-gray-700 rounded-lg overflow-hidden">
-              <thead class="bg-orange-500/10">
-                <tr>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Nombre</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Categoría</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Stock Actual</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Costo Unitario</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Valor Total</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Estado</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Acciones</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-600">
-                @for (ingrediente of (ingredientesResource.value() || []); track ingrediente.ingrediente_id) {
-                  <tr class="hover:bg-gray-600 transition-colors">
-                    <td class="px-4 py-3 text-sm text-white font-medium">{{ ingrediente.nombre }}</td>
-                    <td class="px-4 py-3 text-sm text-gray-300">{{ ingrediente.categoria || 'Sin categoría' }}</td>
-                    <td class="px-4 py-3 text-sm text-white">
-                      {{ ingrediente.stock_actual }} {{ ingrediente.unidad_medida || 'unidades' }}
-                    </td>
-                    <td class="px-4 py-3 text-sm text-green-400">${{ (+ingrediente.costo_unitario || 0).toFixed(2) }}</td>
-                    <td class="px-4 py-3 text-sm text-orange-400">${{ (+ingrediente.valor_total || 0).toFixed(2) }}</td>
-                    <td class="px-4 py-3 text-sm">
-                      <span
-                        class="px-2 py-1 rounded-full text-xs font-semibold"
-                        [class.bg-red-600]="ingrediente.estado_stock === 'CRITICO'"
-                        [class.bg-yellow-600]="ingrediente.estado_stock === 'BAJO'"
-                        [class.bg-green-600]="ingrediente.estado_stock === 'NORMAL'"
-                        [class.bg-blue-600]="ingrediente.estado_stock === 'ALTO'"
-                        [class.text-white]="true"
-                      >
-                        {{ ingrediente.estado_stock }}
-                      </span>
-                    </td>
-                    <td class="px-4 py-3 text-sm">
-                      <div class="flex gap-2">
-                        <button
-                          class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-xs font-medium transition-all"
-                          (click)="editIngrediente(ingrediente)"
-                        >
-                          ✏️ Editar
-                        </button>
-                        <button
-                          class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-all"
-                          (click)="deleteIngrediente(ingrediente)"
-                        >
-                          🗑️ Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+              <div class="grid grid-cols-2 gap-4">
+                @if (!isPizzaCategory()) {
+                  <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                      Precio *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      [value]="precio()"
+                      (input)="updatePrecio($event)"
+                      class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                      placeholder="0.00"
+                    />
+                  </div>
                 }
-              </tbody>
-            </table>
-          </div>
-        } @else if (!ingredientesResource.hasValue()) {
-          <is-empty />
-        }
-      </div>
 
-      <!-- Modal para agregar categoría (Menú) -->
-      @if (showAddCategoriaModal() && activeTab() === 'menu') {
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 class="text-lg font-semibold text-orange-400 mb-4">Agregar Nueva Categoría (Menú)</h3>
-
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                Nombre de la Categoría
-              </label>
-              <input
-                type="text"
-                [value]="newCategoriaName()"
-                (input)="newCategoriaName.set($any($event.target).value)"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-orange-500"
-                placeholder="Ej: Postres, Bebidas, etc."
-              />
-            </div>
-
-            <div class="flex justify-end gap-3">
-              <button
-                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                (click)="closeAddCategoriaModal()"
-              >
-                Cancelar
-              </button>
-              <button
-                class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                (click)="addCategoria()"
-                [disabled]="!newCategoriaName().trim()"
-              >
-                Agregar
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- Modal para eliminar categoría (Menú) -->
-      @if (showDeleteCategoriaModal() && activeTab() === 'menu') {
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
-          <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 class="text-lg font-semibold text-red-400 mb-4">Eliminar Categoría (Menú)</h3>
-
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                Seleccionar Categoría a Eliminar
-              </label>
-              <select
-                [value]="categoriaToDelete()"
-                (change)="categoriaToDelete.set($any($event.target).value)"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-red-500"
-              >
-                <option value="">Seleccionar categoría...</option>
-                @for (categoria of categoriasKeys; track categoria) {
-                  <option [value]="categoria">{{ categoria }}</option>
+                @if (!editingPlatoId()) {
+                  <div [class.col-span-2]="isPizzaCategory()">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                      Categoría
+                    </label>
+                    <select
+                      [value]="categoria()"
+                      (change)="updateCategoria($event)"
+                      class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">Seleccionar categoría...</option>
+                      @for (categoria of (activeTab() === 'menu' ? categoriasKeys : categoriasInventarioKeys); track categoria) {
+                        <option [value]="categoria">{{ categoria }}</option>
+                      }
+                    </select>
+                  </div>
                 }
-              </select>
-            </div>
+              </div>
 
-            <div class="flex justify-end gap-3">
-              <button
-                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                (click)="closeDeleteCategoriaModal()"
-              >
-                Cancelar
-              </button>
-              <button
-                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                (click)="confirmDeleteCategoria()"
-                [disabled]="!categoriaToDelete()"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      }
+              <!-- Precios específicos por Tamaño (Solo para pizzas) -->
+              @if (categoria() === 'Pizzas' || (categoria() && categoria().toLowerCase().includes('pizza')) || activeSeccion() === 'Pizzas') {
+                <div class="bg-gray-900/40 p-4 border border-gray-700/60 rounded-xl space-y-3">
+                  <span class="text-sm font-bold text-orange-400 block border-b border-gray-700 pb-1.5">🍕 Precios personalizados por Tamaño</span>
+                  <p class="text-xs text-gray-400">Si dejas el precio de un tamaño en 0, el sistema calculará su precio automáticamente con base en el precio base.</p>
+                  
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-gray-400 mb-1">Personal</label>
+                      <input type="number" min="0" [value]="precioPersonal()" (input)="updatePrecioSize('Personal', $event)" 
+                             class="w-full px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-orange-500" placeholder="Automático" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-400 mb-1">Mediana</label>
+                      <input type="number" min="0" [value]="precioMediana()" (input)="updatePrecioSize('Mediana', $event)" 
+                             class="w-full px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-orange-500" placeholder="Automático" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-400 mb-1">Grande</label>
+                      <input type="number" min="0" [value]="precioGrande()" (input)="updatePrecioSize('Grande', $event)" 
+                             class="w-full px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-orange-500" placeholder="Automático" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-400 mb-1">Extragrande</label>
+                      <input type="number" min="0" [value]="precioExtragrande()" (input)="updatePrecioSize('Extragrande', $event)" 
+                             class="w-full px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-orange-500" placeholder="Automático" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-400 mb-1">Gigante</label>
+                      <input type="number" min="0" [value]="precioGigante()" (input)="updatePrecioSize('Gigante', $event)" 
+                             class="w-full px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-orange-500" placeholder="Automático" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-400 mb-1">Familiar</label>
+                      <input type="number" min="0" [value]="precioFamiliar()" (input)="updatePrecioSize('Familiar', $event)" 
+                             class="w-full px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-orange-500" placeholder="Automático" />
+                    </div>
+                  </div>
+                </div>
+              }
 
-      <!-- Modal para crear/editar ingrediente -->
-      @if (showAddIngredienteModal()) {
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div class="bg-gray-800 rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-lg font-semibold text-green-400 mb-4">{{ editingIngredienteId() ? 'Editar Ingrediente' : 'Crear Nuevo Ingrediente' }}</h3>
+              <div class="grid grid-cols-2 gap-4">
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-2">
+                   Tiempo de Preparación (min)
+                 </label>
+                 <input
+                   type="number"
+                   min="1"
+                   [value]="tiempo_preparacion_minutos()"
+                   (input)="updateTiempoPreparacion($event)"
+                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                   placeholder="15"
+                 />
+               </div>
 
-            <form class="space-y-4">
+             </div>
+
               <div>
                 <label class="block text-sm font-medium text-gray-300 mb-2">
-                  Nombre del Ingrediente *
+                  Alérgenos (separados por coma)
                 </label>
                 <input
                   type="text"
-                  [value]="ingredienteNombre()"
-                  (input)="updateIngredienteNombre($event)"
-                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
-                  placeholder="Ej: Harina de trigo"
+                  [value]="alergenos().join(', ')"
+                  (input)="updateAlergenos($event)"
+                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  placeholder="lácteos, gluten, huevos"
                 />
               </div>
 
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-300 mb-2">
-                    Categoría
-                  </label>
-                  <select
-                    [value]="ingredienteCategoria()"
-                    (change)="updateIngredienteCategoria($event)"
-                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
-                  >
-                    <option value="">Sin categoría</option>
-                    @for (categoria of categoriasInventarioKeys; track categoria) {
-                      <option [value]="categoria">{{ categoria }}</option>
-                    }
-                  </select>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-300 mb-2">
-                    Unidad de Medida
-                  </label>
+              <div class="flex items-center gap-6 mt-4">
+                <div class="flex items-center">
                   <input
-                    type="text"
-                    [value]="ingredienteUnidadMedida()"
-                    (input)="updateIngredienteUnidadMedida($event)"
-                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
-                    placeholder="Ej: kg, litros, unidades"
+                    type="radio"
+                    id="estado_disponible"
+                    name="estadoDisponibilidad"
+                    [checked]="disponible()"
+                    (change)="disponible.set(true)"
+                    class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500"
                   />
-                </div>
-              </div>
-
-              <div class="grid grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-300 mb-2">
-                    Stock Actual *
+                  <label for="estado_disponible" class="ml-2 text-sm font-medium text-gray-300">
+                    Disponible
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    [value]="ingredienteStockActual()"
-                    (input)="updateIngredienteStockActual($event)"
-                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
-                    placeholder="0.00"
-                  />
                 </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-300 mb-2">
-                    Stock Mínimo
+                <div class="flex items-center">
+                  <input
+                    type="radio"
+                    id="estado_agotado"
+                    name="estadoDisponibilidad"
+                    [checked]="!disponible()"
+                    (change)="disponible.set(false)"
+                    class="w-4 h-4 text-red-600 bg-gray-700 border-gray-600 focus:ring-red-500"
+                  />
+                  <label for="estado_agotado" class="ml-2 text-sm font-medium text-gray-300">
+                    Agotado
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    [value]="ingredienteStockMinimo()"
-                    (input)="updateIngredienteStockMinimo($event)"
-                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
-                    placeholder="0.00"
-                  />
                 </div>
+              </div>
 
-                <div>
-                  <label class="block text-sm font-medium text-gray-300 mb-2">
-                    Stock Máximo
+
+
+
+           </form>
+
+           <div class="flex justify-end gap-3 mt-6">
+             <button
+               class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+               (click)="closeAddPlatoModal()"
+             >
+               Cancelar
+             </button>
+             <button
+               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+               (click)="createPlato()"
+               [disabled]="!nombre().trim() || (!precio() && !isPizzaCategory())"
+             >
+               {{ editingPlatoId() ? 'Actualizar Plato' : 'Crear Plato' }}
+             </button>
+           </div>
+         </div>
+       </div>
+     }
+   </div>
+  } @else if (activeTab() === 'inventario') {
+     <!-- Vista de Inventario -->
+     <div class="space-y-6">
+       <h2 class="text-xl font-semibold text-orange-400">📦 Gestión de Inventario</h2>
+
+
+       <!-- Botones de acción -->
+       <div class="bg-gray-800 rounded-lg p-4">
+         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
+           <h3 class="text-lg font-semibold text-orange-400">Ingredientes</h3>
+           <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+             <input
+               type="text"
+               placeholder="Buscar ingredientes..."
+               class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm w-full sm:w-64"
+               #searchInput
+             />
+             <button
+               class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
+               (click)="openAddIngredienteModal()"
+             >
+               ➕ Crear Ingrediente
+             </button>
+             <button
+               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
+               (click)="openAddCategoriaModal('inventario')"
+             >
+               ➕ Agregar Categoría
+             </button>
+             <button
+               class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
+               (click)="openDeleteCategoriaModal(); $event.stopPropagation();"
+             >
+               🗑️ Eliminar Categoría
+             </button>
+             <button
+               class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-all w-full sm:w-auto"
+               (click)="generarPDFInventario()"
+             >
+               📄 Exportar PDF
+             </button>
+           </div>
+         </div>
+
+
+         <!-- Tabla de ingredientes -->
+         @if (ingredientesResource.error()) {
+           <is-error />
+         } @else if (ingredientesResource.isLoading()) {
+           <is-loading />
+         } @else if (ingredientesResource.hasValue()) {
+           <div class="overflow-x-auto">
+             <table class="w-full bg-gray-700 rounded-lg overflow-hidden">
+               <thead class="bg-orange-500/10">
+                 <tr>
+                   <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Nombre</th>
+                   <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Categoría</th>
+                   <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Cantidad</th>
+                   <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Costo Unitario</th>
+                   <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Valor Total</th>
+                   <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Estado Stock</th>
+                   <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Acciones</th>
+                 </tr>
+               </thead>
+               <tbody class="divide-y divide-gray-600">
+                  @for (ingrediente of (ingredientesResource.value() || []); track (ingrediente.ingrediente_id || ingrediente.id)) {
+                    <tr class="hover:bg-gray-600 transition-colors" [class.opacity-60]="!ingrediente.activo">
+                      <td class="px-4 py-3 text-sm text-white font-medium">
+                        {{ ingrediente.nombre }}
+                        @if (!ingrediente.activo) {
+                          <span class="ml-2 text-[10px] bg-red-800 text-red-200 px-1.5 py-0.5 rounded font-semibold uppercase">Inactivo</span>
+                        }
+                      </td>
+                      <td class="px-4 py-3 text-sm text-gray-300">{{ ingrediente.categoria || 'Sin categoría' }}</td>
+                      <td class="px-4 py-3 text-sm text-white">
+                        {{ ingrediente.stock_actual }} {{ ingrediente.unidad_medida || 'unidades' }}
+                      </td>
+                      <td class="px-4 py-3 text-sm text-green-400">{{ ingrediente.costo_unitario | currency }}</td>
+                      <td class="px-4 py-3 text-sm text-orange-400">{{ ingrediente.valor_total | currency }}</td>
+                      <td class="px-4 py-3 text-sm">
+                        <span
+                          class="px-2 py-1 rounded-full text-xs font-semibold"
+                          [class.bg-red-600]="ingrediente.stock === 'CRITICO'"
+                          [class.bg-yellow-600]="ingrediente.stock === 'BAJO'"
+                          [class.bg-green-600]="ingrediente.stock === 'NORMAL'"
+                          [class.bg-blue-600]="ingrediente.stock === 'ALTO'"
+                        >
+                          {{ ingrediente.stock }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3 text-sm">
+                        <div class="flex gap-2">
+                          <button
+                            class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-xs font-medium transition-all"
+                            (click)="editIngrediente(ingrediente)"
+                            title="Editar ingrediente"
+                          >
+                            ✏️ Editar
+                          </button>
+                          <button
+                            class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-all"
+                            (click)="deleteIngrediente(ingrediente)"
+                            title="Eliminar ingrediente"
+                          >
+                            🗑️ Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+             </table>
+           </div>
+         } @else if (!ingredientesResource.hasValue()) {
+           <is-empty />
+         }
+       </div>
+
+       <!-- Modal para crear/editar ingrediente -->
+       @if (showAddIngredienteModal()) {
+         <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+           <div class="bg-gray-800 rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+             <h3 class="text-lg font-semibold text-green-400 mb-4">{{ editingIngredienteId() ? 'Editar Ingrediente' : 'Crear Nuevo Ingrediente' }}</h3>
+
+             <form class="space-y-4">
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-2">
+                   Nombre del Ingrediente *
+                 </label>
+                 <input
+                   type="text"
+                   [value]="ingredienteNombre()"
+                   (input)="updateIngredienteNombre($event)"
+                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                   placeholder="Ej: Harina de trigo"
+                 />
+               </div>
+
+               <div class="grid grid-cols-2 gap-4">
+                 <div>
+                   <label class="block text-sm font-medium text-gray-300 mb-2">
+                     Categoría
+                   </label>
+                   <select
+                     [value]="ingredienteCategoria()"
+                     (change)="updateIngredienteCategoria($event)"
+                     class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                   >
+                     <option value="">Sin categoría</option>
+                     @for (categoria of categoriasInventarioKeys; track categoria) {
+                       <option [value]="categoria">{{ categoria }}</option>
+                     }
+                   </select>
+                 </div>
+
+                 <div>
+                   <label class="block text-sm font-medium text-gray-300 mb-2">
+                     Unidad de Medida
+                   </label>
+                   <input
+                     type="text"
+                     [value]="ingredienteUnidadMedida()"
+                     (input)="updateIngredienteUnidadMedida($event)"
+                     class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                     placeholder="Ej: kg, litros, unidades"
+                   />
+                 </div>
+               </div>
+
+               <div class="grid grid-cols-3 gap-4">
+                 <div>
+                   <label class="block text-sm font-medium text-gray-300 mb-2">
+                     Cantidad *
+                   </label>
+                   <input
+                     type="number"
+                     step="0.01"
+                     min="0"
+                     [value]="ingredienteStockActual()"
+                     (input)="updateIngredienteStockActual($event)"
+                     class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                     placeholder="0.00"
+                   />
+                 </div>
+
+                 <div>
+                   <label class="block text-sm font-medium text-gray-300 mb-2">
+                     Stock Mínimo
+                   </label>
+                   <input
+                     type="number"
+                     step="0.01"
+                     min="0"
+                     [value]="ingredienteStockMinimo()"
+                     (input)="updateIngredienteStockMinimo($event)"
+                     class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                     placeholder="0.00"
+                   />
+                 </div>
+
+                 <div>
+                   <label class="block text-sm font-medium text-gray-300 mb-2">
+                     Stock Máximo
+                   </label>
+                   <input
+                     type="number"
+                     step="0.01"
+                     min="0"
+                     [value]="ingredienteStockMaximo()"
+                     (input)="updateIngredienteStockMaximo($event)"
+                     class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                     placeholder="0.00"
+                   />
+                 </div>
+               </div>
+
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-2">
+                   Costo Unitario *
+                 </label>
+                 <input
+                   type="number"
+                   step="0.01"
+                   min="0"
+                   [value]="ingredienteCostoUnitario()"
+                   (input)="updateIngredienteCostoUnitario($event)"
+                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                   placeholder="0.00"
+                 />
+               </div>
+
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-2">
+                   Descripción
+                 </label>
+                 <textarea
+                   [value]="ingredienteDescripcion()"
+                   (input)="updateIngredienteDescripcion($event)"
+                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500 h-20 resize-none"
+                   placeholder="Descripción del ingrediente..."
+                 ></textarea>
+               </div>
+             </form>
+
+             <div class="flex justify-end gap-3 mt-6">
+               <button
+                 class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                 (click)="closeAddIngredienteModal()"
+               >
+                 Cancelar
+               </button>
+               <button
+                 class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                 (click)="createIngrediente()"
+                 [disabled]="!ingredienteNombre().trim() || !ingredienteCostoUnitario()"
+               >
+                 {{ editingIngredienteId() ? 'Actualizar Ingrediente' : 'Crear Ingrediente' }}
+               </button>
+             </div>
+           </div>
+         </div>
+       }
+
+       <!-- Modal para agregar categoría (Inventario) -->
+       @if (showAddCategoriaModal() && activeTab() === 'inventario') {
+         <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+           <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+             <h3 class="text-lg font-semibold text-blue-400 mb-4">Agregar Nueva Categoría (Inventario)</h3>
+
+             <div class="mb-4">
+               <label class="block text-sm font-medium text-gray-300 mb-2">
+                 Nombre de la Categoría
+               </label>
+               <input
+                 type="text"
+                 [value]="newCategoriaName()"
+                 (input)="newCategoriaName.set($any($event.target).value)"
+                 class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                 placeholder="Ej: Carnes, Verduras, Lácteos, etc."
+               />
+             </div>
+
+             <div class="flex justify-end gap-3">
+               <button
+                 class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                 (click)="closeAddCategoriaModal()"
+               >
+                 Cancelar
+               </button>
+               <button
+                 class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                 (click)="addCategoria()"
+                 [disabled]="!newCategoriaName().trim()"
+               >
+                 Agregar
+               </button>
+             </div>
+           </div>
+         </div>
+       }
+
+       <!-- Modal para eliminar categoría (Inventario) -->
+       @if (showDeleteCategoriaModal() && activeTab() === 'inventario') {
+         <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+           <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+             <h3 class="text-lg font-semibold text-red-400 mb-4">Eliminar Categoría (Inventario)</h3>
+
+             <div class="mb-4">
+               <label class="block text-sm font-medium text-gray-300 mb-2">
+                 Seleccionar Categoría a Eliminar
+               </label>
+               <select
+                 [value]="categoriaToDelete()"
+                 (change)="categoriaToDelete.set($any($event.target).value)"
+                 class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-red-500"
+               >
+                 <option value="">Seleccionar categoría...</option>
+                 @for (categoria of categoriasInventarioKeys; track categoria) {
+                   <option [value]="categoria">{{ categoria }}</option>
+                 }
+               </select>
+             </div>
+
+             <div class="flex justify-end gap-3">
+               <button
+                 class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                 (click)="closeDeleteCategoriaModal()"
+               >
+                 Cancelar
+               </button>
+               <button
+                 class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                 (click)="confirmDeleteCategoria()"
+                 [disabled]="!categoriaToDelete()"
+               >
+                 Eliminar
+               </button>
+             </div>
+           </div>
+         </div>
+       }
+
+       <!-- ===== MÓDULO DE PROVEEDORES ===== -->
+       <div class="mt-10 border-t-2 border-gray-700 pt-8">
+         <h2 class="text-xl font-semibold text-teal-400 mb-4"><i class="fas fa-truck mr-2"></i>Gestión de Proveedores y Cuentas por Pagar</h2>
+
+         <!-- Sub-pestañas -->
+         <div class="flex gap-1 bg-gray-800 rounded-xl p-1 mb-6">
+           <button (click)="setProveedoresSubTab('directorio')" [class]="proveedoresSubTab() === 'directorio' ? 'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold bg-teal-600 text-white shadow-lg shadow-teal-600/20 transition-all' : 'flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-700 transition-all'">
+             <i class="fas fa-address-book mr-1"></i> Directorio y Saldos
+           </button>
+           <button (click)="setProveedoresSubTab('pedidos')" [class]="proveedoresSubTab() === 'pedidos' ? 'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold bg-blue-600 text-white shadow-lg shadow-blue-600/20 transition-all' : 'flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-700 transition-all'">
+             <i class="fas fa-clipboard-list mr-1"></i> Pedidos y Recepción
+           </button>
+           <button (click)="setProveedoresSubTab('facturas')" [class]="proveedoresSubTab() === 'facturas' ? 'flex-1 px-4 py-2.5 rounded-lg text-sm font-bold bg-orange-600 text-white shadow-lg shadow-orange-600/20 transition-all' : 'flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-700 transition-all'">
+             <i class="fas fa-file-invoice-dollar mr-1"></i> Cuentas por Pagar
+           </button>
+         </div>
+
+         <!-- ===== TAB: DIRECTORIO Y SALDOS ===== -->
+         @if (proveedoresSubTab() === 'directorio') {
+           <div class="bg-gray-800 rounded-lg p-4">
+             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+               <h3 class="text-lg font-semibold text-teal-400"><i class="fas fa-users mr-2"></i>Directorio de Proveedores</h3>
+               <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                 <input type="text" placeholder="Buscar proveedor..." [value]="proveedoresSearch()" (input)="proveedoresSearch.set($any($event.target).value)" class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500 text-sm w-full sm:w-64" />
+                 <button (click)="openProveedorModal()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-all whitespace-nowrap">
+                   <i class="fas fa-plus mr-1"></i> Nuevo Proveedor
+                 </button>
+               </div>
+             </div>
+
+             @if (filteredProveedores.length === 0) {
+               <div class="text-center text-gray-400 py-10 border-2 border-dashed border-gray-700 rounded-lg">
+                 <i class="fas fa-truck text-4xl mb-3 opacity-50"></i>
+                 <p>No hay proveedores registrados.</p>
+               </div>
+             } @else {
+               <div class="overflow-x-auto">
+                 <table class="w-full bg-gray-700 rounded-lg overflow-hidden">
+                   <thead class="bg-teal-500/10">
+                     <tr>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-teal-400 uppercase tracking-wider">Razón Social</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-teal-400 uppercase tracking-wider">NIT</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-teal-400 uppercase tracking-wider">Teléfono</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-teal-400 uppercase tracking-wider">Categoría</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-teal-400 uppercase tracking-wider">Plazo</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-teal-400 uppercase tracking-wider">Saldo Pendiente</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-teal-400 uppercase tracking-wider">Acciones</th>
+                     </tr>
+                   </thead>
+                   <tbody class="divide-y divide-gray-600">
+                     @for (prov of filteredProveedores; track prov.id) {
+                       <tr class="hover:bg-gray-600 transition-colors">
+                         <td class="px-4 py-3 text-sm text-white font-medium">
+                           <div class="flex items-center gap-2">
+                             <span class="w-2 h-2 rounded-full" [class.bg-green-500]="prov.activo" [class.bg-red-500]="!prov.activo"></span>
+                             {{ prov.razon_social }}
+                           </div>
+                         </td>
+                         <td class="px-4 py-3 text-sm text-gray-300">{{ prov.nit }}</td>
+                         <td class="px-4 py-3 text-sm text-gray-300">{{ prov.telefono || '—' }}</td>
+                         <td class="px-4 py-3 text-sm">
+                           <span class="px-2 py-1 rounded-full text-xs font-semibold bg-gray-600 text-gray-200">{{ prov.categoria || 'Sin cat.' }}</span>
+                         </td>
+                         <td class="px-4 py-3 text-sm text-gray-300">{{ prov.dias_plazo || 0 }} días</td>
+                         <td class="px-4 py-3 text-sm">
+                           <span class="px-3 py-1 rounded-full text-xs font-black" [class]="(prov.saldo_pendiente || 0) > 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'">
+                             {{ (prov.saldo_pendiente || 0) | currency:'COP':'symbol-narrow':'1.0-0' }}
+                           </span>
+                         </td>
+                         <td class="px-4 py-3 text-sm">
+                           <div class="flex gap-1.5 flex-wrap">
+                             <button
+                               class="px-2.5 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-xs font-medium transition-all"
+                               (click)="openProveedorModal(prov)"
+                               title="Editar proveedor"
+                             >
+                               <i class="fas fa-edit"></i>
+                             </button>
+                             @if (prov.activo) {
+                               <button
+                                 class="px-2.5 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-xs font-medium transition-all"
+                                 (click)="toggleProveedorStatus(prov)"
+                                 title="Desactivar proveedor"
+                               >
+                                 <i class="fas fa-ban"></i>
+                               </button>
+                             } @else {
+                               <button
+                                 class="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition-all"
+                                 (click)="toggleProveedorStatus(prov)"
+                                 title="Activar proveedor"
+                               >
+                                 <i class="fas fa-check"></i>
+                               </button>
+                             }
+                             <button
+                               class="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-all"
+                               (click)="deleteProveedor(prov)"
+                               title="Eliminar proveedor permanentemente"
+                             >
+                               <i class="fas fa-trash"></i>
+                             </button>
+                           </div>
+                         </td>
+                       </tr>
+                     }
+                   </tbody>
+                 </table>
+               </div>
+             }
+           </div>
+         }
+
+         <!-- ===== TAB: PEDIDOS Y RECEPCIÓN ===== -->
+         @if (proveedoresSubTab() === 'pedidos') {
+           <div class="bg-gray-800 rounded-lg p-4">
+             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+               <h3 class="text-lg font-semibold text-blue-400"><i class="fas fa-clipboard-list mr-2"></i>Órdenes de Compra</h3>
+               <button (click)="openOrdenCompraModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all whitespace-nowrap">
+                 <i class="fas fa-plus mr-1"></i> Nueva Orden de Compra
+               </button>
+             </div>
+
+             @if (ordenesCompra().length === 0) {
+               <div class="text-center text-gray-400 py-10 border-2 border-dashed border-gray-700 rounded-lg">
+                 <i class="fas fa-clipboard text-4xl mb-3 opacity-50"></i>
+                 <p>No hay órdenes de compra registradas.</p>
+               </div>
+             } @else {
+               <div class="space-y-3">
+                 @for (oc of ordenesCompra(); track oc.id) {
+                   <div (click)="openOrdenDetailModal(oc)" class="bg-gray-700 border border-gray-600 rounded-lg p-4 hover:border-blue-500 transition-colors cursor-pointer group">
+                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                       <div>
+                         <div class="flex items-center gap-3 mb-1">
+                           <span class="text-white font-bold group-hover:text-blue-400 transition-colors">OC #{{ oc.id }}</span>
+                           <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                             [class]="oc.estado === 'Recibido' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                      oc.estado === 'Solicitado' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                                      oc.estado === 'Cancelado' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                                      'bg-gray-500/20 text-gray-400 border border-gray-500/30'">
+                             {{ oc.estado }}
+                           </span>
+                           <span class="text-xs text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 font-semibold">
+                             <i class="fas fa-eye"></i> Ver detalle completo
+                           </span>
+                         </div>
+                         <p class="text-sm text-gray-400"><i class="fas fa-truck mr-1"></i> {{ getProveedorNombre(oc.proveedor_id) }}</p>
+                         <p class="text-sm text-gray-400"><i class="fas fa-calendar mr-1"></i> {{ oc.fecha_pedido | date:'mediumDate' }}</p>
+                         <p class="text-sm text-gray-400"><i class="fas fa-boxes mr-1"></i> {{ (oc.items || []).length }} insumos</p>
+                       </div>
+                       <div class="flex flex-col items-end gap-2">
+                         <span class="text-lg font-black text-blue-400">{{ (oc.total_estimado || 0) | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                         @if (oc.estado === 'Borrador' || oc.estado === 'Solicitado') {
+                           <button (click)="$event.stopPropagation(); openRecepcionModal(oc)" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold transition-all flex items-center gap-1">
+                             <i class="fas fa-check-double"></i> Registrar Recepción
+                           </button>
+                         }
+                       </div>
+                     </div>
+                   </div>
+                 }
+               </div>
+             }
+           </div>
+         }
+
+         <!-- ===== TAB: CUENTAS POR PAGAR (FACTURAS) ===== -->
+         @if (proveedoresSubTab() === 'facturas') {
+           <div class="bg-gray-800 rounded-lg p-4">
+             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+               <h3 class="text-lg font-semibold text-orange-400"><i class="fas fa-file-invoice-dollar mr-2"></i>Cuentas por Pagar</h3>
+               <input type="text" placeholder="Buscar factura o proveedor..." [value]="facturasSearch()" (input)="facturasSearch.set($any($event.target).value)" class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-orange-500 text-sm w-full sm:w-64" />
+             </div>
+
+             @if (filteredFacturas.length === 0) {
+               <div class="text-center text-gray-400 py-10 border-2 border-dashed border-gray-700 rounded-lg">
+                 <i class="fas fa-file-invoice text-4xl mb-3 opacity-50"></i>
+                 <p>No hay facturas registradas.</p>
+               </div>
+             } @else {
+               <div class="overflow-x-auto">
+                 <table class="w-full bg-gray-700 rounded-lg overflow-hidden">
+                   <thead class="bg-orange-500/10">
+                     <tr>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Factura</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Proveedor</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Emisión</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Vencimiento</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Total</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Saldo</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Estado</th>
+                       <th class="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider">Acción</th>
+                     </tr>
+                   </thead>
+                   <tbody class="divide-y divide-gray-600">
+                     @for (fact of filteredFacturas; track fact.id) {
+                       <tr class="hover:bg-gray-600 transition-colors" [ngClass]="{'bg-red-900/10': fact.estado_pago === 'Vencido', 'bg-yellow-900/10': isVencidaProxima(fact)}">
+                         <td class="px-4 py-3 text-sm text-white font-medium cursor-pointer" (click)="openFacturaDetailModal(fact)">
+                           <span class="hover:text-blue-400 font-bold flex items-center gap-1.5">
+                             #{{ fact.num_factura }}
+                             <i class="fas fa-eye text-xs text-blue-400" title="Ver foto e historial de factura"></i>
+                           </span>
+                           @if (fact.orden_compra_id) {
+                             <span class="text-[10px] text-gray-500 block">OC #{{ fact.orden_compra_id }}</span>
+                           }
+                         </td>
+                         <td class="px-4 py-3 text-sm text-gray-300">{{ fact.proveedor_nombre || getProveedorNombre(fact.proveedor_id) }}</td>
+                         <td class="px-4 py-3 text-sm text-gray-300">{{ fact.fecha_emision | date:'shortDate' }}</td>
+                         <td class="px-4 py-3 text-sm font-medium" [class]="fact.estado_pago === 'Vencido' ? 'text-red-400' : isVencidaProxima(fact) ? 'text-yellow-400' : 'text-gray-300'">
+                           {{ fact.fecha_vencimiento | date:'shortDate' }}
+                           @if (fact.estado_pago === 'Vencido') {
+                             <span class="block text-[10px] text-red-500 font-black animate-pulse"><i class="fas fa-exclamation-triangle"></i> VENCIDA</span>
+                           }
+                           @if (isVencidaProxima(fact)) {
+                             <span class="block text-[10px] text-yellow-500 font-black"><i class="fas fa-clock"></i> Próxima a vencer</span>
+                           }
+                         </td>
+                         <td class="px-4 py-3 text-sm text-white">{{ fact.total | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                         <td class="px-4 py-3 text-sm">
+                           <span class="font-black" [class]="(+fact.saldo_pendiente) > 0 ? 'text-red-400' : 'text-green-400'">
+                             {{ fact.saldo_pendiente | currency:'COP':'symbol-narrow':'1.0-0' }}
+                           </span>
+                         </td>
+                         <td class="px-4 py-3 text-sm">
+                           <span class="px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-wider"
+                             [class]="fact.estado_pago === 'Pagado' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                      fact.estado_pago === 'Vencido' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                                      'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'">
+                             {{ fact.estado_pago }}
+                           </span>
+                         </td>
+                         <td class="px-4 py-3 text-sm flex items-center gap-2">
+                           <button (click)="openFacturaDetailModal(fact)" class="p-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded border border-blue-500/30 text-xs transition-colors flex items-center gap-1" title="Ver Foto / Evidencia">
+                             <i class="fas fa-camera"></i>
+                           </button>
+                           @if (fact.estado_pago !== 'Pagado') {
+                             <button (click)="openPagoModal(fact)" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-bold transition-all flex items-center gap-1">
+                               <i class="fas fa-money-bill-wave"></i> Pagar
+                             </button>
+                           } @else {
+                             <span class="text-green-400 text-xs font-bold"><i class="fas fa-check-circle"></i> Saldada</span>
+                           }
+                         </td>
+                       </tr>
+                     }
+                   </tbody>
+                 </table>
+               </div>
+             }
+           </div>
+         }
+       </div>
+
+       <!-- ===== MODAL: CREAR/EDITAR PROVEEDOR ===== -->
+       @if (showProveedorModal()) {
+         <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+           <div class="bg-gray-800 rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl">
+             <h3 class="text-lg font-bold text-teal-400 mb-4"><i class="fas fa-truck mr-2"></i>{{ editingProveedorId() ? 'Editar Proveedor' : 'Nuevo Proveedor' }}</h3>
+
+             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Razón Social *</label>
+                 <input type="text" [value]="provRazonSocial()" (input)="provRazonSocial.set($any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500" placeholder="Ej: Distribuidora ABC" />
+               </div>
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">NIT / ID Fiscal *</label>
+                 <input type="text" [value]="provNit()" (input)="provNit.set($any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500" placeholder="Ej: 900123456-1" />
+               </div>
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Contacto</label>
+                 <input type="text" [value]="provContacto()" (input)="provContacto.set($any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500" placeholder="Nombre del contacto" />
+               </div>
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Teléfono</label>
+                 <input type="text" [value]="provTelefono()" (input)="provTelefono.set($any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500" placeholder="3001234567" />
+               </div>
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Correo</label>
+                 <input type="email" [value]="provCorreo()" (input)="provCorreo.set($any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500" placeholder="proveedor@email.com" />
+               </div>
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Dirección</label>
+                 <input type="text" [value]="provDireccion()" (input)="provDireccion.set($any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500" placeholder="Dirección" />
+               </div>
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Categoría</label>
+                 <select [value]="provCategoria()" (change)="provCategoria.set($any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500">
+                   <option value="">Sin categoría</option>
+                   @for (cat of proveedoresCategorias; track cat) {
+                     <option [value]="cat">{{ cat }}</option>
+                   }
+                 </select>
+               </div>
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Días de Plazo</label>
+                 <input type="number" min="0" [value]="provDiasPlazo()" (input)="provDiasPlazo.set(+$any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500" placeholder="30" />
+               </div>
+             </div>
+
+             <!-- Datos bancarios -->
+             <h4 class="text-sm font-bold text-gray-400 uppercase tracking-wider mt-5 mb-3 border-t border-gray-700 pt-4"><i class="fas fa-university mr-1"></i> Datos Bancarios</h4>
+             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Banco</label>
+                 <input type="text" [value]="provBanco()" (input)="provBanco.set($any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500" placeholder="Bancolombia" />
+               </div>
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Tipo de Cuenta</label>
+                 <select [value]="provTipoCuenta()" (change)="provTipoCuenta.set($any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500">
+                   <option value="">Seleccionar</option>
+                   <option value="Ahorros">Ahorros</option>
+                   <option value="Corriente">Corriente</option>
+                 </select>
+               </div>
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Número de Cuenta</label>
+                 <input type="text" [value]="provNumeroCuenta()" (input)="provNumeroCuenta.set($any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500" placeholder="Número de cuenta" />
+               </div>
+             </div>
+
+             <div class="flex justify-end gap-3 mt-6">
+               <button (click)="closeProveedorModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">Cancelar</button>
+               <button (click)="saveProveedor()" [disabled]="!provRazonSocial().trim() || !provNit().trim()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                 {{ editingProveedorId() ? 'Actualizar' : 'Crear Proveedor' }}
+               </button>
+             </div>
+           </div>
+         </div>
+       }
+
+       <!-- ===== MODAL: NUEVA ORDEN DE COMPRA ===== -->
+       @if (showOrdenCompraModal()) {
+         <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+           <div class="bg-gray-800 rounded-xl p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl">
+             <h3 class="text-lg font-bold text-blue-400 mb-4"><i class="fas fa-clipboard-list mr-2"></i>Nueva Orden de Compra</h3>
+
+             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Proveedor *</label>
+                 <select [value]="ocProveedorId()" (change)="ocProveedorId.set(+$any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500">
+                   <option [value]="0">Seleccionar proveedor...</option>
+                   @for (p of proveedores(); track p.id) {
+                     <option [value]="p.id">{{ p.razon_social }}</option>
+                   }
+                 </select>
+               </div>
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Fecha Entrega Estimada</label>
+                 <input type="date" [value]="ocFechaEntrega()" (input)="ocFechaEntrega.set($any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500" />
+               </div>
+             </div>
+
+             <!-- Carga de Foto / Evidencia de la Factura -->
+             <div class="mb-4 bg-gray-700/50 p-3 rounded-lg border border-gray-600">
+               <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">
+                 <i class="fas fa-camera text-blue-400 mr-1"></i> Foto / Evidencia de la Factura (Opcional)
+               </label>
+               <div class="flex items-center gap-3">
+                 <label class="px-3.5 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-semibold cursor-pointer transition-colors flex items-center gap-2">
+                   <i class="fas fa-upload"></i> Subir Foto de Factura
+                   <input type="file" accept="image/*" (change)="onFotoFacturaSelected($event, 'oc')" class="hidden" />
+                 </label>
+                 @if (ocFotoFactura()) {
+                   <div class="flex items-center gap-2 bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-600">
+                     <img [src]="ocFotoFactura()" alt="Vista Previa Factura" class="w-10 h-10 object-cover rounded border border-gray-500 shadow-sm" />
+                     <span class="text-xs text-green-400 font-semibold flex items-center gap-1"><i class="fas fa-check-circle"></i> Foto adjunta</span>
+                     <button type="button" (click)="removeFotoFactura('oc')" class="text-red-400 hover:text-red-300 ml-1 text-xs p-1">
+                       <i class="fas fa-trash"></i>
+                     </button>
+                   </div>
+                 }
+               </div>
+             </div>
+
+             <div class="flex justify-between items-center mb-3">
+               <h4 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Items del Pedido</h4>
+               <button (click)="addOcItem()" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-all">
+                 <i class="fas fa-plus mr-1"></i> Agregar Item
+               </button>
+             </div>
+
+             @if (ocItems().length === 0) {
+               <div class="text-center text-gray-500 py-6 border border-dashed border-gray-700 rounded-lg text-sm">
+                 Agregue los insumos que desea solicitar al proveedor.
+               </div>
+             } @else {
+               <div class="space-y-3 mb-4">
+                 @for (item of ocItems(); track $index; let i = $index) {
+                   <div class="bg-gray-700 rounded-lg p-3 border border-gray-600">
+                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                       <div class="col-span-2">
+                         <label class="block text-[11px] text-gray-400 mb-1">Ingrediente</label>
+                         <select [value]="item.ingrediente_id" (change)="updateOcItem(i, 'ingrediente_id', $any($event.target).value)" class="w-full px-2 py-1.5 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-blue-500">
+                           <option [value]="0">Seleccionar...</option>
+                           @for (ing of (ingredientesResource.value() || []); track ing.ingrediente_id) {
+                             <option [value]="ing.ingrediente_id">{{ ing.nombre }}</option>
+                           }
+                         </select>
+                       </div>
+                       <div>
+                         <label class="block text-[11px] text-gray-400 mb-1">Cantidad</label>
+                         <input type="number" min="1" [value]="item.cantidad_compra" (input)="updateOcItem(i, 'cantidad_compra', +$any($event.target).value)" class="w-full px-2 py-1.5 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-blue-500" />
+                       </div>
+                       <div>
+                         <label class="block text-[11px] text-gray-400 mb-1">Ud. Compra</label>
+                         <input type="text" [value]="item.unidad_compra" (input)="updateOcItem(i, 'unidad_compra', $any($event.target).value)" class="w-full px-2 py-1.5 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-blue-500" placeholder="caja, saco..." />
+                       </div>
+                       <div>
+                         <label class="block text-[11px] text-gray-400 mb-1">Costo por Empaque</label>
+                         <input type="number" min="0" step="100" [value]="item.costo_compra" (input)="updateOcItem(i, 'costo_compra', +$any($event.target).value)" class="w-full px-2 py-1.5 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-blue-500" />
+                       </div>
+                       <div>
+                         <label class="block text-[11px] text-gray-400 mb-1">Factor Conversión</label>
+                         <input type="number" min="1" step="0.1" [value]="item.factor_conversion" (input)="updateOcItem(i, 'factor_conversion', +$any($event.target).value)" class="w-full px-2 py-1.5 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-blue-500" />
+                       </div>
+                       <div>
+                         <label class="block text-[11px] text-gray-400 mb-1">Ud. Stock</label>
+                         <input type="text" [value]="item.unidad_stock" readonly class="w-full px-2 py-1.5 bg-gray-600/50 border border-gray-500 rounded text-gray-400 text-sm" />
+                       </div>
+                       <div class="flex items-end">
+                         <button (click)="removeOcItem(i)" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition-all">
+                           <i class="fas fa-trash"></i>
+                         </button>
+                       </div>
+                     </div>
+                   </div>
+                 }
+               </div>
+               <div class="text-right text-lg font-black text-blue-400 mb-4">Total Estimado: {{ ocTotalEstimado | currency:'COP':'symbol-narrow':'1.0-0' }}</div>
+             }
+
+             <div class="flex justify-end gap-3 mt-4">
+               <button (click)="closeOrdenCompraModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">Cancelar</button>
+               <button (click)="saveOrdenCompra()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50" [disabled]="!ocProveedorId() || ocItems().length === 0">
+                 Crear Orden
+               </button>
+             </div>
+           </div>
+         </div>
+       }
+
+       <!-- ===== MODAL: RECEPCIÓN DE PEDIDO (CHECKLIST) ===== -->
+       @if (showRecepcionModal()) {
+         <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+           <div class="bg-gray-800 rounded-xl p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl">
+             <h3 class="text-lg font-bold text-green-400 mb-1"><i class="fas fa-check-double mr-2"></i>Recepción de Pedido - OC #{{ recepcionOrdenId() }}</h3>
+             <p class="text-sm text-gray-400 mb-4">Verifique cada ingrediente físicamente antes de aceptar.</p>
+
+             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Nº Factura del Proveedor *</label>
+                 <input type="text" [value]="recepcionNumFactura()" (input)="recepcionNumFactura.set($any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500" placeholder="Ej: FAC-001234" />
+               </div>
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Fecha de Emisión</label>
+                 <input type="date" [value]="recepcionFechaEmision()" (input)="recepcionFechaEmision.set($any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500" />
+               </div>
+              </div>
+
+              <!-- Visualización Comparativa de Foto de la Orden Inicial / Factura -->
+              @if (recepcionFotoFactura() || recepcionOrden()?.foto_factura) {
+                <div class="mb-5 bg-gray-900/90 p-4 rounded-xl border border-blue-500/40 shadow-lg">
+                  <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <i class="fas fa-file-invoice text-blue-400"></i> Evidencia Fotográfica de la Factura de la Orden
+                    </h4>
+                    <span class="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded border border-blue-500/30 font-semibold">
+                      Compara lo pedido con la mercadería física recibida
+                    </span>
+                  </div>
+
+                  <div class="flex flex-col sm:flex-row items-center gap-4">
+                    <a [href]="recepcionFotoFactura() || recepcionOrden()?.foto_factura" target="_blank" title="Clic para abrir imagen completa" class="group relative block flex-shrink-0">
+                      <img [src]="recepcionFotoFactura() || recepcionOrden()?.foto_factura" alt="Foto Factura Orden" class="max-h-52 max-w-full sm:max-w-xs rounded-lg border border-gray-600 shadow-md object-contain bg-black/60 group-hover:opacity-90 transition-opacity" />
+                      <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center text-white font-bold text-xs gap-1">
+                        <i class="fas fa-search-plus"></i> Ver foto completa
+                      </div>
+                    </a>
+
+                    <div class="text-xs text-gray-300 space-y-2.5 flex-1">
+                      <p class="text-gray-300"><i class="fas fa-search text-blue-400 mr-1"></i> Examine la fotografía de la factura física arriba para comparar insumo por insumo lo que se solicitó con la mercadería que llegó física.</p>
+                      <div class="flex flex-wrap gap-2">
+                        <a [href]="recepcionFotoFactura() || recepcionOrden()?.foto_factura" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs transition-colors shadow">
+                          <i class="fas fa-external-link-alt"></i> Ampliar foto en ventana nueva
+                        </a>
+                        <label class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600 rounded-lg text-xs font-semibold cursor-pointer transition-colors">
+                          <i class="fas fa-sync-alt text-green-400"></i> Cambiar / Reemplazar foto
+                          <input type="file" accept="image/*" (change)="onFotoFacturaSelected($event, 'recepcion')" class="hidden" />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              } @else {
+                <!-- Carga opcional si la orden no traía foto previa -->
+                <div class="mb-4 bg-gray-700/50 p-3 rounded-lg border border-gray-600">
+                  <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">
+                    <i class="fas fa-camera text-green-400 mr-1"></i> Adjuntar Foto / Evidencia de la Factura Física
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    [value]="ingredienteStockMaximo()"
-                    (input)="updateIngredienteStockMaximo($event)"
-                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
-                    placeholder="0.00"
-                  />
+                  <div class="flex items-center gap-3">
+                    <label class="px-3.5 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-500/30 rounded-lg text-xs font-semibold cursor-pointer transition-colors flex items-center gap-2">
+                      <i class="fas fa-upload"></i> Adjuntar Foto de Factura
+                      <input type="file" accept="image/*" (change)="onFotoFacturaSelected($event, 'recepcion')" class="hidden" />
+                    </label>
+                  </div>
                 </div>
-              </div>
+              }
 
-              <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">
-                  Costo Unitario *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  [value]="ingredienteCostoUnitario()"
-                  (input)="updateIngredienteCostoUnitario($event)"
-                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
-                  placeholder="0.00"
-                />
-              </div>
+             <div class="space-y-3 mb-4">
+               @for (item of recepcionItems(); track $index; let i = $index) {
+                 <div class="bg-gray-700 rounded-lg p-4 border transition-all" [class]="item.checked ? 'border-green-500 bg-green-900/10' : 'border-gray-600'">
+                   <div class="flex items-start gap-3">
+                     <!-- Checkbox visual -->
+                     <button (click)="toggleRecepcionCheck(i)" class="mt-1 w-7 h-7 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0" [class]="item.checked ? 'bg-green-600 border-green-500 text-white' : 'bg-gray-600 border-gray-500 text-transparent hover:border-green-500'">
+                       <i class="fas fa-check text-sm"></i>
+                     </button>
+                     <div class="flex-1">
+                       <p class="text-white font-bold text-sm mb-2">{{ item.nombre }}</p>
+                       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                         <div>
+                           <label class="block text-[10px] text-gray-400 mb-0.5 uppercase">Solicitado</label>
+                           <span class="text-sm text-gray-300 font-mono">{{ item.cantidad_solicitada }}</span>
+                         </div>
+                         <div>
+                           <label class="block text-[10px] text-gray-400 mb-0.5 uppercase">Recibido</label>
+                           <input type="number" min="0" [value]="item.cantidad_recibida" (input)="updateRecepcionItem(i, 'cantidad_recibida', $any($event.target).value)" class="w-full px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-green-500" />
+                         </div>
+                         <div>
+                           <label class="block text-[10px] text-gray-400 mb-0.5 uppercase">Merma</label>
+                           <input type="number" min="0" [value]="item.merma" (input)="updateRecepcionItem(i, 'merma', $any($event.target).value)" class="w-full px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-green-500" />
+                         </div>
+                         <div>
+                           <label class="block text-[10px] text-gray-400 mb-0.5 uppercase">Costo Real</label>
+                           <input type="number" min="0" step="100" [value]="item.costo_real" (input)="updateRecepcionItem(i, 'costo_real', $any($event.target).value)" class="w-full px-2 py-1 bg-gray-600 border border-gray-500 rounded text-white text-sm focus:outline-none focus:border-green-500" />
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               }
+             </div>
 
-              <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">
-                  Descripción
-                </label>
-                <textarea
-                  [value]="ingredienteDescripcion()"
-                  (input)="updateIngredienteDescripcion($event)"
-                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500 h-20 resize-none"
-                  placeholder="Descripción del ingrediente..."
-                ></textarea>
-              </div>
+             <div class="flex justify-between items-center mt-4">
+               <span class="text-sm" [class]="allRecepcionChecked ? 'text-green-400 font-bold' : 'text-gray-500'">
+                 <i class="fas" [class]="allRecepcionChecked ? 'fa-check-circle' : 'fa-info-circle'"></i>
+                 {{ allRecepcionChecked ? 'Todos los items verificados ✓' : 'Marque todos los items para continuar' }}
+               </span>
+               <div class="flex gap-3">
+                 <button (click)="closeRecepcionModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">Cancelar</button>
+                 <button (click)="confirmarRecepcion()" [disabled]="!allRecepcionChecked || !recepcionNumFactura().trim()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold">
+                   <i class="fas fa-check-double mr-1"></i> Confirmar Recepción
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       }
 
-              <div class="flex items-center">
-                <input
-                  type="checkbox"
-                  id="ingrediente-activo"
-                  [checked]="ingredienteActivo()"
-                  (change)="updateIngredienteActivo($event)"
-                  class="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 rounded focus:ring-green-500"
-                />
-                <label for="ingrediente-activo" class="ml-2 text-sm font-medium text-gray-300">
-                  Ingrediente activo
-                </label>
-              </div>
-            </form>
+       <!-- ===== MODAL: REGISTRAR PAGO ===== -->
+       @if (showPagoModal()) {
+         <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+           <div class="bg-gray-800 rounded-xl p-6 w-full max-w-lg mx-4 border border-gray-700 shadow-2xl overflow-y-auto max-h-[90vh]">
+             <h3 class="text-lg font-bold text-green-400 mb-1"><i class="fas fa-money-bill-wave mr-2"></i>Registrar Pago de Factura</h3>
+             @if (pagoFacturaSelected(); as fact) {
+               <p class="text-xs text-gray-400 mb-4">Factura N° <strong class="text-white font-mono">#{{ fact.num_factura }}</strong> - {{ fact.proveedor_nombre || getProveedorNombre(fact.proveedor_id) }}</p>
+             }
 
-            <div class="flex justify-end gap-3 mt-6">
-              <button
-                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                (click)="closeAddIngredienteModal()"
-              >
-                Cancelar
-              </button>
-              <button
-                class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                (click)="createIngrediente()"
-                [disabled]="!ingredienteNombre().trim() || !ingredienteCostoUnitario()"
-              >
-                {{ editingIngredienteId() ? 'Actualizar Ingrediente' : 'Crear Ingrediente' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      }
+             <!-- Foto de la Factura Registrada -->
+             @if (getPagoFacturaFoto(); as fotoFact) {
+               <div class="mb-4 bg-gray-900/80 p-3 rounded-lg border border-blue-500/30">
+                 <span class="text-xs font-bold text-blue-400 block mb-2"><i class="fas fa-camera mr-1"></i> Evidencia Fotográfica de la Factura Registrada</span>
+                 <div class="flex items-center gap-3">
+                   <a [href]="fotoFact" target="_blank" title="Abrir imagen completa" class="block flex-shrink-0 group relative">
+                     <img [src]="fotoFact" alt="Factura Registrada" class="w-16 h-16 object-cover rounded border border-gray-600 group-hover:opacity-80 transition-opacity bg-black/50" />
+                     <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center text-white text-[10px]">
+                       <i class="fas fa-search-plus"></i>
+                     </div>
+                   </a>
+                   <div class="text-xs text-gray-300">
+                     <p class="mb-1 text-gray-300">Verifique la foto de la factura física para confirmar los montos cargados.</p>
+                     <a [href]="fotoFact" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold inline-flex items-center gap-1">
+                       <i class="fas fa-external-link-alt"></i> Ampliar foto completa
+                     </a>
+                   </div>
+                 </div>
+               </div>
+             }
 
-      <!-- Modal para agregar categoría (Inventario) -->
-      @if (showAddCategoriaModal() && activeTab() === 'inventario') {
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 class="text-lg font-semibold text-blue-400 mb-4">Agregar Nueva Categoría (Inventario)</h3>
+             <div class="bg-gray-700 rounded-lg p-4 mb-4 text-center">
+               <p class="text-sm text-gray-400 mb-1">Saldo Pendiente</p>
+               <p class="text-3xl font-black text-red-400">{{ pagoFacturaSaldo() | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
+             </div>
 
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                Nombre de la Categoría
-              </label>
-              <input
-                type="text"
-                [value]="newCategoriaName()"
-                (input)="newCategoriaName.set($any($event.target).value)"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                placeholder="Ej: Carnes, Verduras, Lácteos, etc."
-              />
-            </div>
+             <div class="space-y-4">
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-1">Monto a Pagar *</label>
+                 <input type="number" min="0" step="100" [value]="pagoMonto()" (input)="pagoMonto.set(+$any($event.target).value)" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-lg font-bold focus:outline-none focus:border-green-500" />
+               </div>
+               <div>
+                 <label class="block text-sm font-medium text-gray-300 mb-2">Método de Pago</label>
+                 <div class="flex gap-2">
+                   <button (click)="pagoMetodo.set('Efectivo')" [class]="pagoMetodo() === 'Efectivo' ? 'flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-bold border border-green-500' : 'flex-1 px-3 py-2 bg-gray-700 text-gray-400 rounded-lg text-sm border border-gray-600 hover:border-gray-500'">
+                     <i class="fas fa-money-bill-alt mr-1"></i> Efectivo
+                   </button>
+                   <button (click)="pagoMetodo.set('Transferencia')" [class]="pagoMetodo() === 'Transferencia' ? 'flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold border border-blue-500' : 'flex-1 px-3 py-2 bg-gray-700 text-gray-400 rounded-lg text-sm border border-gray-600 hover:border-gray-500'">
+                     <i class="fas fa-university mr-1"></i> Transferencia
+                   </button>
+                   <button (click)="pagoMetodo.set('Caja Menor')" [class]="pagoMetodo() === 'Caja Menor' ? 'flex-1 px-3 py-2 bg-yellow-600 text-white rounded-lg text-sm font-bold border border-yellow-500' : 'flex-1 px-3 py-2 bg-gray-700 text-gray-400 rounded-lg text-sm border border-gray-600 hover:border-gray-500'">
+                     <i class="fas fa-cash-register mr-1"></i> Caja Menor
+                   </button>
+                 </div>
+               </div>
+             </div>
 
-            <div class="flex justify-end gap-3">
-              <button
-                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                (click)="closeAddCategoriaModal()"
-              >
-                Cancelar
-              </button>
-              <button
-                class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                (click)="addCategoria()"
-                [disabled]="!newCategoriaName().trim()"
-              >
-                Agregar
-              </button>
-            </div>
-          </div>
-        </div>
-      }
+             <div class="flex justify-end gap-3 mt-6">
+               <button (click)="closePagoModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">Cancelar</button>
+               <button (click)="confirmarPago()" [disabled]="pagoMonto() <= 0" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold">
+                 <i class="fas fa-check mr-1"></i> Confirmar Pago
+               </button>
+             </div>
+           </div>
+         </div>
+       }
 
-      <!-- Modal para eliminar categoría (Inventario) -->
-      @if (showDeleteCategoriaModal() && activeTab() === 'inventario') {
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
-          <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 class="text-lg font-semibold text-red-400 mb-4">Eliminar Categoría (Inventario)</h3>
+       <!-- ===== MODAL: DETALLE COMPLETO DE ORDEN Y FACTURA ===== -->
+       @if (showOrdenDetailModal() && selectedOrdenDetail()) {
+         <div class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+           <div class="bg-gray-800 rounded-xl w-full max-w-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+             <!-- Header -->
+             <div class="bg-gray-900 px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+               <div class="flex items-center gap-3">
+                 <div class="w-10 h-10 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-lg">
+                   <i class="fas fa-file-invoice"></i>
+                 </div>
+                 <div>
+                   <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                     Orden de Compra #OC-{{ selectedOrdenDetail()?.id }}
+                     <span class="px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider"
+                       [class]="selectedOrdenDetail()?.estado === 'Recibido' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                selectedOrdenDetail()?.estado === 'Solicitado' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                                selectedOrdenDetail()?.estado === 'Cancelado' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                                'bg-gray-500/20 text-gray-400 border border-gray-500/30'">
+                       {{ selectedOrdenDetail()?.estado }}
+                     </span>
+                   </h3>
+                   <p class="text-xs text-gray-400">Historial completo y desglose de factura a detalle</p>
+                 </div>
+               </div>
+               <button (click)="closeOrdenDetailModal()" class="text-gray-400 hover:text-white transition-colors bg-gray-800 hover:bg-gray-700 w-8 h-8 rounded-lg flex items-center justify-center">
+                 <i class="fas fa-times"></i>
+               </button>
+             </div>
 
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                Seleccionar Categoría a Eliminar
-              </label>
-              <select
-                [value]="categoriaToDelete()"
-                (change)="categoriaToDelete.set($any($event.target).value)"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-red-500"
-              >
-                <option value="">Seleccionar categoría...</option>
-                @for (categoria of categoriasInventarioKeys; track categoria) {
-                  <option [value]="categoria">{{ categoria }}</option>
+             <!-- Body Scrollable -->
+             <div class="p-6 overflow-y-auto space-y-6 flex-1 text-gray-200">
+               
+               <!-- Proveedor e Info de la Orden -->
+               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-700/50 p-4 rounded-xl border border-gray-700">
+                 <div>
+                   <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                     <i class="fas fa-truck text-blue-400"></i> Información del Proveedor
+                   </h4>
+                   <p class="text-base font-bold text-white">{{ getProveedorNombre(selectedOrdenDetail()!.proveedor_id) }}</p>
+                   @if (getProveedor(selectedOrdenDetail()!.proveedor_id); as prov) {
+                     <p class="text-xs text-gray-400 mt-1"><i class="fas fa-id-card mr-1"></i> NIT: {{ prov.nit }}</p>
+                     @if (prov.contacto) { <p class="text-xs text-gray-400"><i class="fas fa-user mr-1"></i> Contacto: {{ prov.contacto }}</p> }
+                     @if (prov.telefono) { <p class="text-xs text-gray-400"><i class="fas fa-phone mr-1"></i> {{ prov.telefono }}</p> }
+                     @if (prov.correo) { <p class="text-xs text-gray-400"><i class="fas fa-envelope mr-1"></i> {{ prov.correo }}</p> }
+                   }
+                 </div>
+
+                 <div>
+                   <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                     <i class="fas fa-calendar-alt text-blue-400"></i> Fechas y Seguimiento
+                   </h4>
+                   <p class="text-xs text-gray-300 mb-1">
+                     <span class="text-gray-400">Fecha de Pedido:</span> 
+                     <strong class="text-white ml-1">{{ selectedOrdenDetail()?.fecha_pedido | date:'medium' }}</strong>
+                   </p>
+                   @if (selectedOrdenDetail()?.fecha_entrega_estimada) {
+                     <p class="text-xs text-gray-300 mb-1">
+                       <span class="text-gray-400">Entrega Estimada:</span> 
+                       <strong class="text-white ml-1">{{ selectedOrdenDetail()?.fecha_entrega_estimada | date:'mediumDate' }}</strong>
+                     </p>
+                   }
+                   <p class="text-xs text-gray-300">
+                     <span class="text-gray-400">Total Estimado de la Orden:</span> 
+                     <strong class="text-blue-400 text-sm ml-1">{{ (selectedOrdenDetail()?.total_estimado || 0) | currency:'COP':'symbol-narrow':'1.0-0' }}</strong>
+                   </p>
+                 </div>
+               </div>
+
+               <!-- Información de Factura Generada (si fue Recibida) -->
+               @if (selectedOrdenFactura(); as fact) {
+                 <div class="bg-blue-900/20 border border-blue-500/30 p-4 rounded-xl">
+                   <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3 flex items-center justify-between">
+                     <span class="flex items-center gap-1.5"><i class="fas fa-file-invoice-dollar"></i> Factura de Compra Vinculada</span>
+                     <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider"
+                       [class]="fact.estado_pago === 'Pagado' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                fact.estado_pago === 'Vencido' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                                'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'">
+                       {{ fact.estado_pago }}
+                     </span>
+                   </h4>
+
+                   <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                     <div>
+                       <span class="text-gray-400 block">N° Factura:</span>
+                       <strong class="text-white font-mono text-sm">{{ fact.num_factura }}</strong>
+                     </div>
+                     <div>
+                       <span class="text-gray-400 block">Fecha Emisión:</span>
+                       <strong class="text-white">{{ fact.fecha_emision | date:'mediumDate' }}</strong>
+                     </div>
+                     <div>
+                       <span class="text-gray-400 block">Vencimiento:</span>
+                       <strong class="text-white">{{ fact.fecha_vencimiento | date:'mediumDate' }}</strong>
+                     </div>
+                     <div>
+                       <span class="text-gray-400 block">Saldo Pendiente:</span>
+                       <strong class="text-red-400 font-bold text-sm">{{ (fact.saldo_pendiente || 0) | currency:'COP':'symbol-narrow':'1.0-0' }}</strong>
+                     </div>
+                   </div>
+                 </div>
+               } @else if (selectedOrdenDetail()?.estado === 'Recibido') {
+                 <div class="bg-green-900/10 border border-green-500/20 p-3 rounded-xl text-xs text-green-400 flex items-center gap-2">
+                   <i class="fas fa-check-circle text-base"></i>
+                   <span>Esta orden fue completada y la factura fue procesada en el módulo de Cuentas por Pagar.</span>
+                 </div>
+               }
+
+                <!-- Foto / Evidencia de Factura Adjunta -->
+                @if (selectedOrdenFactura()?.foto_factura || selectedOrdenDetail()?.foto_factura) {
+                  <div class="bg-gray-900/60 border border-gray-700 p-4 rounded-xl">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                      <i class="fas fa-camera text-blue-400"></i> Evidencia Fotográfica de la Factura
+                    </h4>
+                    <div class="flex flex-col sm:flex-row items-center gap-4">
+                      <img [src]="selectedOrdenFactura()?.foto_factura || selectedOrdenDetail()?.foto_factura" alt="Evidencia Factura" class="max-h-48 rounded-lg border border-gray-600 shadow-md object-contain bg-black/40" />
+                      <div class="text-xs text-gray-400">
+                        <p class="mb-2"><i class="fas fa-info-circle text-blue-400 mr-1"></i> Foto de factura cargada como respaldo físico de la compra.</p>
+                        <a [href]="selectedOrdenFactura()?.foto_factura || selectedOrdenDetail()?.foto_factura" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-lg font-semibold transition-colors">
+                          <i class="fas fa-external-link-alt"></i> Abrir imagen completa
+                        </a>
+                      </div>
+                    </div>
+                  </div>
                 }
-              </select>
-            </div>
 
-            <div class="flex justify-end gap-3">
-              <button
-                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                (click)="closeDeleteCategoriaModal()"
-              >
-                Cancelar
-              </button>
-              <button
-                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                (click)="confirmDeleteCategoria()"
-                [disabled]="!categoriaToDelete()"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-    </div>
-  }
+               <!-- Tabla Detallada de Insumos -->
+               <div>
+                 <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                   <i class="fas fa-boxes text-orange-400"></i> Desglose de Insumos e Impacto en Inventario
+                 </h4>
+
+                 <div class="overflow-x-auto border border-gray-700 rounded-lg">
+                   <table class="w-full text-left text-xs">
+                     <thead class="bg-gray-900 text-gray-400 uppercase border-b border-gray-700">
+                       <tr>
+                         <th class="p-3">Insumo</th>
+                         <th class="p-3 text-center">Cant. Solicitada</th>
+                         <th class="p-3 text-right">Costo Compra</th>
+                         <th class="p-3 text-center">Conversión Stock</th>
+                         <th class="p-3 text-right">Subtotal</th>
+                       </tr>
+                     </thead>
+                     <tbody class="divide-y divide-gray-700/60 bg-gray-800">
+                       @for (item of selectedOrdenDetail()?.items || []; track $index) {
+                         <tr class="hover:bg-gray-700/50 transition-colors">
+                           <td class="p-3 font-semibold text-white">
+                             {{ item.nombre }}
+                           </td>
+                           <td class="p-3 text-center font-bold text-blue-300">
+                             {{ item.cantidad_compra }} {{ item.unidad_compra }}
+                           </td>
+                           <td class="p-3 text-right text-gray-300">
+                             {{ (item.costo_compra || 0) | currency:'COP':'symbol-narrow':'1.0-0' }}
+                           </td>
+                           <td class="p-3 text-center text-xs text-emerald-400 font-medium">
+                             +{{ (item.cantidad_compra * (item.factor_conversion || 1)) }} {{ item.unidad_stock || 'unidades' }}
+                           </td>
+                           <td class="p-3 text-right font-bold text-white">
+                             {{ (item.cantidad_compra * item.costo_compra) | currency:'COP':'symbol-narrow':'1.0-0' }}
+                           </td>
+                         </tr>
+                       }
+                     </tbody>
+                   </table>
+                 </div>
+               </div>
+
+             </div>
+
+             <!-- Footer Modal -->
+             <div class="bg-gray-900 px-6 py-4 border-t border-gray-700 flex justify-between items-center">
+               <div class="text-left">
+                 <span class="text-xs text-gray-400 block">Total Facturado/Estimado</span>
+                 <span class="text-xl font-black text-blue-400">{{ (selectedOrdenDetail()?.total_estimado || 0) | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+               </div>
+
+               <div class="flex gap-3">
+                 @if (selectedOrdenDetail()?.estado === 'Solicitado' || selectedOrdenDetail()?.estado === 'Borrador') {
+                   <button (click)="closeOrdenDetailModal(); openRecepcionModal(selectedOrdenDetail()!)" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm transition-all flex items-center gap-1.5 shadow-lg">
+                     <i class="fas fa-check-double"></i> Registrar Recepción
+                   </button>
+                 }
+                 @if (selectedOrdenFactura(); as fact) {
+                   @if (fact.saldo_pendiente > 0) {
+                     <button (click)="closeOrdenDetailModal(); openPagoModal(fact)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm transition-all flex items-center gap-1.5 shadow-lg">
+                       <i class="fas fa-money-bill-wave"></i> Registrar Pago
+                     </button>
+                   }
+                 }
+                 <button (click)="closeOrdenDetailModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold text-sm transition-colors">
+                   Cerrar
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       }
+
+     </div>
+   }
 </div>

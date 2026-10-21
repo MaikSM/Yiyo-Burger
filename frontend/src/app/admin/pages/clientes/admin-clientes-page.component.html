@@ -1,0 +1,200 @@
+<div class="p-6">
+  <!-- Encabezado con título, buscador y botón nuevo cliente -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-100 flex items-center gap-2">
+        <i class="fas fa-address-book text-orange-500"></i> Historial de Clientes
+      </h1>
+      <p class="text-sm text-gray-400 mt-1">
+        Total: <span class="font-bold text-orange-400">{{ filteredClientes().length }}</span> clientes
+        @if (searchQuery()) {
+          (filtrados de {{ clientes().length }})
+        }
+      </p>
+    </div>
+
+    <div class="flex flex-col sm:flex-row w-full sm:w-auto gap-3">
+      <!-- Buscador -->
+      <div class="relative flex-1 sm:w-80">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        <input 
+          type="text" 
+          [ngModel]="searchQuery()" 
+          (ngModelChange)="onSearchChange($event)"
+          placeholder="Buscar por nombre o teléfono..." 
+          class="w-full pl-9 pr-8 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm shadow-inner"
+        />
+        @if (searchQuery()) {
+          <button (click)="onSearchChange('')" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+            <i class="fas fa-times text-sm"></i>
+          </button>
+        }
+      </div>
+
+      <!-- Botón + Nuevo Cliente -->
+      <button (click)="openModal()" class="btn bg-orange-500 hover:bg-orange-600 text-white border-none shadow-lg flex items-center justify-center gap-2">
+        <i class="fas fa-user-plus"></i> + Nuevo Cliente
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabla de Clientes -->
+  <div class="overflow-x-auto rounded-lg shadow-lg border border-gray-700 bg-gray-800">
+    <table class="table w-full text-left text-gray-100">
+      <thead class="bg-gray-700 text-orange-400 text-sm uppercase">
+        <tr>
+          <th class="px-4 py-3">Nombre</th>
+          <th class="px-4 py-3">Teléfono</th>
+          <th class="px-4 py-3">Dirección</th>
+          <th class="px-4 py-3">Barrio</th>
+          <th class="px-4 py-3 text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td colspan="5" class="text-center py-8 text-gray-400">
+              <i class="fas fa-spinner fa-spin text-2xl mb-2 block"></i> Cargando clientes...
+            </td>
+          </tr>
+        } @else if (filteredClientes().length === 0) {
+          <tr>
+            <td colspan="5" class="text-center py-8 text-gray-400">
+              @if (searchQuery()) {
+                <i class="fas fa-search-minus text-3xl mb-2 text-gray-500 block"></i>
+                No se encontraron clientes que coincidan con "<span class="text-yellow-400 font-bold">{{ searchQuery() }}</span>".
+              } @else {
+                No hay clientes registrados.
+              }
+            </td>
+          </tr>
+        } @else {
+          @for (cliente of paginatedClientes(); track cliente.cliente_id) {
+            <tr class="border-b border-gray-700/60 hover:bg-gray-700/70 transition-colors">
+              <td class="px-4 py-3 font-semibold text-white">{{ cliente.nombre }}</td>
+              <td class="px-4 py-3 font-mono text-yellow-300">{{ cliente.telefono || '-' }}</td>
+              <td class="px-4 py-3 text-gray-300">{{ cliente.direccion || '-' }}</td>
+              <td class="px-4 py-3 text-gray-300">{{ cliente.barrio || '-' }}</td>
+              <td class="px-4 py-3 text-right">
+                <button (click)="openModal(cliente)" class="btn btn-sm btn-ghost text-blue-400 hover:text-blue-300 mr-1" title="Editar">
+                  <i class="fas fa-edit mr-1"></i> Editar
+                </button>
+                <button (click)="deleteCliente(cliente.cliente_id)" class="btn btn-sm btn-ghost text-red-400 hover:text-red-300" title="Eliminar">
+                  <i class="fas fa-trash-alt mr-1"></i> Eliminar
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Paginación -->
+  @if (!loading() && filteredClientes().length > 0) {
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4 bg-gray-800 p-4 rounded-lg border border-gray-700 shadow-md">
+      <!-- Selector de cantidad por página e info -->
+      <div class="flex items-center gap-4 text-sm text-gray-300">
+        <div class="flex items-center gap-2">
+          <span>Mostrar</span>
+          <select 
+            [ngModel]="pageSize()" 
+            (ngModelChange)="setPageSize($event)"
+            class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-gray-100 font-bold focus:outline-none focus:ring-1 focus:ring-orange-500">
+            <option [value]="10">10</option>
+            <option [value]="15">15</option>
+            <option [value]="25">25</option>
+            <option [value]="50">50</option>
+            <option [value]="100">100</option>
+          </select>
+          <span>por página</span>
+        </div>
+        <span class="hidden sm:inline border-l border-gray-600 pl-4 text-gray-400">
+          Mostrando {{ (currentPage() - 1) * pageSize() + 1 }} - {{ Math.min(currentPage() * pageSize(), filteredClientes().length) }} de {{ filteredClientes().length }}
+        </span>
+      </div>
+
+      <!-- Botones de Paginación -->
+      <div class="flex items-center gap-2">
+        <button 
+          (click)="goToPage(1)" 
+          [disabled]="currentPage() === 1"
+          class="btn btn-xs sm:btn-sm bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600 disabled:opacity-40 disabled:cursor-not-allowed">
+          <i class="fas fa-angle-double-left"></i>
+        </button>
+        <button 
+          (click)="prevPage()" 
+          [disabled]="currentPage() === 1"
+          class="btn btn-xs sm:btn-sm bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
+          <i class="fas fa-chevron-left"></i> Anterior
+        </button>
+
+        <span class="px-3 py-1 bg-gray-900 border border-gray-700 rounded-md text-sm font-bold text-orange-400">
+          {{ currentPage() }} / {{ totalPages() }}
+        </span>
+
+        <button 
+          (click)="nextPage()" 
+          [disabled]="currentPage() === totalPages()"
+          class="btn btn-xs sm:btn-sm bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
+          Siguiente <i class="fas fa-chevron-right"></i>
+        </button>
+        <button 
+          (click)="goToPage(totalPages())" 
+          [disabled]="currentPage() === totalPages()"
+          class="btn btn-xs sm:btn-sm bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600 disabled:opacity-40 disabled:cursor-not-allowed">
+          <i class="fas fa-angle-double-right"></i>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Modal para Crear/Editar -->
+  @if (isModalOpen()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div class="flex justify-between items-center p-4 border-b border-gray-700">
+          <h3 class="text-lg font-bold text-gray-100">
+            {{ editingCliente() ? 'Editar Cliente' : 'Nuevo Cliente' }}
+          </h3>
+          <button (click)="closeModal()" class="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
+        </div>
+        <div class="p-4">
+          <form [formGroup]="clienteForm" (ngSubmit)="onSubmit()">
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Nombre *</label>
+              <input type="text" formControlName="nombre" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="Nombre completo">
+              @if (clienteForm.get('nombre')?.invalid && clienteForm.get('nombre')?.touched) {
+                <span class="text-red-400 text-xs mt-1 block">El nombre es requerido</span>
+              }
+            </div>
+            
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Teléfono</label>
+              <input type="text" formControlName="telefono" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="Ej. 123456789">
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Dirección</label>
+              <input type="text" formControlName="direccion" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="Dirección de entrega">
+            </div>
+
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Barrio</label>
+              <input type="text" formControlName="barrio" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="Ej. El Poblado">
+            </div>
+
+            <div class="flex justify-end gap-3">
+              <button type="button" (click)="closeModal()" class="btn btn-outline border-gray-500 text-gray-300 hover:bg-gray-700">
+                Cancelar
+              </button>
+              <button type="submit" [disabled]="clienteForm.invalid" class="btn bg-orange-500 hover:bg-orange-600 text-white border-none disabled:opacity-50">
+                Guardar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,5 @@
+{
+  "printer_caja_ip": "192.168.0.9",
+  "printer_pizzas_ip": "192.168.0.10",
+  "printer_parrilla_ip": "192.168.0.13"
+}

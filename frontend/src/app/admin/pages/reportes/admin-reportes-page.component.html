@@ -1,0 +1,1061 @@
+<div class="h-full flex flex-col bg-gray-900 overflow-hidden">
+  
+  <!-- Header & Filtros -->
+  <div class="bg-gray-800 border-b border-gray-700 p-4 shrink-0 shadow-md">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <h1 class="text-3xl font-black text-orange-500 uppercase tracking-widest flex items-center gap-3">
+        <i class="fas fa-chart-line text-2xl"></i> Reportes Generales
+      </h1>
+      
+      <!-- Date Filters -->
+      <div class="flex items-center flex-wrap gap-3 bg-gray-900/50 p-2 rounded-lg border border-gray-700">
+        <!-- Selector de Tipo de Filtro -->
+        <div class="flex bg-gray-800 rounded-lg p-0.5 border border-gray-700">
+          <button (click)="changeFilterType('dia')" 
+                  [class]="filterType() === 'dia' ? 'bg-orange-500 text-white font-bold' : 'text-gray-400 hover:text-white'" 
+                  class="px-2.5 py-1 text-xs rounded transition-all">
+            Día
+          </button>
+          <button (click)="changeFilterType('mes')" 
+                  [class]="filterType() === 'mes' ? 'bg-orange-500 text-white font-bold' : 'text-gray-400 hover:text-white'" 
+                  class="px-2.5 py-1 text-xs rounded transition-all">
+            Mes
+          </button>
+          <button (click)="changeFilterType('ano')" 
+                  [class]="filterType() === 'ano' ? 'bg-orange-500 text-white font-bold' : 'text-gray-400 hover:text-white'" 
+                  class="px-2.5 py-1 text-xs rounded transition-all">
+            Año
+          </button>
+          <button (click)="changeFilterType('todos')" 
+                  [class]="filterType() === 'todos' ? 'bg-orange-500 text-white font-bold' : 'text-gray-400 hover:text-white'" 
+                  class="px-2.5 py-1 text-xs rounded transition-all">
+            Todo
+          </button>
+        </div>
+
+        <!-- Inputs dinámicos según el tipo de filtro -->
+        @if (filterType() === 'dia') {
+          <div class="flex items-center gap-2">
+            <span class="text-gray-400 text-sm"><i class="far fa-calendar-alt"></i> Día:</span>
+            <input type="date" 
+                   [ngModel]="selectedDate()" 
+                   (ngModelChange)="selectedDate.set($event)" 
+                   class="bg-gray-700 text-white border border-gray-600 rounded px-2 py-1 text-sm outline-none focus:border-orange-500 font-mono">
+          </div>
+        } @else if (filterType() === 'mes') {
+          <div class="flex items-center gap-2">
+            <span class="text-gray-400 text-sm"><i class="far fa-calendar-alt"></i> Mes:</span>
+            <input type="month" 
+                   [ngModel]="selectedDate()" 
+                   (ngModelChange)="selectedDate.set($event)" 
+                   class="bg-gray-700 text-white border border-gray-600 rounded px-2 py-1 text-sm outline-none focus:border-orange-500 font-mono">
+          </div>
+        } @else if (filterType() === 'ano') {
+          <div class="flex items-center gap-2">
+            <span class="text-gray-400 text-sm"><i class="far fa-calendar-alt"></i> Año:</span>
+            <select [ngModel]="selectedDate()" 
+                    (ngModelChange)="selectedDate.set($event)" 
+                    class="bg-gray-700 text-white border border-gray-600 rounded px-2 py-1 text-sm outline-none focus:border-orange-500 font-mono">
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+              <option value="2027">2027</option>
+              <option value="2028">2028</option>
+              <option value="2029">2029</option>
+              <option value="2030">2030</option>
+            </select>
+          </div>
+        } @else {
+          <span class="text-gray-400 text-xs font-semibold px-2">Historial completo</span>
+        }
+
+        <button (click)="changeFilterType('todos')" class="text-gray-400 hover:text-white px-2" title="Restablecer filtros">
+          <i class="fas fa-undo text-xs"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Layout -->
+  <div class="flex flex-1 overflow-hidden">
+    
+    <!-- Sidebar / Tabs -->
+    <div class="w-64 bg-gray-800 border-r border-gray-700 p-4 shrink-0 hidden md:block">
+      <div class="space-y-2">
+
+        <button 
+          (click)="setTab('finanzas')"
+          [class]="activeTab() === 'finanzas' ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : 'text-gray-400 hover:bg-gray-700 hover:text-white'"
+          class="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all text-left">
+          <i class="fas fa-money-bill-wave w-5"></i> Finanzas
+        </button>
+        <button 
+          (click)="setTab('menu')"
+          [class]="activeTab() === 'menu' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-gray-400 hover:bg-gray-700 hover:text-white'"
+          class="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all text-left">
+          <i class="fas fa-utensils w-5"></i> Rendimiento Menú
+        </button>
+        <button 
+          (click)="setTab('historial')"
+          [class]="activeTab() === 'historial' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'text-gray-400 hover:bg-gray-700 hover:text-white'"
+          class="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all text-left">
+          <i class="fas fa-list-alt w-5"></i> Historial Completo
+        </button>
+        <button 
+          (click)="setTab('cierres')"
+          [class]="activeTab() === 'cierres' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-gray-400 hover:bg-gray-700 hover:text-white'"
+          class="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-all text-left">
+          <i class="fas fa-calendar-check w-5"></i> Cierres Diarios
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Tabs (Horizontal) -->
+    <div class="md:hidden flex overflow-x-auto bg-gray-800 border-b border-gray-700 p-2 shrink-0 no-scrollbar gap-2">
+
+      <button (click)="setTab('finanzas')" [class]="activeTab() === 'finanzas' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400'" class="px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap">Finanzas</button>
+      <button (click)="setTab('menu')" [class]="activeTab() === 'menu' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-400'" class="px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap">Menú</button>
+      <button (click)="setTab('historial')" [class]="activeTab() === 'historial' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-400'" class="px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap">Historial</button>
+      <button (click)="setTab('cierres')" [class]="activeTab() === 'cierres' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-400'" class="px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap">Cierres Diarios</button>
+    </div>
+
+    <!-- Scrollable Content Area -->
+    <div class="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-900">
+      
+
+      <!-- ================= TAB: FINANZAS ================= -->
+      @if (activeTab() === 'finanzas') {
+        <div class="max-w-7xl mx-auto space-y-8 animate-fade-in">
+          
+          <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+            <div>
+              <h2 class="text-3xl font-black text-white flex items-center gap-3">
+                <i class="fas fa-chart-pie text-green-500"></i> Análisis Financiero Detallado
+              </h2>
+              <p class="text-gray-400 mt-2">Métricas avanzadas para la toma de decisiones.</p>
+            </div>
+            <div class="flex flex-col gap-3">
+              <div class="bg-green-500/10 border border-green-500/20 text-green-400 px-6 py-3 rounded-xl text-right">
+                <p class="text-xs uppercase tracking-widest font-bold mb-1">Total Ingreso Bruto</p>
+                <p class="text-3xl font-black">{{ totalIncome() | currency }}</p>
+              </div>
+              <button (click)="exportGeneralToPDF()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg shadow-red-600/20 w-full">
+                <i class="fas fa-file-pdf"></i> Exportar Reporte a PDF
+              </button>
+            </div>
+          </div>
+
+          <!-- Top KPI Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Ingreso Neto Operativo (Subtotal) -->
+            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700 shadow-lg relative overflow-hidden group hover:border-blue-500/50 transition-colors">
+              <div class="absolute -right-6 -top-6 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-colors"></div>
+              <div class="relative z-10">
+                <div class="flex justify-between items-start mb-4">
+                  <div class="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl">
+                    <i class="fas fa-wallet"></i>
+                  </div>
+                </div>
+                <p class="text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">Ventas Netas (Subtotal)</p>
+                <p class="text-2xl font-black text-white">{{ totalSubtotal() | currency }}</p>
+              </div>
+            </div>
+
+            <!-- Ticket Promedio -->
+            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700 shadow-lg relative overflow-hidden group hover:border-purple-500/50 transition-colors">
+              <div class="absolute -right-6 -top-6 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-colors"></div>
+              <div class="relative z-10">
+                <div class="flex justify-between items-start mb-4">
+                  <div class="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-xl">
+                    <i class="fas fa-receipt"></i>
+                  </div>
+                </div>
+                <p class="text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">Ticket Promedio</p>
+                <p class="text-2xl font-black text-white">{{ averageTicket() | currency }}</p>
+              </div>
+            </div>
+
+            <!-- Propinas Recaudadas -->
+            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700 shadow-lg relative overflow-hidden group hover:border-teal-500/50 transition-colors">
+              <div class="absolute -right-6 -top-6 w-32 h-32 bg-teal-500/10 rounded-full blur-3xl group-hover:bg-teal-500/20 transition-colors"></div>
+              <div class="relative z-10">
+                <div class="flex justify-between items-start mb-4">
+                  <div class="w-12 h-12 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center text-xl">
+                    <i class="fas fa-hand-holding-usd"></i>
+                  </div>
+                </div>
+                <p class="text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">Propinas Recaudadas</p>
+                <p class="text-2xl font-black text-white">{{ totalTips() | currency }}</p>
+              </div>
+            </div>
+
+            <!-- Impuestos Cobrados -->
+            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700 shadow-lg relative overflow-hidden group hover:border-yellow-500/50 transition-colors">
+              <div class="absolute -right-6 -top-6 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl group-hover:bg-yellow-500/20 transition-colors"></div>
+              <div class="relative z-10">
+                <div class="flex justify-between items-start mb-4">
+                  <div class="w-12 h-12 rounded-xl bg-yellow-500/20 text-yellow-500 flex items-center justify-center text-xl">
+                    <i class="fas fa-landmark"></i>
+                  </div>
+                </div>
+                <p class="text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">Impuestos Cobrados</p>
+                <p class="text-2xl font-black text-white">{{ totalTaxes() | currency }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Canal de Ventas -->
+            <div class="bg-gray-800 rounded-2xl border border-gray-700 shadow-lg p-6 flex flex-col">
+              <h3 class="text-xl font-bold text-white mb-6 border-b border-gray-700 pb-4 flex items-center gap-2">
+                <i class="fas fa-code-branch text-indigo-400"></i> Ingresos por Canal
+              </h3>
+              
+              <div class="flex-1 flex flex-col justify-center space-y-6">
+                <!-- Mesas -->
+                <div class="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                  <div class="flex justify-between items-center mb-2">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                        <i class="fas fa-chair"></i>
+                      </div>
+                      <span class="text-white font-bold text-lg">Servicio en Mesa</span>
+                    </div>
+                    <span class="text-blue-400 font-black text-xl">{{ ingresosPorCanal().mesas.total | currency }}</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="flex-1 bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                      <div class="h-2.5 rounded-full bg-blue-500" [style.width]="ingresosPorCanal().mesas.pct + '%'"></div>
+                    </div>
+                    <span class="text-gray-400 text-sm font-bold">{{ ingresosPorCanal().mesas.pct | number:'1.0-1' }}%</span>
+                  </div>
+                </div>
+
+                <!-- Domicilios -->
+                <div class="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
+                  <div class="flex justify-between items-center mb-2">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center">
+                        <i class="fas fa-motorcycle"></i>
+                      </div>
+                      <span class="text-white font-bold text-lg">Domicilios</span>
+                    </div>
+                    <span class="text-orange-400 font-black text-xl">{{ ingresosPorCanal().domicilios.total | currency }}</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="flex-1 bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                      <div class="h-2.5 rounded-full bg-orange-500" [style.width]="ingresosPorCanal().domicilios.pct + '%'"></div>
+                    </div>
+                    <span class="text-gray-400 text-sm font-bold">{{ ingresosPorCanal().domicilios.pct | number:'1.0-1' }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rendimiento por Día de la Semana -->
+            <div class="bg-gray-800 rounded-2xl border border-gray-700 shadow-lg p-6 lg:col-span-2 flex flex-col">
+              <h3 class="text-xl font-bold text-white mb-6 border-b border-gray-700 pb-4 flex items-center gap-2">
+                <i class="fas fa-calendar-alt text-teal-400"></i> Rendimiento por Día de la Semana
+              </h3>
+              
+              <div class="flex-1 flex flex-col justify-center">
+                <div class="space-y-4">
+                  @for (dia of diasSemanaStats(); track dia.name) {
+                    <div class="flex items-center gap-4">
+                      <div class="w-24 text-gray-300 font-bold shrink-0">{{ dia.name }}</div>
+                      <div class="flex-1 relative">
+                        <!-- Bar background -->
+                        <div class="w-full bg-gray-900 rounded-full h-8 overflow-hidden border border-gray-700">
+                          <!-- Bar fill -->
+                          <div class="h-full rounded-r-full transition-all duration-1000 flex items-center px-3 justify-end" 
+                               [class.bg-teal-500]="dia.pctMax === 100"
+                               [class.bg-teal-600]="dia.pctMax >= 75 && dia.pctMax < 100"
+                               [class.bg-teal-700]="dia.pctMax >= 50 && dia.pctMax < 75"
+                               [class.bg-gray-600]="dia.pctMax < 50"
+                               [style.width]="(dia.pctMax || 1) + '%'">
+                            @if (dia.pctMax > 15) {
+                              <span class="text-white text-xs font-bold drop-shadow-md">{{ dia.value | currency }}</span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                      @if (dia.pctMax <= 15) {
+                        <div class="w-24 text-right text-gray-400 text-sm font-bold shrink-0">{{ dia.value | currency }}</div>
+                      } @else {
+                        <div class="w-24 shrink-0"></div> <!-- spacing -->
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+            
+          </div>
+
+          <!-- Métodos de pago (Full Width) -->
+          <div class="bg-gray-800 rounded-2xl border border-gray-700 shadow-lg p-6">
+            <h3 class="text-xl font-bold text-white mb-6 border-b border-gray-700 pb-4 flex items-center gap-2">
+              <i class="fas fa-credit-card text-pink-400"></i> Distribución de Métodos de Pago
+            </h3>
+            
+            @if (paymentMethodsData().length === 0) {
+              <div class="text-center py-10 text-gray-500">No hay pagos registrados.</div>
+            } @else {
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                @for (method of paymentMethodsData(); track method.name) {
+                  <div class="bg-gray-900/50 p-4 rounded-xl border border-gray-700 hover:border-gray-500 transition-colors">
+                    <div class="flex justify-between items-start mb-4">
+                      <span class="font-bold text-white text-lg">{{ method.name }}</span>
+                      <span class="px-2 py-1 bg-gray-800 rounded text-xs font-bold text-gray-400 border border-gray-600">{{ method.percentage | number:'1.0-1' }}%</span>
+                    </div>
+                    <p class="text-2xl font-black text-green-400 mb-3">{{ method.value | currency }}</p>
+                    <div class="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
+                      <div class="h-1.5 rounded-full" 
+                           [class.bg-green-500]="method.name === 'Efectivo'"
+                           [class.bg-blue-500]="method.name === 'Tarjeta'"
+                           [class.bg-purple-500]="method.name === 'Nequi'"
+                           [class.bg-red-500]="method.name === 'Daviplata'"
+                           [class.bg-teal-500]="method.name === 'Bre-B'"
+                           [class.bg-orange-500]="method.name === 'Crédito'"
+                           [class.bg-gray-400]="method.name === 'Otros'"
+                           [style.width]="method.percentage + '%'"></div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+          
+        </div>
+      }
+
+      <!-- ================= TAB: MENU STATS ================= -->
+      @if (activeTab() === 'menu') {
+        <div class="max-w-6xl mx-auto space-y-6 animate-fade-in">
+          
+          <h2 class="text-2xl font-bold text-white mb-6">Rendimiento del Menú</h2>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Top Vendidos -->
+            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden">
+              <div class="p-6 bg-gray-800/80 border-b border-gray-700">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                  <i class="fas fa-trophy text-yellow-500"></i> Top Platos Más Vendidos
+                </h3>
+              </div>
+              <div class="p-0">
+                <table class="w-full text-left text-sm text-gray-300">
+                  <thead class="bg-gray-900/50 text-xs uppercase text-gray-400">
+                    <tr>
+                      <th class="px-6 py-4">Plato</th>
+                      <th class="px-6 py-4 text-center">Cant.</th>
+                      <th class="px-6 py-4 text-right">Ingreso</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-700">
+                    @for (item of topSold(); track item.nombre; let i = $index) {
+                      <tr class="hover:bg-gray-700/50 transition-colors">
+                        <td class="px-6 py-4 font-bold text-white flex items-center gap-3">
+                          <span class="w-6 h-6 rounded bg-gray-700 flex items-center justify-center text-xs font-black text-gray-400"
+                                [class.bg-yellow-500]="i === 0" [class.text-black]="i === 0"
+                                [class.bg-gray-300]="i === 1" [class.text-black]="i === 1"
+                                [class.bg-orange-700]="i === 2" [class.text-white]="i === 2">
+                            {{ i + 1 }}
+                          </span>
+                          {{ item.nombre }}
+                        </td>
+                        <td class="px-6 py-4 text-center font-bold text-green-400">{{ item.qty }}</td>
+                        <td class="px-6 py-4 text-right font-medium">{{ item.total | currency }}</td>
+                      </tr>
+                    }
+                    @if (topSold().length === 0) {
+                      <tr><td colspan="3" class="px-6 py-10 text-center text-gray-500">No hay datos suficientes</td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Menos Vendidos -->
+            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden">
+              <div class="p-6 bg-gray-800/80 border-b border-gray-700">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                  <i class="fas fa-arrow-down text-red-500"></i> Platos Menos Vendidos
+                </h3>
+              </div>
+              <div class="p-0">
+                <table class="w-full text-left text-sm text-gray-300">
+                  <thead class="bg-gray-900/50 text-xs uppercase text-gray-400">
+                    <tr>
+                      <th class="px-6 py-4">Plato</th>
+                      <th class="px-6 py-4 text-center">Cant.</th>
+                      <th class="px-6 py-4 text-right">Ingreso</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-700">
+                    @for (item of leastSold(); track item.nombre) {
+                      <tr class="hover:bg-gray-700/50 transition-colors">
+                        <td class="px-6 py-4 font-bold text-white">{{ item.nombre }}</td>
+                        <td class="px-6 py-4 text-center font-bold text-red-400">{{ item.qty }}</td>
+                        <td class="px-6 py-4 text-right font-medium">{{ item.total | currency }}</td>
+                      </tr>
+                    }
+                    @if (leastSold().length === 0) {
+                      <tr><td colspan="3" class="px-6 py-10 text-center text-gray-500">No hay datos suficientes</td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      }
+
+      <!-- ================= TAB: HISTORIAL ================= -->
+      @if (activeTab() === 'historial') {
+        <div class="max-w-6xl mx-auto space-y-6 animate-fade-in">
+          
+          <h2 class="text-2xl font-bold text-white mb-6">Historial Combinado (Mesas y Domicilios)</h2>
+          
+          @if (!selectedOrder()) {
+            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-gray-300 whitespace-nowrap">
+                  <thead class="bg-gray-900 text-xs uppercase text-gray-400 border-b border-gray-700">
+                    <tr>
+                      <th class="px-6 py-4 font-bold">Fecha / Hora</th>
+                      <th class="px-6 py-4 font-bold">ID Pedido</th>
+                      <th class="px-6 py-4 font-bold">Tipo</th>
+                      <th class="px-6 py-4 font-bold">Cliente / Mesa</th>
+                      <th class="px-6 py-4 font-bold">Atendido por</th>
+                      <th class="px-6 py-4 font-bold">Método Pago</th>
+                      <th class="px-6 py-4 font-bold text-center">Acciones</th>
+                      <th class="px-6 py-4 font-bold text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-700">
+                    @for (order of paginatedHistorialOrders(); track order.id) {
+                      <tr class="hover:bg-gray-700/50 transition-colors">
+                        <td class="px-6 py-4">{{ order.fecha | date:'MMM dd, HH:mm' }}</td>
+                        <td class="px-6 py-4 font-mono text-gray-400">{{ order.id }}</td>
+                        <td class="px-6 py-4">
+                          <span class="px-2 py-1 rounded text-xs font-bold
+                            {{ order.tipo === 'Domicilio' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400' }}">
+                            <i [class]="order.tipo === 'Domicilio' ? 'fas fa-motorcycle mr-1' : 'fas fa-chair mr-1'"></i>
+                            {{ order.tipo === 'Domicilio' ? 'Domicilio' : 'Mesas' }}
+                          </span>
+                        </td>
+                        <td class="px-6 py-4 font-bold text-white">
+                          {{ order.tipo === 'Domicilio' ? order.cliente_nombre : (order.mesa ? 'Mesa ' + order.mesa : 'Mesa') }}
+                        </td>
+                        <td class="px-6 py-4">
+                          <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-orange-500/15 text-orange-400 border border-orange-500/30 flex items-center gap-1.5 w-fit">
+                            <i class="fas fa-user-tag text-[10px]"></i>
+                            {{ order.mesero || 'Administrador' }}
+                          </span>
+                        </td>
+                        <td class="px-6 py-4">
+                          <select [value]="getMetodoPagoValue(order.metodo_pago)" (change)="cambiarMetodoPago(order, $any($event.target).value)" 
+                                  class="bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded border border-gray-600 focus:border-purple-500 focus:outline-none cursor-pointer">
+                            <option value="Efectivo">💵 Efectivo</option>
+                            <option value="Tarjeta">💳 Tarjeta</option>
+                            <option value="Nequi">💜 Nequi</option>
+                            <option value="Daviplata">🔴 Daviplata</option>
+                            <option value="Bre-B">⚡ Bre-B</option>
+                            <option value="Bold">🟦 Bold</option>
+                            <option value="Crédito">📝 Crédito</option>
+                            <option value="Transferencia">🏦 Transferencia</option>
+                            <option value="Otros">📦 Otros</option>
+                          </select>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                          <button (click)="verDetallePedido(order)" class="bg-indigo-600/20 text-indigo-400 hover:bg-indigo-500 hover:text-white px-3 py-1 rounded transition-colors text-xs font-bold flex items-center justify-center gap-2 mx-auto">
+                            <i class="fas fa-eye"></i> Detalle
+                          </button>
+                        </td>
+                        <td class="px-6 py-4 text-right font-black text-green-400">
+                          {{ order.total | currency }}
+                        </td>
+                      </tr>
+                    }
+                    @if (filteredOrders().length === 0) {
+                      <tr>
+                        <td colspan="8" class="px-6 py-10 text-center text-gray-500">
+                          No hay pedidos completados en este rango de fechas.
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Paginación Historial -->
+              @if (filteredOrders().length > 0) {
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 bg-gray-900/90 border-t border-gray-700">
+                  <!-- Selector de cantidad por página -->
+                  <div class="flex items-center gap-4 text-sm text-gray-300">
+                    <div class="flex items-center gap-2">
+                      <span>Mostrar</span>
+                      <select 
+                        [ngModel]="historialPageSize()" 
+                        (ngModelChange)="setHistorialPageSize($event)"
+                        class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-100 font-bold focus:outline-none focus:ring-1 focus:ring-orange-500">
+                        <option [value]="10">10</option>
+                        <option [value]="15">15</option>
+                        <option [value]="25">25</option>
+                        <option [value]="50">50</option>
+                        <option [value]="100">100</option>
+                      </select>
+                      <span>registros por página</span>
+                    </div>
+                    <span class="hidden sm:inline border-l border-gray-700 pl-4 text-gray-400">
+                      Mostrando {{ (historialPage() - 1) * historialPageSize() + 1 }} - {{ Math.min(historialPage() * historialPageSize(), filteredOrders().length) }} de {{ filteredOrders().length }}
+                    </span>
+                  </div>
+
+                  <!-- Botones de Paginación -->
+                  <div class="flex items-center gap-2">
+                    <button 
+                      (click)="goToHistorialPage(1)" 
+                      [disabled]="historialPage() === 1"
+                      class="btn btn-xs sm:btn-sm bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                      <i class="fas fa-angle-double-left"></i>
+                    </button>
+                    <button 
+                      (click)="prevHistorialPage()" 
+                      [disabled]="historialPage() === 1"
+                      class="btn btn-xs sm:btn-sm bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
+                      <i class="fas fa-chevron-left"></i> Anterior
+                    </button>
+
+                    <span class="px-3 py-1 bg-gray-950 border border-gray-700 rounded-md text-sm font-bold text-orange-400">
+                      {{ historialPage() }} / {{ historialTotalPages() }}
+                    </span>
+
+                    <button 
+                      (click)="nextHistorialPage()" 
+                      [disabled]="historialPage() === historialTotalPages()"
+                      class="btn btn-xs sm:btn-sm bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
+                      Siguiente <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <button 
+                      (click)="goToHistorialPage(historialTotalPages())" 
+                      [disabled]="historialPage() === historialTotalPages()"
+                      class="btn btn-xs sm:btn-sm bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                      <i class="fas fa-angle-double-right"></i>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <!-- Detailed Order View -->
+            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden animate-fade-in">
+              <div class="bg-gray-700/50 p-4 md:p-6 border-b border-gray-600 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative">
+                <div class="flex items-center gap-4">
+                  <button (click)="volverHistorial()" class="w-10 h-10 bg-gray-800 hover:bg-gray-600 text-gray-300 rounded-full flex items-center justify-center transition-colors shadow-md border border-gray-600" title="Volver al historial">
+                    <i class="fas fa-arrow-left"></i>
+                  </button>
+                  <div>
+                    <h3 class="text-2xl font-black text-white flex items-center gap-3">
+                      Detalle del Pedido <span class="text-indigo-400 font-mono">#{{ selectedOrder()!.id }}</span>
+                    </h3>
+                    <p class="text-gray-400 mt-1"><i class="far fa-clock"></i> {{ selectedOrder()!.fecha | date:'medium' }}</p>
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                  <span class="px-3 py-1 rounded-full text-sm font-bold bg-gray-900 border border-gray-700 text-gray-300 flex items-center gap-2 shadow-inner">
+                    <i [class]="selectedOrder()!.tipo === 'Domicilio' ? 'fas fa-motorcycle text-orange-400' : 'fas fa-chair text-blue-400'"></i>
+                    {{ selectedOrder()!.tipo === 'Domicilio' ? (selectedOrder()!.cliente_nombre || 'Domicilio') : (selectedOrder()!.mesa ? 'Mesa ' + selectedOrder()!.mesa : 'Mesa') }}
+                  </span>
+                  <span class="px-3 py-1 rounded-full text-sm font-bold bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-2 shadow-inner">
+                    <i class="fas fa-check-circle"></i> {{ selectedOrder()!.estado }}
+                  </span>
+                  <span class="px-3 py-1 rounded-full text-sm font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center gap-2 shadow-inner">
+                    <i class="fas fa-user-tag text-xs"></i>
+                    Atendido por: <strong class="text-white">{{ selectedOrder()!.mesero || 'Administrador' }}</strong>
+                  </span>
+                </div>
+              </div>
+              
+              <div class="p-6">
+                <h4 class="text-white font-bold mb-4 flex items-center gap-2 border-b border-gray-700 pb-2 text-lg">
+                  <i class="fas fa-receipt text-gray-400"></i> Resumen de Productos
+                </h4>
+                <div class="bg-gray-900/50 rounded-xl border border-gray-700 overflow-hidden mb-8 shadow-inner">
+                  <table class="w-full text-left text-sm text-gray-300">
+                    <thead class="bg-gray-900/80 text-xs uppercase text-gray-400 border-b border-gray-700">
+                      <tr>
+                        <th class="px-6 py-4">Cant</th>
+                        <th class="px-6 py-4">Producto</th>
+                        <th class="px-6 py-4 text-right">Precio Unit.</th>
+                        <th class="px-6 py-4 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700/50">
+                      @for (item of selectedOrder()!.items; track item.id) {
+                        <tr class="hover:bg-gray-800 transition-colors">
+                          <td class="px-6 py-4">
+                            <span class="bg-gray-700 text-gray-200 px-2 py-1 rounded text-xs font-bold">{{ item.qty }}x</span>
+                          </td>
+                          <td class="px-6 py-4 font-bold text-white">{{ item.nombre }}</td>
+                          <td class="px-6 py-4 text-right text-gray-400">{{ item.precio | currency }}</td>
+                          <td class="px-6 py-4 text-right font-bold text-white">{{ (item.precio * item.qty) | currency }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div class="flex flex-col md:flex-row justify-between gap-6">
+                  <div class="bg-gray-900/40 p-5 rounded-2xl border border-gray-700/50 w-full md:w-1/2 flex items-center gap-5 shadow-sm">
+                    <div class="w-14 h-14 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center text-2xl shrink-0">
+                      <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div>
+                      <p class="text-gray-400 text-sm font-bold uppercase tracking-wider">Método de Pago</p>
+                      <select [value]="getMetodoPagoValue(selectedOrder()!.metodo_pago)" (change)="cambiarMetodoPago(selectedOrder()!, $any($event.target).value)" 
+                              class="bg-gray-800 text-white text-lg font-bold px-3 py-1 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none cursor-pointer mt-1">
+                        <option value="Efectivo">💵 Efectivo</option>
+                        <option value="Tarjeta">💳 Tarjeta</option>
+                        <option value="Nequi">💜 Nequi</option>
+                        <option value="Daviplata">🔴 Daviplata</option>
+                        <option value="Bre-B">⚡ Bre-B</option>
+                        <option value="Bold">🟦 Bold</option>
+                        <option value="Crédito">📝 Crédito</option>
+                        <option value="Transferencia">🏦 Transferencia</option>
+                        <option value="Otros">📦 Otros</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div class="bg-gray-900/60 p-6 rounded-2xl border border-gray-700 w-full md:w-1/2 shadow-inner">
+                    <div class="flex justify-between items-center mb-3 text-lg">
+                      <span class="text-gray-400 font-medium">Subtotal</span>
+                      <span class="text-white font-bold">{{ selectedOrder()!.subtotal | currency }}</span>
+                    </div>
+                    @if (selectedOrder()!.impuesto_valor) {
+                      <div class="flex justify-between items-center mb-3 text-lg">
+                        <span class="text-gray-400 font-medium">Impuestos</span>
+                        <span class="text-white font-bold">{{ selectedOrder()!.impuesto_valor | currency }}</span>
+                      </div>
+                    }
+                    @if (selectedOrder()!.propina_valor) {
+                      <div class="flex justify-between items-center mb-3 text-lg">
+                        <span class="text-gray-400 font-medium">Propina</span>
+                        <span class="text-white font-bold">{{ selectedOrder()!.propina_valor | currency }}</span>
+                      </div>
+                    }
+                    <div class="flex justify-between items-center mt-5 pt-5 border-t border-gray-700">
+                      <span class="text-xl font-bold text-gray-200 uppercase tracking-wide">Total Pagado</span>
+                      <span class="text-3xl font-black text-green-400">{{ selectedOrder()!.total | currency }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ================= TAB: CIERRES DIARIOS ================= -->
+      @if (activeTab() === 'cierres') {
+        <div class="max-w-6xl mx-auto space-y-8 animate-fade-in">
+          
+          <!-- SECCIÓN: REGISTROS OFICIALES DE CIERRES EN BASE DE DATOS -->
+          <div class="bg-gray-800/80 border border-gray-700 rounded-2xl p-6 shadow-xl space-y-4">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 pb-4 border-b border-gray-700">
+              <div>
+                <h2 class="text-xl font-black text-white flex items-center gap-2">
+                  <i class="fas fa-cash-register text-orange-500"></i>
+                  Auditoría Oficial de Turnos de Caja (Base de Datos)
+                </h2>
+                <p class="text-xs text-gray-400 mt-0.5">Historial de aperturas, cierres físicos, bases iniciales y arqueos contados por los cajeros.</p>
+              </div>
+              <button (click)="cargarHistorialCierres()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5">
+                <i class="fas fa-sync-alt"></i> Actualizar
+              </button>
+            </div>
+
+            @if (historialCierresBD().length === 0) {
+              <div class="text-center py-8 text-gray-400 text-sm">
+                No hay registros oficiales de turnos de caja almacenados en la base de datos.
+              </div>
+            } @else {
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm border-collapse">
+                  <thead>
+                    <tr class="bg-gray-900/60 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-700 font-bold">
+                      <th class="py-3 px-4">Turno #</th>
+                      <th class="py-3 px-4">Apertura / Cierre</th>
+                      <th class="py-3 px-4">Cajero</th>
+                      <th class="py-3 px-4 text-right">Base Inicial</th>
+                      <th class="py-3 px-4 text-right">Ventas Efectivo</th>
+                      <th class="py-3 px-4 text-right">Ventas Tarjeta/Transf.</th>
+                      <th class="py-3 px-4 text-right">Efectivo Esperado</th>
+                      <th class="py-3 px-4 text-right">Físico Contado</th>
+                      <th class="py-3 px-4 text-center">Diferencia</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-700/50 font-mono text-xs">
+                    @for (c of historialCierresBD(); track c.id) {
+                      <tr class="hover:bg-gray-700/30 transition-colors">
+                        <td class="py-3 px-4 font-bold text-white">#{{ c.id }}</td>
+                        <td class="py-3 px-4 font-sans text-gray-300">
+                          <span class="block text-white font-medium">{{ c.fecha_apertura | date:'shortDate' }}</span>
+                          <span class="block text-[11px] text-gray-400">{{ c.fecha_apertura | date:'shortTime' }} - {{ (c.fecha_cierre | date:'shortTime') || 'En Turno' }}</span>
+                        </td>
+                        <td class="py-3 px-4 font-sans text-gray-300">{{ c.usuario_nombre }}</td>
+                        <td class="py-3 px-4 text-right text-gray-300">{{ c.monto_inicial | currency }}</td>
+                        <td class="py-3 px-4 text-right text-green-400 font-bold">{{ c.ventas_efectivo | currency }}</td>
+                        <td class="py-3 px-4 text-right text-blue-400">{{ (c.ventas_tarjeta + c.ventas_transferencia) | currency }}</td>
+                        <td class="py-3 px-4 text-right text-orange-400 font-bold">{{ c.total_esperado_efectivo | currency }}</td>
+                        <td class="py-3 px-4 text-right text-white font-bold">
+                          @if (c.monto_real_contado !== null && c.monto_real_contado !== undefined) {
+                            {{ c.monto_real_contado | currency }}
+                          } @else {
+                            <span class="text-gray-500 font-sans italic">Pendiente</span>
+                          }
+                        </td>
+                        <td class="py-3 px-4 text-center font-sans">
+                          @if (c.estado === 'Abierto') {
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                              En Curso
+                            </span>
+                          } @else {
+                            @if (c.diferencia === 0) {
+                              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500/20 text-green-400 border border-green-500/30">
+                                Cuadrado ($0)
+                              </span>
+                            } @else if (c.diferencia > 0) {
+                              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                Sobrante (+{{ c.diferencia | currency }})
+                              </span>
+                            } @else {
+                              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                                Faltante ({{ c.diferencia | currency }})
+                              </span>
+                            }
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+
+          <!-- SECCIÓN: RESUMEN CONSOLIDADO POR DÍAS -->
+          <div class="space-y-4">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+              <i class="fas fa-calendar-alt text-indigo-400"></i>
+              Resumen Consolidado de Ventas por Fecha
+            </h2>
+          
+          @if (cierresDiarios().length === 0) {
+            <div class="text-center py-10 text-gray-500 bg-gray-800 rounded-xl border border-gray-700">
+              No hay cierres disponibles para este rango de fechas.
+            </div>
+          }
+          
+          @if (!selectedCierre()) {
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              @for (cierre of cierresDiarios(); track cierre.fecha) {
+                <div class="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden flex flex-col hover:border-indigo-500/50 transition-colors">
+                  <div class="bg-gray-700/50 p-4 border-b border-gray-600 flex items-center gap-4">
+                    <div class="w-12 h-12 bg-indigo-500/20 text-indigo-400 rounded-lg flex items-center justify-center text-xl shrink-0">
+                      <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div>
+                      <h3 class="text-lg font-bold text-white leading-tight">
+                        {{ cierre.fechaFormateada }}
+                      </h3>
+                      <p class="text-gray-400 text-sm mt-1">{{ cierre.totalVentas }} pedidos completados</p>
+                    </div>
+                  </div>
+                  <div class="p-4 flex-1 flex flex-col justify-center">
+                    <p class="text-gray-400 text-sm uppercase tracking-widest font-bold mb-1">Total Ingresos</p>
+                    <p class="text-2xl font-black text-green-400">{{ cierre.ingresoTotal | currency }}</p>
+                  </div>
+                  <div class="p-4 bg-gray-900/50 border-t border-gray-700">
+                    <button (click)="verDetalles(cierre)" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                      <i class="fas fa-eye"></i> Ver Detalles
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden mb-6 animate-fade-in">
+              <!-- Header del cierre detallado -->
+              @if (activeSelectedCierre(); as cierre) {
+                <div class="bg-gray-700/50 p-4 md:p-6 border-b border-gray-600 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative">
+                  
+                  <div class="flex items-center gap-4">
+                    <button (click)="volverCierres()" class="w-10 h-10 bg-gray-800 hover:bg-gray-600 text-gray-300 rounded-full flex items-center justify-center transition-colors shadow-md border border-gray-600" title="Volver a los cierres">
+                      <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div>
+                      <h3 class="text-2xl font-black text-white flex items-center gap-3">
+                        <i class="fas fa-calendar-day text-indigo-400"></i> {{ cierre.fechaFormateada }}
+                      </h3>
+                      <p class="text-indigo-400 font-bold mt-1 tracking-wide">{{ cierre.totalVentas }} pedidos completados en este día</p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                    <!-- Balance Summary Badges -->
+                    <div class="flex items-center gap-3 bg-gray-900/90 px-4 py-2 rounded-xl border border-gray-700 shadow-inner">
+                      <div>
+                        <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">Ingreso Bruto</p>
+                        <p class="text-lg font-black text-emerald-400">{{ cierre.ingresoBruto | currency }}</p>
+                      </div>
+                      @if (cierre.totalGastos > 0) {
+                        <div class="border-l border-gray-700 pl-3">
+                          <p class="text-xs text-red-400 font-bold uppercase tracking-wider">Egresos (-)</p>
+                          <p class="text-lg font-black text-red-400">-{{ cierre.totalGastos | currency }}</p>
+                        </div>
+                        <div class="border-l border-gray-700 pl-3">
+                          <p class="text-xs text-indigo-300 font-bold uppercase tracking-wider">Neto Caja</p>
+                          <p class="text-xl font-black text-green-400">{{ cierre.ingresoNeto | currency }}</p>
+                        </div>
+                      }
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <button (click)="openGastoModal()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-red-600/20 active:scale-95">
+                      <i class="fas fa-minus-circle"></i> Registrar Gasto / Egreso
+                    </button>
+
+                    <button (click)="exportCierreToPDF(cierre)" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/20 active:scale-95">
+                      <i class="fas fa-file-pdf"></i> Exportar PDF
+                    </button>
+                  </div>
+                </div>
+                
+                <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <!-- Métodos de Pago -->
+                  <div class="bg-gray-900/40 p-6 rounded-2xl border border-gray-700/50 flex flex-col justify-between">
+                    <div>
+                      <h4 class="text-white font-bold mb-6 flex items-center gap-3 border-b border-gray-700 pb-4 text-xl">
+                        <div class="w-10 h-10 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center">
+                          <i class="fas fa-wallet"></i>
+                        </div>
+                        Desglose por Método de Pago
+                      </h4>
+                      <div class="space-y-4">
+                        @for (metodo of cierre.metodosPago; track metodo.nombre) {
+                          <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-gray-500 transition-colors shadow-sm flex justify-between items-center">
+                            <div>
+                              <span class="text-gray-200 font-bold text-lg flex items-center gap-2">
+                                <i class="fas fa-money-check-alt text-gray-400"></i> {{ metodo.nombre }}
+                              </span>
+                              @if (metodo.gastos > 0) {
+                                <p class="text-xs text-gray-400 mt-0.5">
+                                  Bruto: <span class="text-gray-300 font-semibold">{{ metodo.bruto | currency }}</span> 
+                                  | Restado: <span class="text-red-400 font-semibold">-{{ metodo.gastos | currency }}</span>
+                                </p>
+                              }
+                            </div>
+                            <div class="text-right">
+                              <span class="text-green-400 font-black text-xl">{{ metodo.neto | currency }}</span>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Gastos y Egresos del Día -->
+                  <div class="bg-gray-900/40 p-6 rounded-2xl border border-gray-700/50">
+                    <div class="flex justify-between items-center border-b border-gray-700 pb-4 mb-6">
+                      <h4 class="text-white font-bold flex items-center gap-3 text-xl">
+                        <div class="w-10 h-10 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center">
+                          <i class="fas fa-receipt"></i>
+                        </div>
+                        Gastos y Egresos del Día
+                      </h4>
+                      <span class="bg-red-500/10 text-red-400 border border-red-500/20 font-black px-3 py-1 rounded-lg text-sm">
+                        {{ cierre.gastos.length }} egresos registrados
+                      </span>
+                    </div>
+
+                    @if (cierre.gastos.length === 0) {
+                      <div class="text-center py-10 bg-gray-800/40 rounded-xl border border-dashed border-gray-700">
+                        <i class="fas fa-check-circle text-4xl text-gray-600 mb-3"></i>
+                        <p class="text-gray-400 font-medium">No se han registrado gastos o egresos en este día.</p>
+                        <button (click)="openGastoModal()" class="mt-4 text-xs font-bold text-red-400 hover:text-red-300 underline inline-flex items-center gap-1">
+                          <i class="fas fa-plus"></i> Registrar el primer gasto
+                        </button>
+                      </div>
+                    } @else {
+                      <div class="max-h-[500px] overflow-y-auto no-scrollbar pr-2 space-y-3">
+                        @for (gasto of cierre.gastos; track gasto.id) {
+                          <div class="bg-gray-800 p-4 rounded-xl border border-gray-700/80 hover:border-gray-500 transition-colors shadow-sm flex justify-between items-center gap-3">
+                            <div class="flex-1">
+                              <div class="flex items-center gap-2 mb-1">
+                                <span class="text-xs font-bold px-2 py-0.5 rounded-md bg-red-500/20 text-red-400 border border-red-500/30 uppercase tracking-wider">
+                                  {{ gasto.categoria }}
+                                </span>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded-md bg-gray-700 text-gray-300">
+                                  {{ gasto.metodoPago }}
+                                </span>
+                                <span class="text-xs text-gray-500 ml-auto">{{ gasto.fechaRegistro }}</span>
+                              </div>
+                              <p class="text-white font-bold text-base leading-snug">{{ gasto.motivo }}</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                              <span class="text-red-400 font-black text-xl whitespace-nowrap">-{{ gasto.monto | currency }}</span>
+                              <button (click)="eliminarGasto(gasto.id)" class="text-gray-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-gray-700 transition-colors" title="Eliminar registro">
+                                <i class="fas fa-trash-alt"></i>
+                              </button>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Productos Vendidos (Fila Completa) -->
+                  <div class="lg:col-span-2 bg-gray-900/40 p-6 rounded-2xl border border-gray-700/50">
+                    <h4 class="text-white font-bold mb-6 flex items-center gap-3 border-b border-gray-700 pb-4 text-xl">
+                      <div class="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                        <i class="fas fa-utensils"></i>
+                      </div>
+                      Resumen de Productos Vendidos
+                    </h4>
+                    <div class="max-h-[400px] overflow-y-auto no-scrollbar pr-2 space-y-3">
+                      @for (producto of cierre.productosVendidos; track producto.nombre) {
+                        <div class="flex justify-between items-center bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-gray-500 transition-colors shadow-sm">
+                          <div class="flex items-center gap-4">
+                            <span class="w-12 h-12 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center font-black text-xl border border-blue-500/30 shadow-inner">
+                              {{ producto.qty }}
+                            </span>
+                            <span class="text-gray-200 font-bold text-lg">{{ producto.nombre }}</span>
+                          </div>
+                          <span class="text-gray-400 font-bold text-lg">{{ producto.total | currency }}</span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    </div>
+  </div>
+</div>
+
+<!-- MINI-TERMINAL MODAL PARA REGISTRAR GASTO / EGRESO -->
+@if (showGastoModal()) {
+  <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative overflow-hidden">
+      <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-500 via-orange-500 to-amber-500"></div>
+
+      <div class="flex justify-between items-center border-b border-gray-700 pb-4 mb-6">
+        <h3 class="text-xl font-black text-white flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center border border-red-500/30">
+            <i class="fas fa-minus-circle"></i>
+          </div>
+          Registrar Gasto de Pedido / Egreso
+        </h3>
+        <button (click)="closeGastoModal()" class="w-8 h-8 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 flex items-center justify-center transition-colors">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <form (submit)="$event.preventDefault(); registrarGasto();" class="space-y-4">
+        <!-- Monto -->
+        <div>
+          <label class="block text-gray-300 font-bold text-sm uppercase tracking-wider mb-2">Valor a Restar ($)</label>
+          <div class="relative">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black text-xl">$</span>
+            <input 
+              type="number" 
+              [ngModel]="gastoMonto()" 
+              (ngModelChange)="gastoMonto.set($event)"
+              name="gastoMonto"
+              placeholder="0.00"
+              class="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 pl-10 pr-4 text-white text-2xl font-black focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all placeholder:text-gray-600"
+              required
+              autofocus
+            />
+          </div>
+        </div>
+
+        <!-- Método de Pago a Restar -->
+        <div>
+          <label class="block text-gray-300 font-bold text-sm uppercase tracking-wider mb-2">Restar del Método de Pago</label>
+          <select 
+            [ngModel]="gastoMetodoPago()" 
+            (ngModelChange)="gastoMetodoPago.set($event)"
+            name="gastoMetodoPago"
+            class="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 px-4 text-white font-bold focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"
+          >
+            <option value="Efectivo">Efectivo (Caja)</option>
+            <option value="Bold">Bold</option>
+            <option value="Nequi">Nequi</option>
+            <option value="Tarjeta">Tarjeta</option>
+            <option value="Daviplata">Daviplata</option>
+            <option value="Bre-B">Bre-B</option>
+            <option value="Otros">Otros</option>
+          </select>
+        </div>
+
+        <!-- Categoría de Gasto -->
+        <div>
+          <label class="block text-gray-300 font-bold text-sm uppercase tracking-wider mb-2">Categoría del Gasto</label>
+          <select 
+            [ngModel]="gastoCategoria()" 
+            (ngModelChange)="gastoCategoria.set($event)"
+            name="gastoCategoria"
+            class="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 px-4 text-white font-bold focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"
+          >
+            <option value="Pedidos / Insumos">Pedidos / Insumos de Proveedores</option>
+            <option value="Operativo">Gasto Operativo (Servicios, Flete, Transporte)</option>
+            <option value="Caja Chica">Caja Chica / Imprevisto</option>
+            <option value="Otros">Otros Egresos</option>
+          </select>
+        </div>
+
+        <!-- Motivo / Concepto -->
+        <div>
+          <label class="block text-gray-300 font-bold text-sm uppercase tracking-wider mb-2">Motivo / Concepto del Gasto</label>
+          <textarea 
+            [ngModel]="gastoMotivo()" 
+            (ngModelChange)="gastoMotivo.set($event)"
+            name="gastoMotivo"
+            rows="3"
+            placeholder="Ejemplo: Pago a proveedor de verduras para pedidos..."
+            class="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 px-4 text-white font-medium focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all placeholder:text-gray-600"
+            required
+          ></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-700 mt-6">
+          <button 
+            type="button" 
+            (click)="closeGastoModal()" 
+            class="px-5 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold transition-colors"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="submit" 
+            class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-black shadow-lg shadow-red-600/30 transition-all flex items-center gap-2 active:scale-95"
+          >
+            <i class="fas fa-check"></i> Registrar Egreso y Restar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

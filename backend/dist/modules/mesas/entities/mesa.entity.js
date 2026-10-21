@@ -21,6 +21,7 @@ __decorate([
 __decorate([
     (0, typeorm_1.Column)({
         nullable: false,
+        unique: true,
     }),
     __metadata("design:type", Number)
 ], MesaEntity.prototype, "numero", void 0);
@@ -32,7 +33,7 @@ __decorate([
 ], MesaEntity.prototype, "capacidad", void 0);
 __decorate([
     (0, typeorm_1.Column)({
-        type: 'enum',
+        type: 'simple-enum',
         enum: ['libre', 'reservada', 'ocupada', 'mantenimiento'],
         default: 'libre',
         nullable: false,
@@ -48,21 +49,21 @@ __decorate([
 ], MesaEntity.prototype, "ubicacion", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({
-        type: 'timestamp',
+        type: 'datetime',
         nullable: false,
     }),
     __metadata("design:type", Date)
 ], MesaEntity.prototype, "created_at", void 0);
 __decorate([
     (0, typeorm_1.UpdateDateColumn)({
-        type: 'timestamp',
+        type: 'datetime',
         nullable: false,
     }),
     __metadata("design:type", Date)
 ], MesaEntity.prototype, "updated_at", void 0);
 __decorate([
     (0, typeorm_1.DeleteDateColumn)({
-        type: 'timestamp',
+        type: 'datetime',
         nullable: true,
     }),
     __metadata("design:type", Date)

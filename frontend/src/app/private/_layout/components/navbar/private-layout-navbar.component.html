@@ -59,10 +59,11 @@
     </div>
     <!-- Nombre de la app -->
     <a
-      class="btn btn-ghost normal-case text-base sm:text-xl text-orange-500 hover:bg-gray-700 px-2"
+      class="btn btn-ghost normal-case text-base sm:text-xl text-orange-500 hover:bg-gray-700 px-2 flex items-center gap-2"
       routerLink="/"
     >
-      🍽️ {{ appName() }}
+      <img src="/logo.png" alt="Yiyo Burger Logo" class="h-9 sm:h-10 w-auto object-contain drop-shadow" />
+      <span>{{ appName() }}</span>
     </a>
   </div>
 
@@ -101,32 +102,58 @@
   <!-- DERECHA (estado de sesión) -->
   <div class="navbar-end gap-1 sm:gap-2 md:gap-3 flex-wrap">
     @if (authStatus() === 'authenticated') {
-      <a
-        class="px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 md:text-base bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl max-w-[100px] sm:max-w-[120px] md:max-w-[140px] truncate"
-        [routerLink]="isAdmin() ? ['/admin'] : ['/private/profile']"
-      >
-        {{ displayName() }}
-      </a>
-      <button
-        class="px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 md:text-base bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl"
-        (click)="logout()"
-      >
-        <span class="hidden sm:inline">Salir De la Cuenta</span>
-        <span class="sm:hidden">Salir</span>
-      </button>
-    } @else if (authStatus() === 'not-authenticated') {
+      <!-- User Profile Photo -->
+      <div class="dropdown dropdown-end">
+        <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
+          <div class="w-10 h-10 rounded-full overflow-hidden bg-orange-500 flex items-center justify-center">
+            @if (userPhoto()) {
+              <img 
+                [src]="userPhoto()!" 
+                alt="Foto de perfil" 
+                class="w-full h-full object-cover"
+              />
+            } @else {
+              <span class="text-white font-bold text-sm">{{ getInitials() }}</span>
+            }
+          </div>
+        </div>
+        <ul tabindex="0" class="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-gray-800 rounded-box w-52 border border-gray-700">
+          <li>
+            <a 
+              routerLink="/private/profile" 
+              class="text-gray-100 hover:bg-gray-700 hover:text-orange-400"
+            >
+              <i class="fas fa-user"></i>&nbsp;Mi Perfil
+            </a>
+          </li>
+          @if (isAdmin()) {
+            <li>
+              <a 
+                routerLink="/admin" 
+                class="text-gray-100 hover:bg-gray-700 hover:text-orange-400"
+              >
+                <i class="fas fa-cogs"></i>&nbsp;Administración
+              </a>
+            </li>
+          }
+          <li>
+            <a 
+              (click)="logout()" 
+              class="text-gray-100 hover:bg-gray-700 hover:text-red-400 cursor-pointer"
+            >
+              <i class="fas fa-sign-out-alt"></i>&nbsp;Cerrar Sesión
+            </a>
+          </li>
+        </ul>
+      </div>
+    }
+    @if (authStatus() === 'not-authenticated') {
       <a
         class="px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 md:text-base bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl"
         routerLink="/auth/login"
       >
         Iniciar
       </a>
-    } @else {
-      <button
-        class="px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 md:text-base bg-gray-700 text-gray-300 font-medium rounded-lg border border-gray-600 hover:bg-gray-600 transition-all duración-300"
-      >
-        . . .
-      </button>
     }
   </div>
 <!-- Chat Modal -->

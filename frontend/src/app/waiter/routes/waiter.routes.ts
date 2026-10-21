@@ -9,15 +9,12 @@ export const waiterRoutes: Routes = [
     children: [
       {
         path: '',
-        title: 'Dashboard',
-        loadComponent: () =>
-          import(
-            '@waiter/pages/_dashboard/waiter-dashboard-page.component'
-          ).then((m) => m.default),
+        redirectTo: 'mesas',
+        pathMatch: 'full',
       },
       {
         path: 'pedidos',
-        title: 'Pedidos',
+        title: 'Mis Pedidos',
         loadComponent: () =>
           import('@waiter/pages/pedidos/waiter-pedidos-page.component').then(
             (m) => m.default,
@@ -33,15 +30,12 @@ export const waiterRoutes: Routes = [
       },
       {
         path: 'nuevo-pedido',
-        title: 'Nuevo Pedido',
-        loadComponent: () =>
-          import('@waiter/pages/nuevo-pedido/nuevo-pedido.component').then(
-            (m) => m.default,
-          ),
+        redirectTo: 'mesas',
+        pathMatch: 'full',
       },
       {
         path: 'perfil',
-        title: 'Perfil',
+        title: 'Mi Perfil',
         loadComponent: () =>
           import('@waiter/pages/perfil/perfil.component').then(
             (m) => m.default,
@@ -49,8 +43,8 @@ export const waiterRoutes: Routes = [
       },
       {
         path: '**',
-        title: 'Redirecting ... ',
-        redirectTo: '',
+        title: 'Redirigiendo...',
+        redirectTo: 'mesas',
         pathMatch: 'full',
       },
     ],

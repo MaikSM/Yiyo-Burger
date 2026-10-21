@@ -23,3 +23,36 @@ export class LoginUserDto {
   @MinLength(8)
   password: string; // Declaración de la propiedad 'password' de tipo string
 }
+
+// Definición de la clase Data Transfer Object (DTO) para la recuperación de contraseña
+export class PasswordRecoveryDto {
+  // Valida que el campo 'email' no esté vacío
+  @IsNotEmpty()
+
+  // Valida que el campo 'email' sea de tipo string
+  @IsString()
+
+  // Valida que el campo 'email' tenga un formato de correo electrónico válido
+  @IsEmail()
+  email: string; // Declaración de la propiedad 'email' de tipo string
+}
+
+// Definición de la clase Data Transfer Object (DTO) para el reinicio de contraseña
+export class PasswordResetDto {
+  // Valida que el campo 'token' no esté vacío
+  @IsNotEmpty()
+
+  // Valida que el campo 'token' sea de tipo string
+  @IsString()
+  token: string; // Declaración de la propiedad 'token' de tipo string
+
+  // Valida que el campo 'password' no esté vacío
+  @IsNotEmpty()
+
+  // Valida que el campo 'password' sea de tipo string
+  @IsString()
+
+  // Valida que el campo 'password' tenga al menos 8 caracteres
+  @MinLength(8)
+  password: string; // Declaración de la propiedad 'password' de tipo string
+}

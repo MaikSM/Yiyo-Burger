@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 
 export interface Ingrediente {
   ingrediente_id: number;
+  id?: number;
   nombre: string;
   categoria?: string;
   unidad_medida?: string;
@@ -13,7 +14,8 @@ export interface Ingrediente {
   stock_maximo?: number;
   costo_unitario: number;
   valor_total: number;
-  estado_stock: 'CRITICO' | 'BAJO' | 'NORMAL' | 'ALTO';
+  stock: 'CRITICO' | 'BAJO' | 'NORMAL' | 'ALTO';
+  estado?: string;
   necesita_reposicion: boolean;
   descripcion?: string;
   activo: boolean;

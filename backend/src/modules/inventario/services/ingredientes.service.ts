@@ -49,10 +49,9 @@ export class IngredientesService {
     return await this.ingredienteRepository.save(ingrediente);
   }
 
-  // Obtener todos los ingredientes activos
+  // Obtener todos los ingredientes
   async findAll(): Promise<IngredienteEntity[]> {
     return await this.ingredienteRepository.find({
-      where: { activo: true },
       order: { nombre: 'ASC' }
     });
   }
@@ -62,7 +61,7 @@ export class IngredientesService {
     return await this.ingredienteRepository.find({
       where: { activo: true },
       order: {
-        estado_stock: 'DESC',
+        stock: 'DESC',
         stock_actual: 'ASC'
       }
     });
@@ -73,7 +72,7 @@ export class IngredientesService {
     return await this.ingredienteRepository.find({
       where: {
         activo: true,
-        estado_stock: 'CRITICO'
+        stock: 'CRITICO'
       },
       order: { stock_actual: 'ASC' }
     });
@@ -82,7 +81,7 @@ export class IngredientesService {
   // Obtener ingrediente por ID
   async findOne(id: number): Promise<IngredienteEntity> {
     const ingrediente = await this.ingredienteRepository.findOne({
-      where: { ingrediente_id: id, activo: true }
+      where: { ingrediente_id: id }
     });
 
     if (!ingrediente) {
@@ -122,11 +121,10 @@ export class IngredientesService {
     return await this.ingredienteRepository.save(ingrediente);
   }
 
-  // Eliminar ingrediente (soft delete)
+  // Eliminar ingrediente (hard delete)
   async remove(id: number): Promise<void> {
     const ingrediente = await this.findOne(id);
-    ingrediente.activo = false;
-    await this.ingredienteRepository.save(ingrediente);
+    await this.ingredienteRepository.remove(ingrediente);
   }
 
   // Actualizar stock de un ingrediente

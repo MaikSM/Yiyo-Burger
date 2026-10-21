@@ -22,15 +22,23 @@ export class IsAdminMiddleware {
       // Verifica la validez del token utilizando la utilidad JwtUtil.
       const decoded = await JwtUtil.verifyToken(token);
 
-      // Si el token no es válido, devuelve una respuesta 401 (No autorizado).
-      if (!decoded) return res.status(401).json({ message: 'Unauthorized' });
+      if (!decoded || !decoded?.data?.user_id) return res.status(401).json({ message: 'Unauthorized' });
 
-      // Verifica si el usuario tiene el rol de administrador (role_id === 1).
-      // Si no lo tiene, responde con un error 401 (No autorizado).
-      if (decoded?.data?.role_id !== 1)
+      const userId = Number(decoded.data.user_id);
+      const { DatabaseConnection } = await import('../database/DatabaseConnection');
+      const { UserEntity } = await import('../../modules/user/entities/user.entity');
+      const userRepo = DatabaseConnection.appDataSource.getRepository(UserEntity);
+      const user = await userRepo.findOne({ where: { id: userId }, relations: ['role'] });
+
+      if (!user || !user.is_active || !user.role) {
         return res.status(401).json({ message: 'Unauthorized' });
+      }
 
-      // Si el token es válido y el usuario es administrador, continúa con el siguiente middleware o controlador.
+      const roleName = (user.role.name || '').toLowerCase();
+      if (decoded.data.role_id !== 1 && roleName !== 'admin') {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
       next();
 
       /*  

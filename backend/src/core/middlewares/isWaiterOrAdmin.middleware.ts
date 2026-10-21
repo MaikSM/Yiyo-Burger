@@ -22,15 +22,34 @@ export class IsWaiterOrAdminMiddleware {
       // Verifica la validez del token utilizando la utilidad JwtUtil.
       const decoded = await JwtUtil.verifyToken(token);
 
-      // Si el token no es válido, devuelve una respuesta 401 (No autorizado).
-      if (!decoded) return res.status(401).json({ message: 'Unauthorized' });
+      if (!decoded || !decoded?.data?.user_id) return res.status(401).json({ message: 'Unauthorized' });
 
-      // Verifica si el usuario tiene el rol de administrador (role_id === 1) o mesero (role_id === 2).
-      // Si no lo tiene, responde con un error 401 (No autorizado).
-      if (decoded?.data?.role_id !== 1 && decoded?.data?.role_id !== 2)
+      const userId = Number(decoded.data.user_id);
+      const { DatabaseConnection } = await import('../database/DatabaseConnection');
+      const { UserEntity } = await import('../../modules/user/entities/user.entity');
+      const userRepo = DatabaseConnection.appDataSource.getRepository(UserEntity);
+      const user = await userRepo.findOne({ where: { id: userId }, relations: ['role'] });
+
+      if (!user || !user.is_active || !user.role) {
         return res.status(401).json({ message: 'Unauthorized' });
+      }
 
-      // Si el token es válido y el usuario es mesero o administrador, continúa con el siguiente middleware o controlador.
+      const roleName = (user.role.name || '').toLowerCase();
+      const isAllowed =
+        decoded.data.role_id === 1 ||
+        decoded.data.role_id === 2 ||
+        decoded.data.role_id === 3 ||
+        decoded.data.role_id === 4 ||
+        roleName.includes('admin') ||
+        roleName.includes('mesero') ||
+        roleName.includes('camarero') ||
+        roleName.includes('cajero') ||
+        roleName === 'user';
+                         
+      if (!isAllowed) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
       next();
     } catch (error) {
       // Si ocurre un error durante el proceso, lo pasa al siguiente middleware de manejo de errores.

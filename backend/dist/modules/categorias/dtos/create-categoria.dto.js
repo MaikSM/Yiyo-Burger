@@ -34,3 +34,8 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], CreateCategoriaDto.prototype, "activo", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['Parrilla', 'Pizzas', 'Bebidas']),
+    __metadata("design:type", String)
+], CreateCategoriaDto.prototype, "seccion", void 0);

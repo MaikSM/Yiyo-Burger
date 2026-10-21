@@ -57,12 +57,12 @@ class MesaRepository {
     }
     delete(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.repository.delete(id);
+            yield this.repository.delete({ mesa_id: id });
         });
     }
     cambiarEstado(id, estado) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.repository.update(id, { estado });
+            yield this.repository.update({ mesa_id: id }, { estado });
             const updatedMesa = yield this.findById(id);
             if (!updatedMesa) {
                 throw new Error('Mesa no encontrada después de cambiar estado');
@@ -77,15 +77,13 @@ class MesaRepository {
     }
     hasActiveReservations(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            const reservaRepository = this.repository.manager.getRepository('ReservaEntity');
-            const count = yield reservaRepository.count({
-                where: {
-                    mesa_id: id,
-                    deleted_at: null,
-                    estado: ['pendiente', 'confirmado'],
-                },
-            });
-            return count > 0;
+            try {
+                const count = yield this.repository.manager.query(`SELECT COUNT(*) as cnt FROM reservas WHERE mesa_id = ? AND (estado = 'pendiente' OR estado = 'confirmado') AND deleted_at IS NULL`, [id]);
+                return count && count[0] && Number(count[0].cnt || count[0]['COUNT(*)']) > 0;
+            }
+            catch (error) {
+                return false;
+            }
         });
     }
 }

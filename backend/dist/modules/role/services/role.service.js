@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RoleService = void 0;
 // Importa la clase DatabaseConnection para obtener la conexión a la base de datos.
-const DatabaseConnection_1 = require("../../database/DatabaseConnection");
+const DatabaseConnection_1 = require("../../../core/database/DatabaseConnection");
 const role_entity_1 = require("../entities/role.entity");
 // Define la clase RoleService que implementa la interfaz IRoleRepository.
 class RoleService {
@@ -42,14 +42,14 @@ class RoleService {
             });
         });
     }
-    // Busca un rol por su nombre y lo devuelve si existe, de lo contrario, retorna null.
-    getByName(name) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return yield this.repository.findOne({
-                where: {
-                    name: name, // Se puede simplificar a `name`
-                },
-            });
+    // Busca un rol por su nombre y lo devuelve si existe (incluyendo eliminados suavemente si se especifica)
+    getByName(name_1) {
+        return __awaiter(this, arguments, void 0, function* (name, withDeleted = true) {
+            const trimmed = (name || '').trim();
+            if (!trimmed)
+                return null;
+            const all = yield this.repository.find({ withDeleted });
+            return all.find((r) => r.name.toLowerCase().trim() === trimmed.toLowerCase()) || null;
         });
     }
     // Crea un nuevo rol en la base de datos y lo devuelve si la operación tiene éxito.

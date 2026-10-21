@@ -51,6 +51,7 @@ export class AdminReservasCreateReservaPageComponent
     this.createForm = this._fb.group({
       mesa_id: [null, Validators.required],
       cliente_nombre: ['', [Validators.required, Validators.minLength(2)]],
+      cliente_email: ['', [Validators.email]],
       cliente_telefono: ['', [Validators.pattern(/^[\d\-+()\s]+$/)]],
       fecha_hora: ['', Validators.required],
       numero_personas: [
@@ -117,6 +118,11 @@ export class AdminReservasCreateReservaPageComponent
         estado: formValue.estado,
         notas: formValue.notas,
       };
+
+      // Solo incluir email si no está vacío
+      if (formValue.cliente_email && formValue.cliente_email.trim()) {
+        reservaData.cliente_email = formValue.cliente_email.trim();
+      }
 
       // Solo incluir teléfono si no está vacío
       if (formValue.cliente_telefono && formValue.cliente_telefono.trim()) {

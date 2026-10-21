@@ -71,16 +71,29 @@
               📱 QR
             </button>
             <button
-              class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-sm transition w-full"
-              (click)="onDeleteUser(user.id!)"
-              [disabled]="isForbidden(user.id!)"
-              [class.opacity-70]="isForbidden(user.id!)"
-              title="Eliminar usuario"
-            >
-              🗑️ Eliminar
-            </button>
-          </div>
-        </div>
+               class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-sm transition w-full"
+               (click)="onDeleteUser(user.id!)"
+               [disabled]="isForbidden(user.id!)"
+               [class.opacity-70]="isForbidden(user.id!)"
+               title="Eliminar usuario"
+             >
+               🗑️ Eliminar
+             </button>
+             <button
+               class="text-white px-3 py-1.5 rounded text-sm transition w-full"
+               [class.bg-gray-600]="user.is_active"
+               [class.hover:bg-gray-700]="user.is_active"
+               [class.bg-green-600]="!user.is_active"
+               [class.hover:bg-green-700]="!user.is_active"
+               (click)="onToggleUserStatus(user.id!, !!user.is_active, user.name)"
+               [disabled]="isForbidden(user.id!)"
+               [class.opacity-70]="isForbidden(user.id!)"
+               [title]="user.is_active ? 'Desactivar usuario' : 'Activar usuario'"
+             >
+               {{ user.is_active ? '🚫 Desactivar' : '✅ Activar' }}
+             </button>
+           </div>
+         </div>
       }
     </div>
 

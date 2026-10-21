@@ -64,6 +64,15 @@ class ReservaRepository {
             });
         });
     }
+    findByUserId(userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this.repository.find({
+                where: { user_id: userId },
+                relations: ['mesa'],
+                order: { fecha_hora: 'DESC' },
+            });
+        });
+    }
     create(reserva) {
         return __awaiter(this, void 0, void 0, function* () {
             const newReserva = this.repository.create(reserva);

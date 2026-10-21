@@ -1,4 +1,6 @@
 export * from './is-admin.guard';
 export * from './is-authenticated.guard';
+export * from './is-cook.guard';
 export * from './is-waiter.guard';
 export * from './not-authenticated.guard';
+export * from './root-redirect.guard';

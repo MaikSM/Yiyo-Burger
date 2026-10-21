@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of, tap } from 'rxjs';
 import { environment } from '@env/environment';
 
 export interface Plato {
@@ -10,9 +10,12 @@ export interface Plato {
   precio: number;
   categoria?: string;
   imagen_url?: string;
+  es_especial?: boolean;
   disponible: boolean;
+
   tiempo_preparacion_minutos?: number;
   alergenos?: string[];
+  precios_por_tamano?: Record<string, number>;
   created_at: string;
 }
 
@@ -22,9 +25,12 @@ export interface CreatePlato {
   precio: number;
   categoria?: string;
   imagen_url?: string;
+  es_especial?: boolean;
   disponible?: boolean;
+
   tiempo_preparacion_minutos?: number;
   alergenos?: string[];
+  precios_por_tamano?: Record<string, number>;
 }
 
 export interface UpdatePlato extends Partial<CreatePlato> {}
@@ -42,9 +48,19 @@ export interface MenuEstadisticas {
 export class PlatosService {
   private _http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/platos`;
+  private _cachedPlatos: Plato[] | null = null;
 
-  getAll(): Observable<Plato[]> {
-    return this._http.get<Plato[]>(`${environment.apiUrl}/platos-public`);
+  clearCache() {
+    this._cachedPlatos = null;
+  }
+
+  getAll(forceRefresh: boolean = false): Observable<Plato[]> {
+    if (!forceRefresh && this._cachedPlatos) {
+      return of(this._cachedPlatos);
+    }
+    return this._http.get<Plato[]>(`${environment.apiUrl}/platos-public`).pipe(
+      tap(platos => this._cachedPlatos = platos)
+    );
   }
 
   getById(id: number): Observable<Plato> {
@@ -52,14 +68,17 @@ export class PlatosService {
   }
 
   create(plato: CreatePlato): Observable<Plato> {
+    this.clearCache();
     return this._http.post<Plato>(this.apiUrl, plato);
   }
 
   update(id: number, plato: UpdatePlato): Observable<Plato> {
+    this.clearCache();
     return this._http.patch<Plato>(`${this.apiUrl}/${id}`, plato);
   }
 
   delete(id: number): Observable<void> {
+    this.clearCache();
     return this._http.delete<void>(`${this.apiUrl}/${id}`);
   }
 

@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpdateUserDto = void 0;
 // Importa los decoradores de validación de la librería "class-validator".
 const class_validator_1 = require("class-validator");
-// Define una clase DTO (Data Transfer Object) para la creación de usuarios.
+// Define una clase DTO (Data Transfer Object) para la actualización de usuarios.
 class UpdateUserDto {
 }
 exports.UpdateUserDto = UpdateUserDto;
@@ -21,19 +21,19 @@ __decorate([
     // Valida que el campo "name" sea una cadena de texto.
     ,
     (0, class_validator_1.IsString)()
-    // Restringe la longitud del nombre entre 4 y 100 caracteres.
+    // Restringe la longitud del nombre entre 2 y 100 caracteres.
     ,
-    (0, class_validator_1.Length)(4, 200),
+    (0, class_validator_1.Length)(2, 200),
     __metadata("design:type", String)
 ], UpdateUserDto.prototype, "name", void 0);
 __decorate([
     (0, class_validator_1.IsNotEmpty)()
-    // Valida que el campo "name" sea una cadena de texto.
+    // Valida que el campo "surname" sea una cadena de texto.
     ,
     (0, class_validator_1.IsString)()
-    // Restringe la longitud del nombre entre 4 y 100 caracteres.
+    // Restringe la longitud del apellido entre 2 y 100 caracteres.
     ,
-    (0, class_validator_1.Length)(4, 200),
+    (0, class_validator_1.Length)(2, 200),
     __metadata("design:type", String)
 ], UpdateUserDto.prototype, "surname", void 0);
 __decorate([
@@ -50,17 +50,27 @@ __decorate([
     __metadata("design:type", String)
 ], UpdateUserDto.prototype, "email", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)()
-    // Valida que el campo "email" sea una cadena de texto.
+    (0, class_validator_1.IsOptional)()
+    // Valida que el campo "password" sea una cadena de texto.
     ,
     (0, class_validator_1.IsString)()
-    // Restringe la longitud del correo electrónico entre 4 y 100 caracteres.
+    // Restringe la longitud de la contraseña entre 8 y 100 caracteres.
     ,
-    (0, class_validator_1.Length)(4, 100),
+    (0, class_validator_1.Length)(8, 100),
     __metadata("design:type", String)
 ], UpdateUserDto.prototype, "password", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsOptional)()
+    // Valida que el campo "photo" sea una cadena de texto.
+    ,
+    (0, class_validator_1.IsString)()
+    // Permite hasta 2MB de datos en base64 (aproximadamente 2.7M caracteres)
+    ,
+    (0, class_validator_1.MaxLength)(3000000),
+    __metadata("design:type", String)
+], UpdateUserDto.prototype, "photo", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsInt)() // Asegura que sea un número entero
     ,
     (0, class_validator_1.Min)(1) // Evita valores menores que 1

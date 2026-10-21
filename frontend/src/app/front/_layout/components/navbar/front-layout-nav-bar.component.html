@@ -45,7 +45,7 @@
         </li>
         <li>
           <a
-            [routerLink]="authStatus() === 'authenticated' ? '/private/reservas' : '/auth/login'"
+            [routerLink]="authStatus() === 'authenticated' ? '/admin' : '/auth/login'"
             class="text-gray-100 hover:bg-gray-700 hover:text-orange-400"
             >Reservas</a
           >
@@ -61,10 +61,11 @@
     </div>
     <!-- Nombre de la app -->
     <a
-      class="btn btn-ghost normal-case text-base sm:text-xl text-orange-500 hover:bg-gray-700 px-2"
+      class="btn btn-ghost normal-case text-base sm:text-xl text-orange-500 hover:bg-gray-700 px-2 flex items-center gap-2"
       routerLink="/"
     >
-      🍽️ {{ appName() }}
+      <img src="/logo.png" alt="Yiyo Burger Logo" class="h-9 sm:h-10 w-auto object-contain drop-shadow" />
+      <span>{{ appName() }}</span>
     </a>
   </div>
 
@@ -87,7 +88,7 @@
       </li>
       <li>
         <a
-          [routerLink]="authStatus() === 'authenticated' ? '/private/reservas' : '/auth/login'"
+          [routerLink]="authStatus() === 'authenticated' ? '/admin' : '/auth/login'"
           class="text-gray-100 hover:text-orange-400 transition-colors"
           >Reservas</a
         >
@@ -107,7 +108,7 @@
     @if (authStatus() === 'authenticated') {
       <a
         class="px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm md:px-4 md:py-2 md:text-base bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl max-w-[100px] sm:max-w-[120px] md:max-w-[140px] truncate"
-        [routerLink]="isAdmin() ? ['/admin'] : isWaiter() ? ['/waiter'] : ['/']"
+        [routerLink]="isAdmin() ? ['/admin'] : isWaiter() ? ['/waiter'] : isCook() ? ['/cook'] : ['/private/reservas']"
       >
         {{ displayName() }}
       </a>

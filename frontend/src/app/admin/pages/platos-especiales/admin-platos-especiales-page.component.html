@@ -1,0 +1,68 @@
+<div class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-6 overflow-x-hidden">
+  <!-- Encabezado -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b-2 border-orange-500 p-4 bg-gray-800 shadow-md mb-6 rounded-lg">
+    <h1 class="text-center sm:text-left text-2xl sm:text-3xl font-bold text-white">
+      ⭐ Platos especiales del día
+    </h1>
+  </div>
+
+  <!-- Contenido -->
+  <div class="space-y-6">
+    @if (platosEspecialesResource.isLoading()) {
+      <is-loading />
+    } @else if (platosEspecialesResource.hasValue()) {
+      @if (platosEspeciales.length > 0) {
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          @for (plato of platosEspeciales; track plato.plato_id) {
+            <div class="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-orange-500 transition-all shadow-lg group">
+              <div class="flex justify-between items-start mb-3">
+                <h4 class="text-xl font-bold text-white group-hover:text-orange-400 transition-colors">
+                  {{ plato.nombre }}
+                </h4>
+                <button
+                  (click)="toggleEspecial(plato, $event)"
+                  class="text-orange-500 hover:scale-110 transition-transform"
+                  title="Quitar de especiales"
+                >
+                  <i class="fas fa-star text-2xl"></i>
+                </button>
+              </div>
+
+
+
+              <p class="text-gray-300 text-sm mb-4 line-clamp-2 min-h-[3rem]">
+                {{ plato.descripcion || 'Sin descripción' }}
+              </p>
+
+              <div class="flex justify-between items-center bg-gray-900/50 p-3 rounded-lg border border-gray-700">
+                <span class="text-2xl font-bold text-orange-500">
+                  {{ plato.precio | currency }}
+                </span>
+                <span
+                  class="px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition-all uppercase tracking-wider"
+                  [class.bg-green-600]="plato.disponible"
+                  [class.bg-red-600]="!plato.disponible"
+                  [class.text-white]="true"
+                  (click)="toggleDisponibilidad(plato, $event)"
+                  title="Alternar disponibilidad"
+                >
+                  {{ plato.disponible ? 'Disponible' : 'Agotado' }}
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="bg-gray-800 rounded-xl p-12 text-center border-2 border-dashed border-gray-700">
+          <div class="mb-4">
+            <i class="fas fa-star text-6xl text-gray-700"></i>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-400">No hay platos especiales seleccionados</h3>
+          <p class="text-gray-500 mt-2">Marca algunos platos como especiales en el inventario para verlos aquí.</p>
+        </div>
+      }
+    } @else {
+      <is-error />
+    }
+  </div>
+</div>

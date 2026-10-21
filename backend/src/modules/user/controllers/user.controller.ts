@@ -45,6 +45,7 @@ export class UserController {
         name: user.name,
         surname: user.surname,
         email: user.email,
+        is_active: user.is_active,
         role: {
           id: user.role?.id,
           name: user.role?.name,
@@ -81,6 +82,7 @@ export class UserController {
         name: data?.name,
         surname: data?.surname,
         email: data?.email,
+        is_active: data?.is_active,
         role: {
           id: data?.role?.id,
           name: data?.role?.name,
@@ -152,6 +154,7 @@ export class UserController {
         name: newUserData?.name,
         surname: newUserData?.surname,
         email: newUserData?.email,
+        is_active: newUserData?.is_active,
         role: {
           id: newUserData?.role?.id,
           name: newUserData?.role?.name,
@@ -220,6 +223,7 @@ export class UserController {
         name: data?.name,
         surname: data?.surname,
         email: data?.email,
+        is_active: data?.is_active,
         role: {
           id: data?.role?.id,
           name: data?.role?.name,
@@ -259,6 +263,33 @@ export class UserController {
       // Maneja cualquier error inesperado y devuelve un mensaje de error.
       return res.status(500).json({
         message: 'Error Fetching Users  | UserController',
+        data: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  // Método para alternar el estado de un usuario (activar/desactivar).
+  public async toggleStatus(req: Request, res: Response): Promise<Response> {
+    try {
+      const id = parseInt(req.params.id);
+      const { is_active } = req.body;
+
+      if (typeof is_active !== 'boolean') {
+        return res.status(400).json('is_active must be a boolean');
+      }
+
+      const user = await this.service.getById(id);
+      if (!user) return res.status(404).json('User Not Found');
+
+      const result = await this.service.toggleStatus(id, is_active);
+      if (!result) return res.status(500).json('Error Updating User Status');
+
+      return res.status(200).json({
+        message: `User ${is_active ? 'Activated' : 'Deactivated'} Successfully`,
+        is_active,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: 'Error Toggling User Status | UserController',
         data: error instanceof Error ? error.message : String(error),
       });
     }

@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LoginUserDto = void 0;
+exports.PasswordResetDto = exports.PasswordRecoveryDto = exports.LoginUserDto = void 0;
 // Importación de decoradores de validación de la librería 'class-validator'
 const class_validator_1 = require("class-validator");
 // Definición de la clase Data Transfer Object (DTO) para el inicio de sesión de un usuario
@@ -36,3 +36,38 @@ __decorate([
     (0, class_validator_1.MinLength)(8),
     __metadata("design:type", String)
 ], LoginUserDto.prototype, "password", void 0);
+// Definición de la clase Data Transfer Object (DTO) para la recuperación de contraseña
+class PasswordRecoveryDto {
+}
+exports.PasswordRecoveryDto = PasswordRecoveryDto;
+__decorate([
+    (0, class_validator_1.IsNotEmpty)()
+    // Valida que el campo 'email' sea de tipo string
+    ,
+    (0, class_validator_1.IsString)()
+    // Valida que el campo 'email' tenga un formato de correo electrónico válido
+    ,
+    (0, class_validator_1.IsEmail)(),
+    __metadata("design:type", String)
+], PasswordRecoveryDto.prototype, "email", void 0);
+// Definición de la clase Data Transfer Object (DTO) para el reinicio de contraseña
+class PasswordResetDto {
+}
+exports.PasswordResetDto = PasswordResetDto;
+__decorate([
+    (0, class_validator_1.IsNotEmpty)()
+    // Valida que el campo 'token' sea de tipo string
+    ,
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], PasswordResetDto.prototype, "token", void 0);
+__decorate([
+    (0, class_validator_1.IsNotEmpty)()
+    // Valida que el campo 'password' sea de tipo string
+    ,
+    (0, class_validator_1.IsString)()
+    // Valida que el campo 'password' tenga al menos 8 caracteres
+    ,
+    (0, class_validator_1.MinLength)(8),
+    __metadata("design:type", String)
+], PasswordResetDto.prototype, "password", void 0);

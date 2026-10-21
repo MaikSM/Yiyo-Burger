@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PlatosService = exports.CATEGORIAS_PLATO = void 0;
+const realtime_events_1 = require("../../../core/events/realtime.events");
 // Definir las categorías permitidas
 exports.CATEGORIAS_PLATO = [
     'ENTRADA',
@@ -49,14 +50,15 @@ class PlatosService {
                 throw this.createBadRequestException('El precio debe ser mayor a 0');
             }
             const plato = this.platoRepository.create(platoData);
-            return yield this.platoRepository.save(plato);
+            const saved = yield this.platoRepository.save(plato);
+            realtime_events_1.realTimeEmitter.broadcast('platos_changed', saved);
+            return saved;
         });
     }
     // Obtener todos los platos disponibles
     findAll() {
         return __awaiter(this, void 0, void 0, function* () {
             return yield this.platoRepository.find({
-                where: { disponible: true },
                 order: { nombre: 'ASC' }
             });
         });
@@ -65,16 +67,21 @@ class PlatosService {
     findByCategoria(categoria) {
         return __awaiter(this, void 0, void 0, function* () {
             return yield this.platoRepository.find({
-                where: { categoria, disponible: true },
+                where: { categoria },
                 order: { nombre: 'ASC' }
             });
         });
     }
     // Obtener plato por ID
-    findOne(id) {
-        return __awaiter(this, void 0, void 0, function* () {
+    findOne(id_1) {
+        return __awaiter(this, arguments, void 0, function* (id, includeUnavailable = true) {
+            const whereClause = { plato_id: id };
+            if (!includeUnavailable) {
+                whereClause.disponible = true;
+            }
             const plato = yield this.platoRepository.findOne({
-                where: { plato_id: id, disponible: true }
+                where: whereClause,
+                withDeleted: includeUnavailable
             });
             if (!plato) {
                 throw this.createNotFoundException(`Plato con ID ${id} no encontrado`);
@@ -85,13 +92,13 @@ class PlatosService {
     // Actualizar plato
     update(id, updateData) {
         return __awaiter(this, void 0, void 0, function* () {
-            const plato = yield this.findOne(id);
+            const plato = yield this.findOne(id, true);
             // Validar nombre único si se está actualizando
             if (updateData.nombre && updateData.nombre !== plato.nombre) {
                 const existingPlato = yield this.platoRepository.findOne({
                     where: { nombre: updateData.nombre }
                 });
-                if (existingPlato) {
+                if (existingPlato && existingPlato.plato_id !== id) {
                     throw this.createBadRequestException(`Ya existe un plato con el nombre: ${updateData.nombre}`);
                 }
             }
@@ -100,15 +107,25 @@ class PlatosService {
                 throw this.createBadRequestException('El precio debe ser mayor a 0');
             }
             Object.assign(plato, updateData);
-            return yield this.platoRepository.save(plato);
+            const saved = yield this.platoRepository.save(plato);
+            realtime_events_1.realTimeEmitter.broadcast('platos_changed', saved);
+            return saved;
         });
     }
-    // Eliminar plato (soft delete)
+    // Eliminar plato
     remove(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            const plato = yield this.findOne(id);
-            plato.disponible = false;
-            yield this.platoRepository.save(plato);
+            const plato = yield this.findOne(id, true);
+            if (!plato) {
+                throw this.createNotFoundException(`Plato con ID ${id} no encontrado`);
+            }
+            try {
+                yield this.platoRepository.softDelete(id);
+            }
+            catch (e) {
+                yield this.platoRepository.delete(id);
+            }
+            realtime_events_1.realTimeEmitter.broadcast('platos_changed', { id });
         });
     }
     // Obtener estadísticas del menú
@@ -241,8 +258,7 @@ class PlatosService {
         return __awaiter(this, void 0, void 0, function* () {
             return yield this.platoRepository
                 .createQueryBuilder('plato')
-                .where('plato.disponible = :disponible', { disponible: true })
-                .andWhere('(plato.nombre LIKE :query OR plato.descripcion LIKE :query)')
+                .where('(plato.nombre LIKE :query OR plato.descripcion LIKE :query)')
                 .setParameters({ query: `%${query}%` })
                 .orderBy('plato.nombre', 'ASC')
                 .getMany();

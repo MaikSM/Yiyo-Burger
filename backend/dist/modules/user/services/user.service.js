@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserService = void 0;
 // Importa la clase DatabaseConnection para obtener la conexión a la base de datos.
-const DatabaseConnection_1 = require("../../database/DatabaseConnection");
+const DatabaseConnection_1 = require("../../../core/database/DatabaseConnection");
 const user_entity_1 = require("../entities/user.entity");
 // Define la clase UserService que implementa la interfaz IUserRepository.
 class UserService {
@@ -68,6 +68,12 @@ class UserService {
     deleteById(id) {
         return __awaiter(this, void 0, void 0, function* () {
             return yield this.repository.softDelete(id);
+        });
+    }
+    // Alterna el estado de activación del usuario.
+    toggleStatus(id, status) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this.repository.update(id, { is_active: status });
         });
     }
 }

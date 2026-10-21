@@ -1,234 +1,166 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { PlatosService, Plato } from '../../../admin/services/platos.service';
+import { FormsModule } from '@angular/forms';
+import { PedidosService, Order } from '../../../admin/services/pedidos.service';
+import { AuthService } from '@auth/services/auth.service';
 import jsPDF from 'jspdf';
-
-interface Order {
-  id: string;
-  mesa: string;
-  cliente?: string;
-  notas?: string;
-  items: any[];
-  subtotal: number;
-  tax: number;
-  total: number;
-  estado: string;
-  fecha: string;
-}
+import { toast } from 'ngx-sonner';
 
 @Component({
   selector: 'waiter-pedidos-page',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, FormsModule],
   templateUrl: './waiter-pedidos-page.component.html',
   styles: ``,
 })
 export class WaiterPedidosPageComponent implements OnInit {
-  private platosService = inject(PlatosService);
+  private pedidosService = inject(PedidosService);
+  public authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
+
   orders: Order[] = [];
-  menu: Plato[] = [];
-  showModal = false;
-  showEditModal = false;
+  filteredOrders: Order[] = [];
   selectedOrder: Order | null = null;
-  editingOrder: Order | null = null;
+  showModal = false;
+  isLoading = false;
+
+  filtroEstado: 'todos' | 'activos' | 'completados' = 'todos';
+  filtroFecha: string = '';
 
   ngOnInit() {
-    console.log('📋 Componente de Pedidos del Mesero cargado correctamente');
-    this.loadOrders();
-    this.loadMenu();
+    this.loadMyOrders();
   }
 
-  /**
-   * Carga los pedidos desde localStorage
-   */
-  loadOrders() {
-    const pedidos = JSON.parse(localStorage.getItem('pedidos') || '[]');
-    this.orders = pedidos.reverse(); // Mostrar los más recientes primero
-  }
+  loadMyOrders() {
+    this.isLoading = true;
+    const user = this.authService.user();
+    const userId = user?.id;
+    const meseroName = user
+      ? `${user.name} ${user.surname || ''}`.trim().toLowerCase()
+      : '';
 
-  /**
-   * Carga el menú de platos
-   */
-  loadMenu() {
-    this.platosService.getAll().subscribe({
-      next: (platos) => {
-        this.menu = platos.filter(p => p.disponible);
+    this.pedidosService.getAll({ all: true, usuario_id: userId }).subscribe({
+      next: (allOrders) => {
+        // Filtrar pedidos que correspondan a este mesero (por usuario_id o por coincidencia en mesero)
+        const myOrders = (allOrders || []).filter((o) => {
+          if (userId && o.usuario_id && Number(o.usuario_id) === Number(userId)) {
+            return true;
+          }
+          if (meseroName && o.mesero) {
+            return o.mesero.toLowerCase().includes(meseroName);
+          }
+          return false;
+        });
+
+        // Ordenar los más recientes primero
+        myOrders.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
+        this.orders = myOrders;
+        this.applyFilter();
+        this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('Error loading menu:', err);
-        // For development, load some mock dishes
-        this.menu = [
-          { plato_id: 1, nombre: 'Hamburguesa', descripcion: 'Deliciosa hamburguesa con queso', precio: 25000, disponible: true, imagen_url: '', categoria: 'Principales', created_at: new Date().toISOString() },
-          { plato_id: 2, nombre: 'Pizza Margherita', descripcion: 'Pizza clásica con tomate y mozzarella', precio: 30000, disponible: true, imagen_url: '', categoria: 'Principales', created_at: new Date().toISOString() },
-          { plato_id: 3, nombre: 'Ensalada César', descripcion: 'Ensalada fresca con aderezo césar', precio: 18000, disponible: true, imagen_url: '', categoria: 'Ensaladas', created_at: new Date().toISOString() },
-        ];
-      }
+        console.error('Error cargando historial de pedidos:', err);
+        this.isLoading = false;
+        toast.error('Error al cargar historial de pedidos.');
+        this.cdr.detectChanges();
+      },
     });
   }
 
-  /**
-   * Vista rápida del pedido - abre modal
-   */
+  applyFilter() {
+    let list = [...this.orders];
+
+    if (this.filtroEstado === 'activos') {
+      list = list.filter(
+        (o) => o.estado !== 'Completado' && o.estado !== 'Cancelado',
+      );
+    } else if (this.filtroEstado === 'completados') {
+      list = list.filter((o) => o.estado === 'Completado');
+    }
+
+    if (this.filtroFecha) {
+      list = list.filter((o) => {
+        const orderDate = (o.fecha || '').split('T')[0];
+        return orderDate === this.filtroFecha;
+      });
+    }
+
+    this.filteredOrders = list;
+  }
+
+  setFiltroEstado(estado: 'todos' | 'activos' | 'completados') {
+    this.filtroEstado = estado;
+    this.applyFilter();
+  }
+
+  get totalVendido(): number {
+    return this.orders
+      .filter((o) => o.estado === 'Completado')
+      .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  }
+
+  get pedidosActivosCount(): number {
+    return this.orders.filter(
+      (o) => o.estado !== 'Completado' && o.estado !== 'Cancelado',
+    ).length;
+  }
+
+  get pedidosHoyCount(): number {
+    const today = new Date().toISOString().split('T')[0];
+    return this.orders.filter((o) => (o.fecha || '').startsWith(today)).length;
+  }
+
   viewOrder(order: Order) {
     this.selectedOrder = order;
     this.showModal = true;
   }
 
-  /**
-   * Editar pedido - abre modal de edición
-   */
-  editOrder(order: Order) {
-    this.editingOrder = { ...order }; // Crear copia para editar
-    this.showEditModal = true;
-  }
-
-  /**
-   * Cerrar modal
-   */
   closeModal() {
     this.showModal = false;
     this.selectedOrder = null;
   }
 
-  /**
-   * Cerrar modal de edición
-   */
-  closeEditModal() {
-    this.showEditModal = false;
-    this.editingOrder = null;
-  }
-
-  /**
-   * Disminuir cantidad de un item
-   */
-  decreaseItemQty(index: number) {
-    if (this.editingOrder && this.editingOrder.items[index].qty > 1) {
-      this.editingOrder.items[index].qty--;
-      this.updateOrderTotals();
-    }
-  }
-
-  /**
-   * Aumentar cantidad de un item
-   */
-  increaseItemQty(index: number) {
-    if (this.editingOrder) {
-      this.editingOrder.items[index].qty++;
-      this.updateOrderTotals();
-    }
-  }
-
-  /**
-   * Eliminar un item del pedido
-   */
-  removeItem(index: number) {
-    if (this.editingOrder && this.editingOrder.items.length > 1) {
-      this.editingOrder.items.splice(index, 1);
-      this.updateOrderTotals();
-    } else {
-      alert('El pedido debe tener al menos un artículo.');
-    }
-  }
-
-  /**
-   * Actualizar totales del pedido
-   */
-  updateOrderTotals() {
-    if (this.editingOrder) {
-      this.editingOrder.subtotal = this.editingOrder.items.reduce((sum, item) => sum + item.precio * item.qty, 0);
-      this.editingOrder.tax = this.editingOrder.subtotal * 0.1;
-      this.editingOrder.total = this.editingOrder.subtotal + this.editingOrder.tax;
-    }
-  }
-
-  /**
-   * Agregar un plato al pedido
-   */
-  addDishToOrder(plato: Plato) {
-    if (this.editingOrder) {
-      // Check if dish is already in the order
-      const existingItem = this.editingOrder.items.find(item => item.id === plato.plato_id);
-      if (existingItem) {
-        existingItem.qty++;
-      } else {
-        this.editingOrder.items.push({
-          id: plato.plato_id,
-          nombre: plato.nombre,
-          precio: plato.precio,
-          qty: 1
-        });
-      }
-      this.updateOrderTotals();
-    }
-  }
-
-  /**
-   * Guardar cambios del pedido editado
-   */
-  saveOrderChanges() {
-    if (this.editingOrder) {
-      // Actualizar el pedido en localStorage
-      const pedidos = JSON.parse(localStorage.getItem('pedidos') || '[]');
-      const index = pedidos.findIndex((p: Order) => p.id === this.editingOrder!.id);
-      if (index !== -1) {
-        pedidos[index] = { ...this.editingOrder };
-        localStorage.setItem('pedidos', JSON.stringify(pedidos));
-        this.loadOrders(); // Recargar pedidos
-        this.closeEditModal();
-        alert('Pedido actualizado exitosamente.');
-      }
-    }
-  }
-
-  /**
-   * Eliminar pedido
-   */
-  deleteOrder(orderId: string) {
-    if (confirm('¿Estás seguro de que quieres eliminar este pedido?')) {
-      const pedidos = JSON.parse(localStorage.getItem('pedidos') || '[]');
-      const updatedPedidos = pedidos.filter((p: Order) => p.id !== orderId);
-      localStorage.setItem('pedidos', JSON.stringify(updatedPedidos));
-      this.loadOrders(); // Refrescar lista
-    }
-  }
-
-  /**
-   * Generar comprobante de pago
-   */
   printReceipt(order: Order) {
-    const doc = new jsPDF();
-    doc.setFontSize(20);
-    doc.text('Comprobante de Pago', 20, 20);
-    doc.setFontSize(12);
-    doc.text(`Pedido: ${order.id}`, 20, 40);
-    doc.text(`Mesa: ${order.mesa}`, 20, 50);
-    doc.text(`Cliente: ${order.cliente || 'N/A'}`, 20, 60);
-    doc.text(`Fecha: ${new Date(order.fecha).toLocaleString()}`, 20, 70);
+    try {
+      const doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.text('RestauSync POS - Comprobante', 20, 20);
+      doc.setFontSize(11);
+      doc.text(`Pedido: #${order.orderNumber || order.id}`, 20, 32);
+      doc.text(`Mesa: ${order.mesa || 'N/A'}`, 20, 40);
+      doc.text(`Cliente: ${order.cliente_nombre || 'Cliente Mesa'}`, 20, 48);
+      doc.text(`Atendido por: ${order.mesero || 'Mesero'}`, 20, 56);
+      doc.text(`Fecha: ${new Date(order.fecha).toLocaleString()}`, 20, 64);
 
-    let y = 90;
-    doc.text('Items:', 20, y);
-    y += 10;
-    order.items.forEach(item => {
-      doc.text(`${item.nombre} x${item.qty} - $${(item.precio * item.qty).toFixed(2)}`, 20, y);
-      y += 10;
-    });
+      let y = 78;
+      doc.setFontSize(12);
+      doc.text('Items:', 20, y);
+      y += 8;
 
-    y += 10;
-    doc.text(`Subtotal: $${order.subtotal.toFixed(2)}`, 20, y);
-    y += 10;
-    doc.text(`Impuesto (10%): $${order.tax.toFixed(2)}`, 20, y);
-    y += 10;
-    doc.text(`Total: $${order.total.toFixed(2)}`, 20, y);
+      doc.setFontSize(10);
+      (order.items || []).forEach((item) => {
+        doc.text(
+          `${item.nombre} x${item.qty} - $${((Number(item.precio) || 0) * item.qty).toLocaleString()}`,
+          20,
+          y,
+        );
+        y += 7;
+      });
 
-    doc.save(`comprobante-${order.id}.pdf`);
-  }
+      y += 6;
+      doc.setFontSize(11);
+      doc.text(`Subtotal: $${(Number(order.subtotal) || 0).toLocaleString()}`, 20, y);
+      y += 7;
+      doc.text(`Total: $${(Number(order.total) || 0).toLocaleString()}`, 20, y);
 
-  /**
-   * Método para futuras funcionalidades del componente de pedidos
-   */
-  gestionarPedidos() {
-    console.log('🍽️ Gestionando pedidos desde Angular...');
-    this.loadOrders(); // Refrescar lista
+      doc.save(`pedido-${order.orderNumber || order.id}.pdf`);
+      toast.success('Comprobante descargado');
+    } catch (e) {
+      console.error('Error generando PDF:', e);
+      toast.error('Error al generar PDF');
+    }
   }
 }
 

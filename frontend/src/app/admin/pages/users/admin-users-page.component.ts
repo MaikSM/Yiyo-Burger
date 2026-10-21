@@ -203,6 +203,32 @@ export class AdminUsersPageComponent {
       alert('Error al generar el código QR, por favor intente de nuevo.');
     }
   }
+
+  onToggleUserStatus(id: number, currentStatus: boolean, name: string): void {
+    try {
+      if (this.isForbidden(id)) {
+        alert('Este usuario es de sistema y no puede ser desactivado.');
+        return;
+      }
+      const newStatus = !currentStatus;
+      const action = newStatus ? 'activar' : 'desactivar';
+      
+      if (!confirm(`¿Está seguro de ${action} a ${name}?`)) return;
+
+      this._usersService.toggleStatus(id, newStatus).subscribe({
+        next: () => {
+          location.reload();
+        },
+        error: (err) => {
+          console.error(err);
+          alert(`Error al ${action} el usuario.`);
+        }
+      });
+    } catch (error) {
+      console.error(error);
+      alert('Error al cambiar el estado del usuario.');
+    }
+  }
 }
 
 export default AdminUsersPageComponent;

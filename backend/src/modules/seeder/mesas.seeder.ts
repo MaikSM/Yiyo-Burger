@@ -1,4 +1,4 @@
-import { DatabaseConnection } from '../database/DatabaseConnection';
+import { DatabaseConnection } from '../../core/database/DatabaseConnection';
 import { MesaEntity } from '../mesas/entities/mesa.entity';
 
 export class MesasSeeder {

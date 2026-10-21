@@ -1,29 +1,491 @@
-<span class="block text-lg font-extrabold text-center text-orange-500"> Menú</span>
-<div class="divider bg-gray-700"></div>
-<ul class="menu">
-  @for (item of menuItems(); track $index) {
-    <li class="mb-1">
-      <a
-        [routerLink]="item.path"
-        routerLinkActive="bg-orange-500 text-white"
-        [routerLinkActiveOptions]="{ exact: true }"
-        class="text-gray-300 hover:bg-gray-700 hover:text-orange-400"
-      >
-        <i [class]="item.icon"></i> {{ item.label }}</a
-      >
-    </li>
-  }
-</ul>
-<div class="divider bg-gray-700"></div>
-<ul class="menu">
-  <li class="menu">
-    <a [routerLink]="'/'" class="text-gray-300 hover:bg-gray-700 hover:text-orange-400">
-      <i class="fas fa-home"></i> Inicio
-    </a>
-  </li>
-  <li class="menu">
-    <button class="btn bg-red-600 hover:bg-red-700 text-white" (click)="logout()">
-      <i class="fas fa-sign-out-alt"></i> Salir
+<nav class="flex flex-col md:flex-row w-full h-full md:h-12 items-stretch text-white text-xs xl:text-sm bg-gray-800 relative">
+  
+  <!-- Left Side: Brand & Time (Desktop only) -->
+  <div class="hidden md:flex items-stretch border-r border-gray-700 flex-shrink-0">
+    <div class="flex items-center px-2.5 xl:px-3 font-bold tracking-wider gap-2 text-orange-500 text-sm xl:text-base flex-shrink-0">
+      <img src="/logo.png" alt="Yiyo Burger" class="h-7 xl:h-8 w-auto object-contain drop-shadow" />
+      <span class="hidden lg:inline-block">Yiyo Burger</span>
+    </div>
+    
+    <div class="hidden xl:flex items-center px-2.5 bg-gray-900/50 border-l border-gray-700 gap-2 flex-shrink-0">
+      <i class="fas fa-clock text-gray-400 text-xs"></i>
+      <div class="flex flex-col text-[11px] leading-none justify-center text-gray-300">
+        <span class="font-bold font-mono">{{ currentTime() | date:'hh:mm a' | lowercase }}</span>
+        <span class="hidden 2xl:inline-block text-[10px] text-gray-400 mt-0.5">{{ currentTime() | date:'EEE, dd \'de\' MMM' | lowercase }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Title -->
+  <div class="md:hidden flex items-center justify-center h-14 border-b border-gray-700 text-orange-500 font-extrabold text-lg gap-2 flex-shrink-0">
+    <img src="/logo.png" alt="Yiyo Burger" class="h-9 w-auto object-contain drop-shadow" />
+    <span>Yiyo Burger</span>
+  </div>
+
+  <!-- Tabs Nav Container (MenuItems with Scroll Buttons) -->
+  <div class="flex-1 relative flex items-center min-w-0 overflow-hidden">
+    
+    <!-- Left Scroll Arrow (Desktop) -->
+    @if (canScrollLeft()) {
+      <button 
+        type="button"
+        (click)="scrollNav('left')"
+        aria-label="Desplazar a la izquierda"
+        class="hidden md:flex absolute left-0 top-0 bottom-0 z-10 w-7 items-center justify-center bg-gradient-to-r from-gray-900 via-gray-800 to-transparent text-gray-300 hover:text-white hover:bg-gray-700/80 transition-all shadow-md">
+        <i class="fas fa-chevron-left text-xs"></i>
+      </button>
+    }
+
+    <!-- Tabs (MenuItems) -->
+    <ul 
+      #navContainer
+      (scroll)="checkScroll()"
+      (wheel)="onWheelScroll($event)"
+      class="flex flex-col md:flex-row flex-1 w-full h-full overflow-y-auto md:overflow-x-auto md:overflow-y-hidden no-scrollbar scroll-smooth">
+      @for (item of filteredMenuItems(); track $index) {
+        @if (!item.hidden) {
+          <li class="flex-shrink-0 flex md:items-stretch border-b border-gray-700 md:border-b-0 md:border-r md:border-gray-700/80">
+            @if (item.disabled) {
+              <span class="flex items-center gap-1.5 px-2.5 xl:px-3 py-3 md:py-0 text-gray-500 opacity-50 cursor-not-allowed w-full whitespace-nowrap">
+                <i [class]="item.icon + ' text-gray-500 text-xs xl:text-sm'"></i>
+                <span class="font-medium text-xs xl:text-sm">{{ item.label }}</span>
+              </span>
+            } @else {
+              <a
+                [routerLink]="item.path"
+                routerLinkActive="bg-orange-500 text-white md:border-b-2 md:border-white font-semibold"
+                [routerLinkActiveOptions]="{ exact: true }"
+                class="flex items-center gap-1.5 px-2.5 xl:px-3 2xl:px-3.5 py-3 md:py-0 text-gray-300 hover:text-orange-400 hover:bg-gray-700/70 transition-colors w-full h-full md:border-b-2 md:border-transparent whitespace-nowrap"
+              >
+                <i [class]="item.icon + ' text-xs xl:text-sm'"></i>
+                <span class="font-medium text-xs xl:text-sm">{{ item.label }}</span>
+                <span class="hidden 2xl:inline-block ml-1 px-1 py-0.5 rounded bg-black/30 text-[9px] font-mono text-gray-400 leading-none group-hover:text-orange-300">F{{$index + 1}}</span>
+              </a>
+            }
+          </li>
+        }
+      }
+    </ul>
+
+    <!-- Right Scroll Arrow (Desktop) -->
+    @if (canScrollRight()) {
+      <button 
+        type="button"
+        (click)="scrollNav('right')"
+        aria-label="Desplazar a la derecha"
+        class="hidden md:flex absolute right-0 top-0 bottom-0 z-10 w-7 items-center justify-center bg-gradient-to-l from-gray-900 via-gray-800 to-transparent text-gray-300 hover:text-white hover:bg-gray-700/80 transition-all shadow-md">
+        <i class="fas fa-chevron-right text-xs"></i>
+      </button>
+    }
+  </div>
+
+  <!-- Right Side: Settings/Caja/Logout -->
+  <div class="flex-shrink-0 flex flex-col md:flex-row mt-auto md:mt-0 md:ml-auto md:items-stretch border-t border-gray-700 md:border-t-0 md:border-l md:border-gray-700 bg-gray-800">
+    <!-- Caja Button -->
+    <button (click)="abrirCajaModal()" 
+            class="flex items-center gap-1.5 px-2.5 xl:px-3 py-3 md:py-0 transition-colors w-full md:w-auto text-left md:border-r md:border-gray-700 border-b border-gray-700 md:border-b-0 whitespace-nowrap"
+            [ngClass]="caja() ? 'text-green-500 hover:text-green-400 hover:bg-gray-700' : 'text-gray-400 hover:text-orange-400 hover:bg-gray-700'">
+      <i class="fas" [ngClass]="caja() ? 'fa-cash-register' : 'fa-box-open'"></i> 
+      <span class="font-medium md:hidden">Caja</span>
+      <span class="hidden md:inline-block font-medium text-xs xl:text-sm">Caja {{ caja() ? 'Abierta' : 'Cerrada' }}</span>
     </button>
-  </li>
-</ul>
+    
+    <button (click)="logout()" title="Cerrar sesión" class="flex items-center gap-1.5 px-2.5 xl:px-3 py-3 md:py-0 text-red-500 hover:text-red-400 hover:bg-gray-700 transition-colors w-full md:w-auto text-left whitespace-nowrap">
+      <i class="fas fa-power-off"></i> <span class="font-medium md:hidden">Salir</span>
+    </button>
+  </div>
+</nav>
+
+<!-- Modal de Caja -->
+@if (showCajaModal()) {
+  <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in">
+    <div [ngClass]="cajaResumen() ? 'max-w-5xl w-full' : 'max-w-md w-full'" class="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300">
+      
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fas fa-cash-register text-orange-500"></i>
+          Gestión de Caja
+        </h3>
+        <button (click)="cerrarModalCaja()" class="text-gray-400 hover:text-white transition-colors">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <div class="p-6 flex-1 overflow-y-auto">
+        <!-- VISTA: ABRIR CAJA -->
+        @if (!caja()) {
+          <div class="text-center">
+            <div class="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-lock-open text-2xl text-gray-400"></i>
+            </div>
+            <h4 class="text-white text-xl font-medium mb-2">Abrir Caja del Día</h4>
+            <p class="text-gray-400 text-sm mb-6">Ingresa el monto base con el que empezarás el turno.</p>
+            
+            <div class="mb-6 text-left">
+              <label class="block text-sm font-medium text-gray-400 mb-2">Monto Base Inicial</label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                <input type="number" 
+                       [value]="baseInput()"
+                       (input)="baseInput.set($any($event.target).value)"
+                       (focus)="$any($event.target).select()"
+                       class="w-full bg-gray-900 border border-gray-700 text-white pl-8 pr-4 py-3 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
+                       placeholder="Ej: 50000">
+              </div>
+            </div>
+            
+            <button (click)="confirmarApertura()" [disabled]="!baseInput() || +baseInput() < 0" 
+                    class="w-full bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-bold py-3 px-4 rounded-xl transition-colors">
+              Iniciar Caja
+            </button>
+          </div>
+        }
+
+        <!-- VISTA: CAJA ABIERTA (Registrar Gasto o Preparar Cierre) -->
+        @else if (caja() && !cajaResumen()) {
+          <div>
+            <div class="bg-gray-900/50 rounded-xl p-4 mb-6 border border-gray-700 flex justify-between items-center">
+              <div>
+                <p class="text-sm text-gray-400">Estado actual</p>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                  <span class="text-white font-medium">Abierta</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="text-sm text-gray-400">Caja en Efectivo Actual</p>
+                <p class="text-xl font-bold text-white font-mono">{{ caja()!.base_actual | currency }}</p>
+              </div>
+            </div>
+
+            <!-- Registrar Gasto del Día -->
+            <div class="mb-6 bg-gray-900/30 border border-gray-700/50 rounded-xl p-4">
+              <h4 class="text-white font-medium mb-3 flex items-center gap-2 text-sm">
+                <i class="fas fa-minus-circle text-red-500"></i>
+                Registrar Gasto / Egreso de Caja
+              </h4>
+              <div class="mb-3 text-left">
+                <label class="block text-xs font-medium text-gray-400 mb-1">Monto del Gasto</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                  <input type="number" 
+                         [value]="montoGasto()"
+                         (input)="montoGasto.set($any($event.target).value)"
+                         (focus)="$any($event.target).select()"
+                         class="w-full bg-gray-900 border border-gray-700 text-white pl-8 pr-3 py-2 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none text-sm"
+                         placeholder="Monto del gasto (ej: 5000)">
+                </div>
+              </div>
+              <div class="mb-4 text-left">
+                <label class="block text-xs font-medium text-gray-400 mb-1">Descripción del Gasto</label>
+                <input type="text"
+                       [value]="motivoGasto()"
+                       (input)="motivoGasto.set($any($event.target).value)"
+                       class="w-full bg-gray-900 border border-gray-700 text-white px-3 py-2 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none text-sm"
+                       placeholder="Motivo del egreso (ej: Compra de servilletas)">
+              </div>
+                     
+              <button (click)="registrarGasto()" 
+                      [disabled]="!motivoGasto() || +montoGasto() <= 0"
+                      class="w-full bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2">
+                <i class="fas fa-file-invoice-dollar"></i>
+                Registrar Egreso
+              </button>
+            </div>
+
+            <!-- Historial de egresos -->
+            @if (caja()!.historial_cambios.length > 0) {
+              <div class="mb-6">
+                <h4 class="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Historial de Gastos del Turno</h4>
+                <div class="space-y-2 max-h-32 overflow-y-auto no-scrollbar">
+                  @for (cambio of caja()!.historial_cambios; track cambio.fecha) {
+                    <div class="bg-gray-900 rounded-lg p-3 text-sm flex justify-between items-center border border-gray-800">
+                      <div>
+                        <div class="flex items-center gap-1.5">
+                          <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                          <p class="text-white font-semibold">{{ cambio.motivo }}</p>
+                        </div>
+                        <p class="text-xs text-gray-500 ml-3">{{ cambio.fecha | date:'shortTime' }}</p>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-red-400 font-bold font-mono">-{{ cambio.monto_gasto | currency }}</p>
+                        <p class="text-[10px] text-gray-500 font-mono">Saldo: {{ cambio.monto_nuevo | currency }}</p>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (mesasOcupadasError()) {
+              <div class="mt-4 p-4 bg-red-950/60 border border-red-600/50 rounded-xl text-red-300 text-sm flex items-start gap-3 shadow-lg">
+                <i class="fas fa-exclamation-triangle text-red-500 text-lg mt-0.5"></i>
+                <div class="flex-1">
+                  <span class="font-bold block text-red-200">No se puede cerrar la caja</span>
+                  <p class="mt-0.5 text-xs text-red-300/90 leading-relaxed">{{ mesasOcupadasError() }}</p>
+                </div>
+              </div>
+            }
+
+            <div class="mt-6 border-t border-gray-700 pt-6">
+              <button (click)="prepararCierre()" 
+                      [disabled]="cargandoMesas()"
+                      class="w-full bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white border border-red-900/50 font-bold py-3 px-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                @if (cargandoMesas()) {
+                  <i class="fas fa-spinner fa-spin mr-2"></i> Verificando Mesas...
+                } @else {
+                  Cerrar Caja del Día
+                }
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- VISTA: RESUMEN DE CIERRE (Vista Grande) -->
+        @else if (caja() && cajaResumen()) {
+          <div class="space-y-6">
+            <!-- Header Info -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-700/60">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-red-950/40 text-red-500 rounded-xl flex items-center justify-center border border-red-900/30">
+                  <i class="fas fa-lock text-xl"></i>
+                </div>
+                <div>
+                  <h4 class="text-white text-lg font-bold">Resumen de Cierre de Caja</h4>
+                  <p class="text-gray-400 text-xs mt-0.5">
+                    Turno ID: <span class="text-gray-300 font-mono font-bold">{{ caja()!.id }}</span> 
+                    | Apertura: <span class="text-gray-300 font-semibold">{{ caja()!.fecha_apertura | date:'dd/MM hh:mm a' }}</span>
+                  </p>
+                </div>
+              </div>
+              <div class="bg-gray-900/60 border border-gray-700/80 px-4 py-2 rounded-xl text-right">
+                <span class="text-gray-400 text-[10px] uppercase block tracking-wider font-semibold">Total Ventas/Pedidos</span>
+                <span class="text-white text-lg font-black font-mono">{{ cajaResumen().totalTransacciones }}</span>
+              </div>
+            </div>
+
+            <!-- Resumen Financiero: Tarjetas en Grid de 4 Columnas -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <!-- Base Inicial -->
+              <div class="bg-gray-900/40 border border-gray-700/60 p-4 rounded-xl flex flex-col justify-between">
+                <span class="text-gray-400 text-xs font-semibold">Base de Apertura</span>
+                <span class="text-white text-xl font-bold font-mono mt-1">{{ cajaResumen().baseInicial | currency }}</span>
+              </div>
+              
+              <!-- Ventas Efectivo -->
+              <div class="bg-gray-900/40 border border-gray-700/60 p-4 rounded-xl flex flex-col justify-between border-l-4 border-l-green-500">
+                <span class="text-gray-400 text-xs font-semibold">Ventas en Efectivo (+)</span>
+                <span class="text-green-400 text-xl font-bold font-mono mt-1">+{{ cajaResumen().ventasEfectivo | currency }}</span>
+              </div>
+              
+              <!-- Egresos / Gastos -->
+              <div class="bg-gray-900/40 border border-gray-700/60 p-4 rounded-xl flex flex-col justify-between border-l-4 border-l-red-500">
+                <span class="text-gray-400 text-xs font-semibold">Egresos/Gastos (-)</span>
+                <span class="text-red-400 text-xl font-bold font-mono mt-1">-{{ cajaResumen().totalGastos | currency }}</span>
+              </div>
+
+              <!-- Total Físico Esperado -->
+              <div class="bg-orange-500/10 border border-orange-500/30 p-4 rounded-xl flex flex-col justify-between">
+                <span class="text-orange-400 text-xs font-bold">Total Físico Esperado</span>
+                <span class="text-white text-2xl font-black font-mono mt-1">{{ cajaResumen().totalEsperado | currency }}</span>
+              </div>
+            </div>
+
+            <!-- Seccion Arqueo Fisico (Ingresar Efectivo Real y Mostrar Diferencia en Vivo) -->
+            <div class="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border border-orange-500/40 p-5 rounded-2xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+              <div class="flex-1 w-full text-left">
+                <label class="block text-white text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-2">
+                  <i class="fas fa-coins text-yellow-400"></i>
+                  Efectivo Físico Contado por el Cajero ($)
+                </label>
+                <div class="relative mt-1">
+                  <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 font-bold">$</span>
+                  <input type="number" 
+                         [value]="montoRealContadoInput()" 
+                         (input)="montoRealContadoInput.set($any($event.target).value)" 
+                         placeholder="Ingresa el dinero físico contado en el cajón"
+                         class="w-full bg-gray-950 border border-orange-500/50 rounded-xl py-3 pl-8 pr-4 text-white font-mono text-xl font-bold focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all shadow-inner">
+                </div>
+                <span class="text-gray-400 text-[11px] mt-1 block">Cuenta los billetes y monedas físicos en la caja e ingresa el monto total exacto.</span>
+              </div>
+
+              <div class="w-full md:w-auto min-w-[220px] bg-gray-950 border border-gray-700/60 p-4 rounded-xl flex flex-col items-center justify-center text-center">
+                <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Resultado del Arqueo</span>
+                
+                @if (diferenciaArqueo() === 0) {
+                  <span class="text-green-400 text-xl font-black font-mono mt-1 flex items-center gap-1.5">
+                    <i class="fas fa-check-circle text-green-500"></i> $0.00
+                  </span>
+                  <span class="text-green-400/80 text-[11px] font-semibold mt-0.5">✅ Cierre Cuadrado</span>
+                } @else if (diferenciaArqueo() > 0) {
+                  <span class="text-blue-400 text-xl font-black font-mono mt-1 flex items-center gap-1.5">
+                    <i class="fas fa-arrow-up text-blue-400"></i> +{{ diferenciaArqueo() | currency }}
+                  </span>
+                  <span class="text-blue-400/80 text-[11px] font-semibold mt-0.5">ℹ️ Sobrante de Dinero</span>
+                } @else {
+                  <span class="text-red-400 text-xl font-black font-mono mt-1 flex items-center gap-1.5">
+                    <i class="fas fa-exclamation-triangle text-red-500"></i> {{ diferenciaArqueo() | currency }}
+                  </span>
+                  <span class="text-red-400/80 text-[11px] font-semibold mt-0.5">⚠️ Faltante de Dinero</span>
+                }
+              </div>
+            </div>
+
+            <!-- Detalle Dividido (Doble Columna) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              <!-- Columna Izquierda: Métodos de Pago y Egresos (5 cols) -->
+              <div class="lg:col-span-5 space-y-6">
+                <!-- Ventas por Método de Pago -->
+                <div class="bg-gray-900/30 border border-gray-700/50 rounded-xl p-4">
+                  <h5 class="text-white font-bold text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-credit-card text-orange-500"></i>
+                    Métodos de Pago
+                  </h5>
+                  <div class="space-y-2">
+                    @for (m of cajaResumen().resumenMetodos; track m.metodo) {
+                      <div class="flex justify-between items-center py-2 px-3 bg-gray-900/60 border border-gray-800 rounded-lg text-sm">
+                        <div class="flex items-center gap-2">
+                          <span class="w-2.5 h-2.5 rounded-full" 
+                                [ngClass]="{
+                                  'bg-green-500': m.metodo === 'Efectivo',
+                                  'bg-blue-500': m.metodo === 'Tarjeta',
+                                  'bg-indigo-500': m.metodo === 'Transferencia',
+                                  'bg-gray-500': m.metodo === 'Otros'
+                                }"></span>
+                          <span class="text-gray-300 font-medium">{{ m.metodo }}</span>
+                          <span class="text-xs text-gray-500">({{ m.cantidad }})</span>
+                        </div>
+                        <span class="text-white font-semibold font-mono" 
+                              [ngClass]="m.metodo === 'Efectivo' ? 'text-green-400' : 'text-white'">
+                          {{ m.total | currency }}
+                        </span>
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <!-- Ventas por Tipo (Mesas vs Domicilios) -->
+                <div class="bg-gray-900/30 border border-gray-700/50 rounded-xl p-4">
+                  <h5 class="text-white font-bold text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-chart-pie text-orange-500"></i>
+                    Orígenes de Venta
+                  </h5>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-gray-900/60 border border-gray-800 p-3 rounded-lg">
+                      <span class="text-gray-400 text-xs block font-semibold">Mesas ({{ cajaResumen().ventasMesasCant }})</span>
+                      <span class="text-white font-bold font-mono text-sm block mt-1">{{ cajaResumen().ventasMesas | currency }}</span>
+                    </div>
+                    <div class="bg-gray-900/60 border border-gray-800 p-3 rounded-lg">
+                      <span class="text-gray-400 text-xs block font-semibold">Domicilios ({{ cajaResumen().ventasDomiciliosCant }})</span>
+                      <span class="text-white font-bold font-mono text-sm block mt-1">{{ cajaResumen().ventasDomicilios | currency }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Detalle de Egresos / Gastos del Turno -->
+                @if (cajaResumen().gastos.length > 0) {
+                  <div class="bg-gray-900/30 border border-gray-700/50 rounded-xl p-4">
+                    <h5 class="text-white font-bold text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <i class="fas fa-file-invoice text-red-500"></i>
+                      Desglose de Gastos ({{ cajaResumen().gastos.length }})
+                    </h5>
+                    <div class="space-y-2 max-h-40 overflow-y-auto no-scrollbar">
+                      @for (g of cajaResumen().gastos; track g.fecha) {
+                        <div class="flex justify-between items-center py-2 px-2 border-b border-gray-800 text-xs">
+                          <div>
+                            <span class="text-white font-medium block text-left">{{ g.motivo }}</span>
+                            <span class="text-gray-500 text-[10px] block mt-0.5 text-left">{{ g.fecha | date:'shortTime' }}</span>
+                          </div>
+                          <span class="text-red-400 font-bold font-mono">-{{ g.monto_gasto | currency }}</span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Columna Derecha: Listado de Transacciones (7 cols) -->
+              <div class="lg:col-span-7 bg-gray-900/30 border border-gray-700/50 rounded-xl p-4 flex flex-col">
+                <h5 class="text-white font-bold text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <i class="fas fa-list-ul text-orange-500"></i>
+                  Detalle de Transacciones ({{ cajaResumen().transacciones.length }})
+                </h5>
+                
+                @if (cajaResumen().transacciones.length === 0) {
+                  <div class="text-center py-10">
+                    <i class="fas fa-receipt text-gray-600 text-3xl mb-2"></i>
+                    <p class="text-gray-500 text-sm">No se registraron transacciones completadas en este turno.</p>
+                  </div>
+                } @else {
+                  <div class="overflow-y-auto max-h-[350px] space-y-2 pr-1 no-scrollbar">
+                    @for (t of cajaResumen().transacciones; track t.id) {
+                      <div class="bg-gray-900/60 hover:bg-gray-900/90 border border-gray-800 hover:border-gray-700/60 rounded-xl p-3 flex justify-between items-center text-sm transition-all">
+                        <div class="space-y-1 text-left">
+                          <div class="flex items-center gap-2">
+                            <!-- Tipo Badge -->
+                            <span class="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase leading-none" 
+                                  [ngClass]="t.tipo === 'Mesa' ? 'bg-orange-500/10 text-orange-400' : 'bg-blue-500/10 text-blue-400'">
+                              {{ t.tipo }}
+                            </span>
+                            <!-- Hora -->
+                            <span class="text-[11px] text-gray-500">{{ t.hora | date:'hh:mm a' }}</span>
+                          </div>
+                          <span class="text-white font-medium block">{{ t.descripcion }}</span>
+                        </div>
+                        <div class="text-right">
+                          <span class="text-white font-bold font-mono block">{{ t.total | currency }}</span>
+                          <!-- Método Badge -->
+                          <span class="text-[10px] px-2 py-0.5 rounded-full font-medium inline-block mt-1 leading-none font-mono" 
+                                [ngClass]="{
+                                  'bg-green-500/10 text-green-400': t.metodo_pago === 'Efectivo',
+                                  'bg-blue-500/10 text-blue-400': t.metodo_pago === 'Tarjeta',
+                                  'bg-indigo-500/10 text-indigo-400': t.metodo_pago === 'Transferencia',
+                                  'bg-gray-500/10 text-gray-400': t.metodo_pago === 'Otros'
+                                }">
+                            {{ t.metodo_pago }}
+                          </span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
+            </div>
+
+            @if (mesasOcupadasError()) {
+              <div class="p-4 bg-red-950/70 border border-red-600/60 rounded-xl text-red-300 text-sm flex items-start gap-3 shadow-lg">
+                <i class="fas fa-ban text-red-500 text-xl mt-0.5"></i>
+                <div class="flex-1">
+                  <span class="font-bold block text-red-100 text-base">Cierre Bloqueado</span>
+                  <p class="mt-1 text-xs text-red-200 leading-relaxed">{{ mesasOcupadasError() }}</p>
+                </div>
+              </div>
+            }
+
+            <!-- Botones de Acción -->
+            <div class="flex gap-4 pt-4 border-t border-gray-700/60">
+              <button (click)="cajaResumen.set(null)" 
+                      class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2">
+                <i class="fas fa-arrow-left"></i>
+                Volver a la Caja
+              </button>
+              <button (click)="confirmarCierre()" 
+                      [disabled]="!!mesasOcupadasError() || cargandoMesas()"
+                      [class]="!!mesasOcupadasError() ? 'flex-1 bg-gray-800 text-gray-400 border border-gray-700 cursor-not-allowed py-3 rounded-xl font-bold flex items-center justify-center gap-2' : 'flex-1 bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-red-950/20'">
+                @if (cargandoMesas()) {
+                  <i class="fas fa-spinner fa-spin"></i> Verificando...
+                } @else {
+                  <i class="fas fa-check"></i>
+                  Confirmar y Cerrar Caja
+                }
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

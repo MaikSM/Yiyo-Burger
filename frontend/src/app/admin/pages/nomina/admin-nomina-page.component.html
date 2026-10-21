@@ -1,0 +1,478 @@
+<div class="min-h-screen bg-gray-950 text-gray-100 p-4 md:p-6 font-sans">
+  
+  <!-- Header / Navigation Bar -->
+  <div class="max-w-7xl mx-auto mb-6">
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 md:p-5 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+      
+      <!-- Title & Month Banner -->
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-500 shadow-inner">
+          <i class="fas fa-calendar-alt text-2xl"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-2xl md:text-3xl font-black text-white tracking-tight uppercase font-mono">{{ currentMonthName() }}</span>
+            <span class="text-2xl md:text-3xl font-black text-orange-500 font-mono">{{ currentYear() }}</span>
+          </div>
+          <p class="text-xs text-gray-400 font-medium">Control de Nómina, Días Laborados y Registro de Pagos</p>
+        </div>
+      </div>
+
+      <!-- Controls & Month Nav -->
+      <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+        <!-- Prev Month -->
+        <button (click)="prevMonth()" title="Mes anterior" class="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl border border-gray-700 transition-all text-sm font-semibold flex items-center gap-1">
+          <i class="fas fa-chevron-left"></i> <span class="hidden sm:inline">Anterior</span>
+        </button>
+
+        <!-- Today -->
+        <button (click)="goToToday()" class="px-3 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border border-orange-500/40 rounded-xl transition-all text-sm font-bold">
+          Hoy
+        </button>
+
+        <!-- Next Month -->
+        <button (click)="nextMonth()" title="Mes siguiente" class="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl border border-gray-700 transition-all text-sm font-semibold flex items-center gap-1">
+          <span class="hidden sm:inline">Siguiente</span> <i class="fas fa-chevron-right"></i>
+        </button>
+
+        <!-- Filter Employee -->
+        <div class="relative ml-2">
+          <select 
+            [ngModel]="selectedEmployeeFilter()" 
+            (ngModelChange)="selectedEmployeeFilter.set($event)"
+            class="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded-xl px-3 py-2 pr-8 font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none cursor-pointer">
+            <option value="ALL">👤 Todos los Trabajadores</option>
+            @for (u of users(); track u.id) {
+              <option [value]="u.id">👤 {{ u.name }} {{ u.surname }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Summary Cards -->
+  <div class="max-w-7xl mx-auto mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Asistencias Totales -->
+    <div class="bg-gray-900/80 border border-emerald-900/40 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+      <div>
+        <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block">Días Trabajados (Asistencias)</span>
+        <span class="text-2xl font-black text-white font-mono mt-1 block">{{ monthlyStats().totalAsistencias }} <span class="text-xs text-emerald-400 font-normal">días</span></span>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+        <i class="fas fa-user-check text-lg"></i>
+      </div>
+    </div>
+
+    <!-- Nómina Total Pagada -->
+    <div class="bg-gray-900/80 border border-red-900/40 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+      <div>
+        <span class="text-xs font-bold text-red-400 uppercase tracking-wider block">Total Pagado en Nómina</span>
+        <span class="text-2xl font-black text-white font-mono mt-1 block">${{ monthlyStats().totalMontoPagado | number:'1.0-0' }}</span>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/20">
+        <i class="fas fa-hand-holding-usd text-lg"></i>
+      </div>
+    </div>
+
+    <!-- Días de Nómina Pagados -->
+    <div class="bg-gray-900/80 border border-amber-900/40 rounded-2xl p-4 flex items-center justify-between shadow-lg">
+      <div>
+        <span class="text-xs font-bold text-amber-400 uppercase tracking-wider block">Días de Nómina Abonados</span>
+        <span class="text-2xl font-black text-white font-mono mt-1 block">{{ monthlyStats().totalDiasPagados }} <span class="text-xs text-amber-400 font-normal">días pagados</span></span>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
+        <i class="fas fa-calendar-check text-lg"></i>
+      </div>
+    </div>
+
+    <!-- Quick Action Buttons -->
+    <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-3 flex flex-col justify-center gap-2 shadow-lg">
+      <button (click)="openPagoModal()" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold text-xs py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md">
+        <i class="fas fa-plus-circle"></i> Registrar Pago de Nómina
+      </button>
+      <button (click)="openAsistenciaModal()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md">
+        <i class="fas fa-user-plus"></i> Registrar Asistencia del Día
+      </button>
+    </div>
+  </div>
+
+  <!-- CALENDAR CONTAINER -->
+  <div class="max-w-7xl mx-auto">
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl overflow-hidden">
+      
+      <!-- Calendar Header Days (LUNES - DOMINGO like Excel sheet) -->
+      <div class="grid grid-cols-7 bg-gradient-to-r from-emerald-950/60 via-gray-900 to-emerald-950/60 border-b border-gray-800 text-center font-bold text-xs text-emerald-300 py-3 tracking-widest uppercase font-mono">
+        @for (wDay of weekDays; track wDay) {
+          <div class="px-1 border-r border-gray-800/60 last:border-r-0 flex items-center justify-center gap-1">
+            <span>{{ wDay }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Calendar Grid Cells -->
+      <div class="grid grid-cols-7 auto-rows-fr bg-gray-950 divide-x divide-y divide-gray-800/80">
+        @for (day of calendarDays(); track day.dateStr) {
+          <div 
+            (click)="openDayDetail(day)"
+            [ngClass]="{
+              'bg-gray-900/40 opacity-40 hover:opacity-70': !day.isCurrentMonth,
+              'bg-gray-900 hover:bg-gray-800/80 cursor-pointer': day.isCurrentMonth,
+              'ring-2 ring-orange-500/80 ring-inset bg-orange-950/20': day.isToday
+            }"
+            class="min-h-[120px] md:min-h-[140px] p-2 flex flex-col justify-between transition-all group relative overflow-hidden">
+            
+            <!-- Cell Top Row: Day Number & Today indicator -->
+            <div class="flex justify-between items-center mb-1">
+              <span 
+                [ngClass]="{
+                  'bg-orange-500 text-white font-black rounded-lg px-2 py-0.5 shadow-md': day.isToday,
+                  'text-gray-300 font-bold text-sm font-mono': !day.isToday && day.isCurrentMonth,
+                  'text-gray-600 font-mono text-xs': !day.isCurrentMonth
+                }">
+                {{ day.dayNumber < 10 ? '0' + day.dayNumber : day.dayNumber }}
+              </span>
+
+              @if (day.isCurrentMonth) {
+                <div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                  <button (click)="$event.stopPropagation(); openAsistenciaModal(day.dateStr)" title="Agregar asistencia" class="w-5 h-5 rounded bg-emerald-950 text-emerald-400 hover:bg-emerald-600 hover:text-white flex items-center justify-center text-[10px] border border-emerald-600/40">
+                    <i class="fas fa-user-plus"></i>
+                  </button>
+                  <button (click)="$event.stopPropagation(); openPagoModal(day.dateStr)" title="Agregar pago" class="w-5 h-5 rounded bg-red-950 text-red-400 hover:bg-red-600 hover:text-white flex items-center justify-center text-[10px] border border-red-600/40">
+                    <i class="fas fa-dollar-sign"></i>
+                  </button>
+                </div>
+              }
+            </div>
+
+            <!-- Cell Body: Asistencias & Pagos de Nómina -->
+            <div class="flex-1 space-y-1 text-[11px] overflow-y-auto no-scrollbar max-h-[90px]">
+              
+              <!-- 1. Asistencias (Trabajadores que asistieron) -->
+              @if (day.asistencias.length > 0) {
+                <div class="space-y-0.5">
+                  @for (ast of day.asistencias; track ast.user_id) {
+                    <div class="px-1.5 py-0.5 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-800/50 flex items-center justify-between font-semibold truncate leading-tight">
+                      <span class="truncate flex items-center gap-1">
+                        <i class="fas fa-check text-[8px] text-emerald-400"></i>
+                        {{ ast.nombre }}
+                      </span>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- 2. Pagos de Nómina (Resaltados en Rojo como en el Excel subido por el usuario) -->
+              @if (day.pagos.length > 0) {
+                <div class="space-y-0.5 mt-1">
+                  @for (pago of day.pagos; track pago.id) {
+                    <div class="px-1.5 py-0.5 rounded bg-red-950/90 text-red-300 border border-red-700/60 font-bold truncate leading-tight shadow-sm flex items-center justify-between">
+                      <span class="truncate text-[10px]">
+                        {{ pago.empleado_nombre }}: pago {{ pago.dias_pagados }} {{ pago.dias_pagados === 1 ? 'día' : 'días' }}
+                      </span>
+                      <span class="text-[9px] font-mono text-red-200 ml-1 font-extrabold flex-shrink-0">${{ pago.monto | number:'1.0-0' }}</span>
+                    </div>
+                  }
+                </div>
+              }
+
+            </div>
+
+            <!-- Empty cell visual helper -->
+            @if (day.isCurrentMonth && day.asistencias.length === 0 && day.pagos.length === 0) {
+              <div class="text-[10px] text-gray-700 group-hover:text-gray-500 italic transition-colors text-center py-2">
+                Sin registros
+              </div>
+            }
+
+          </div>
+        }
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL 1: REGISTRAR PAGO DE NÓMINA -->
+@if (showPagoModal()) {
+  <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in">
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-gray-800 bg-gradient-to-r from-red-950/50 via-gray-900 to-gray-900 flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fas fa-hand-holding-usd text-red-500"></i>
+          Registrar Pago de Nómina
+        </h3>
+        <button (click)="closePagoModal()" class="text-gray-400 hover:text-white transition-colors">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6 space-y-4">
+        <!-- Fecha -->
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Fecha de Pago</label>
+          <input 
+            type="date" 
+            [ngModel]="pagoFecha()" 
+            (ngModelChange)="pagoFecha.set($event)"
+            class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:ring-2 focus:ring-red-500 outline-none text-sm">
+        </div>
+
+        <!-- Empleado -->
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Trabajador / Empleado</label>
+          <select 
+            [ngModel]="pagoUserId()" 
+            (ngModelChange)="pagoUserId.set(+$event)"
+            class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-medium focus:ring-2 focus:ring-red-500 outline-none text-sm">
+            @for (u of users(); track u.id) {
+              <option [value]="u.id">👤 {{ u.name }} {{ u.surname }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Días Pagados & Monto -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Días Pagados</label>
+            <input 
+              type="number" 
+              min="1"
+              [ngModel]="pagoDias()" 
+              (ngModelChange)="pagoDias.set(+$event)"
+              class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono text-center font-bold focus:ring-2 focus:ring-red-500 outline-none text-sm"
+              placeholder="Ej: 3">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Monto ($)</label>
+            <input 
+              type="number" 
+              [ngModel]="pagoMonto()" 
+              (ngModelChange)="pagoMonto.set($event)"
+              class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono font-bold focus:ring-2 focus:ring-red-500 outline-none text-sm"
+              placeholder="Ej: 150000">
+          </div>
+        </div>
+
+        <!-- Método de Pago -->
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Método de Pago</label>
+          <select 
+            [ngModel]="pagoMetodo()" 
+            (ngModelChange)="pagoMetodo.set($event)"
+            class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-medium focus:ring-2 focus:ring-red-500 outline-none text-sm">
+            <option value="Efectivo">💵 Efectivo (Caja Chica)</option>
+            <option value="Transferencia">📱 Nequi / Bancolombia / Transferencia</option>
+            <option value="Daviplata">📲 Daviplata</option>
+          </select>
+        </div>
+
+        <!-- Observaciones -->
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Observaciones / Concepto</label>
+          <input 
+            type="text" 
+            [ngModel]="pagoObs()" 
+            (ngModelChange)="pagoObs.set($event)"
+            class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white text-sm focus:ring-2 focus:ring-red-500 outline-none"
+            placeholder="Ej: Pago de 3 días turno completo">
+        </div>
+
+        <!-- Switch Egreso -->
+        <div class="bg-gray-950 border border-gray-800 rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <span class="text-xs font-bold text-white block">Descontar de la Caja (Gastos)</span>
+            <span class="text-[11px] text-gray-400 block">Registra un egreso de dinero en el reporte diario.</span>
+          </div>
+          <input 
+            type="checkbox" 
+            [ngModel]="pagoRegistrarEgreso()" 
+            (ngModelChange)="pagoRegistrarEgreso.set($event)"
+            class="w-5 h-5 accent-red-600 rounded cursor-pointer">
+        </div>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="px-6 py-4 border-t border-gray-800 flex gap-3 bg-gray-950">
+        <button (click)="closePagoModal()" class="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-2.5 rounded-xl transition-colors text-sm">
+          Cancelar
+        </button>
+        <button (click)="savePago()" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-red-950/50">
+          <i class="fas fa-check"></i> Guardar Pago
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL 2: REGISTRAR ASISTENCIA DEL DÍA -->
+@if (showAsistenciaModal()) {
+  <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in">
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-gray-800 bg-gradient-to-r from-emerald-950/50 via-gray-900 to-gray-900 flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fas fa-user-check text-emerald-500"></i>
+          Asistencia del Día
+        </h3>
+        <button (click)="closeAsistenciaModal()" class="text-gray-400 hover:text-white transition-colors">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6 space-y-4">
+        <!-- Fecha -->
+        <div>
+          <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Fecha</label>
+          <input 
+            type="date" 
+            [ngModel]="asistenciaFecha()" 
+            (ngModelChange)="asistenciaFecha.set($event)"
+            class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white font-mono focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+        </div>
+
+        <!-- Quick actions -->
+        <div class="flex justify-between items-center text-xs">
+          <span class="font-bold text-gray-400 uppercase">Selecciona los Trabajadores Presentes:</span>
+          <div class="flex gap-2">
+            <button (click)="selectAllUsersAsistencia()" class="text-emerald-400 hover:underline">Marcar Todos</button>
+            <span class="text-gray-600">|</span>
+            <button (click)="clearAllUsersAsistencia()" class="text-gray-400 hover:underline">Limpiar</button>
+          </div>
+        </div>
+
+        <!-- User Checklist -->
+        <div class="space-y-2 max-h-60 overflow-y-auto pr-1 no-scrollbar">
+          @for (u of users(); track u.id) {
+            <div 
+              (click)="toggleUserAsistencia(u.id)"
+              [ngClass]="isUserSelected(u.id) ? 'bg-emerald-950/60 border-emerald-600/60 text-white' : 'bg-gray-950 border-gray-800 text-gray-400'"
+              class="p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all hover:border-emerald-500/50">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-user text-xs" [ngClass]="isUserSelected(u.id) ? 'text-emerald-400' : 'text-gray-600'"></i>
+                <span class="font-semibold text-sm">{{ u.name }} {{ u.surname }}</span>
+              </div>
+              <div 
+                [ngClass]="isUserSelected(u.id) ? 'bg-emerald-500 text-white' : 'border border-gray-700 bg-gray-900'"
+                class="w-6 h-6 rounded-lg flex items-center justify-center transition-all">
+                @if (isUserSelected(u.id)) {
+                  <i class="fas fa-check text-xs"></i>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="px-6 py-4 border-t border-gray-800 flex gap-3 bg-gray-950">
+        <button (click)="closeAsistenciaModal()" class="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-2.5 rounded-xl transition-colors text-sm">
+          Cancelar
+        </button>
+        <button (click)="saveAsistencia()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50">
+          <i class="fas fa-save"></i> Guardar Asistencia
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL 3: DETALLE DEL DÍA -->
+@if (showDayDetailModal() && selectedDayDetail()) {
+  <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in">
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-gray-800 bg-gradient-to-r from-orange-950/50 via-gray-900 to-gray-900 flex justify-between items-center">
+        <div>
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fas fa-calendar-day text-orange-500"></i>
+            Registros del {{ selectedDayDetail()!.dateStr }}
+          </h3>
+          <span class="text-xs text-gray-400">Detalle completo de asistencia y nómina</span>
+        </div>
+        <button (click)="closeDayDetailModal()" class="text-gray-400 hover:text-white transition-colors">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar">
+        
+        <!-- Asistencias -->
+        <div>
+          <h4 class="text-xs font-bold uppercase text-emerald-400 tracking-wider mb-2 flex items-center justify-between">
+            <span><i class="fas fa-user-check mr-1"></i> Asistencia ({{ selectedDayDetail()!.asistencias.length }})</span>
+            <button (click)="openAsistenciaModal(selectedDayDetail()!.dateStr)" class="text-emerald-400 hover:underline normal-case font-normal text-[11px]">+ Editar Asistencia</button>
+          </h4>
+
+          @if (selectedDayDetail()!.asistencias.length === 0) {
+            <p class="text-xs text-gray-500 italic bg-gray-950 p-3 rounded-xl border border-gray-800/80">No hay registro de asistencia para este día.</p>
+          } @else {
+            <div class="space-y-1.5">
+              @for (ast of selectedDayDetail()!.asistencias; track ast.user_id) {
+                <div class="bg-gray-950 border border-emerald-900/40 p-2.5 rounded-xl flex items-center justify-between text-sm">
+                  <span class="font-bold text-emerald-300 flex items-center gap-2">
+                    <i class="fas fa-user-circle text-emerald-400"></i>
+                    {{ ast.nombre }}
+                  </span>
+                  <span class="text-xs text-gray-400 font-mono">Presente</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Pagos de Nómina -->
+        <div>
+          <h4 class="text-xs font-bold uppercase text-red-400 tracking-wider mb-2 flex items-center justify-between">
+            <span><i class="fas fa-hand-holding-usd mr-1"></i> Pagos de Nómina ({{ selectedDayDetail()!.pagos.length }})</span>
+            <button (click)="openPagoModal(selectedDayDetail()!.dateStr)" class="text-red-400 hover:underline normal-case font-normal text-[11px]">+ Registrar Pago</button>
+          </h4>
+
+          @if (selectedDayDetail()!.pagos.length === 0) {
+            <p class="text-xs text-gray-500 italic bg-gray-950 p-3 rounded-xl border border-gray-800/80">No se registraron pagos de nómina en este día.</p>
+          } @else {
+            <div class="space-y-2">
+              @for (pago of selectedDayDetail()!.pagos; track pago.id) {
+                <div class="bg-gray-950 border border-red-900/40 p-3 rounded-xl flex justify-between items-center text-sm">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-white">{{ pago.empleado_nombre }}</span>
+                      <span class="text-xs px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-800 font-mono font-bold">
+                        Pago {{ pago.dias_pagados }} {{ pago.dias_pagados === 1 ? 'día' : 'días' }}
+                      </span>
+                    </div>
+                    @if (pago.observaciones) {
+                      <p class="text-xs text-gray-400 mt-1 italic">{{ pago.observaciones }}</p>
+                    }
+                    <span class="text-[10px] text-gray-500 mt-0.5 block font-mono">Vía {{ pago.metodo_pago }}</span>
+                  </div>
+                  
+                  <div class="text-right flex flex-col items-end gap-1">
+                    <span class="text-lg font-black text-red-400 font-mono">${{ pago.monto | number:'1.0-0' }}</span>
+                    <button (click)="deletePago(pago.id)" class="text-xs text-red-500 hover:text-red-300 transition-colors">
+                      <i class="fas fa-trash-alt"></i> Eliminar
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+      </div>
+
+      <!-- Footer Button -->
+      <div class="px-6 py-4 border-t border-gray-800 bg-gray-950 text-right">
+        <button (click)="closeDayDetailModal()" class="bg-gray-800 hover:bg-gray-700 text-white font-bold px-5 py-2 rounded-xl transition-colors text-sm">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+}

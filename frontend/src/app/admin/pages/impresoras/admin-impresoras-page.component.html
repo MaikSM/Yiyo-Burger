@@ -1,0 +1,508 @@
+<div class="max-w-4xl mx-auto py-8 px-4">
+  <div class="mb-8 border-b border-gray-700 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-bold text-orange-500 mb-2">
+        <i class="fas fa-print mr-2"></i> Configuración de Impresoras Térmicas
+      </h1>
+      <p class="text-gray-400 text-sm">Configura impresoras por IP de red local o selecciona una impresora USB detectada en Windows.</p>
+    </div>
+
+    <button 
+      type="button" 
+      (click)="scanSystemPrinters()" 
+      [disabled]="isScanningPrinters()" 
+      class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 text-sm whitespace-nowrap disabled:opacity-50"
+    >
+      @if (isScanningPrinters()) {
+        <i class="fas fa-spinner fa-spin"></i> Buscando impresoras...
+      } @else {
+        <i class="fas fa-search"></i> Detectar Impresoras USB / Sistema
+      }
+    </button>
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center items-center py-20">
+      <i class="fas fa-spinner fa-spin text-4xl text-orange-500"></i>
+    </div>
+  } @else {
+    <form [formGroup]="configForm" (ngSubmit)="saveConfig()" class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <!-- Impresora de Caja Principal -->
+        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg relative overflow-hidden group hover:border-orange-500 transition-colors flex flex-col justify-between">
+          <div class="absolute top-0 left-0 w-full h-1 bg-orange-500"></div>
+          <div>
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 bg-orange-500/20 text-orange-400 rounded-lg flex items-center justify-center text-xl mr-4 group-hover:scale-110 transition-transform">
+                <i class="fas fa-cash-register"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-bold text-white">Caja / Principal</h3>
+                <p class="text-xs text-gray-400">Facturas y recibos</p>
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <label class="block text-gray-400 text-sm font-bold mb-1">Nombre o IP de Impresora</label>
+              <input type="text" formControlName="printer_caja_ip" class="w-full bg-gray-900 text-white border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-orange-500 transition-colors text-sm" placeholder="Ej: POS-80C o 192.168.0.9">
+              
+              @if (systemPrinters().length > 0) {
+                <div class="mt-2.5 pt-2 border-t border-gray-700/80">
+                  <label class="block text-gray-400 text-xs font-semibold mb-1">
+                    <i class="fas fa-plug text-orange-400 mr-1"></i> Seleccionar impresora USB de Windows:
+                  </label>
+                  <select (change)="selectPrinterFor('Caja', $any($event.target).value)" class="w-full bg-gray-900 text-orange-300 border border-orange-500/40 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-orange-500 transition-colors">
+                    <option value="">-- Seleccionar impresora USB --</option>
+                    @for (p of systemPrinters(); track p) {
+                      <option [value]="p" [selected]="configForm.get('printer_caja_ip')?.value === p">🖨️ {{ p }}</option>
+                    }
+                  </select>
+                </div>
+              }
+            </div>
+          </div>
+
+          <button 
+            type="button" 
+            (click)="testPrinter('Caja')" 
+            [disabled]="testingPrinter() === 'Caja'"
+            class="w-full bg-orange-500/20 hover:bg-orange-500 text-orange-300 hover:text-white border border-orange-500/40 font-semibold py-2 px-4 rounded-lg transition-all flex items-center justify-center text-sm disabled:opacity-50 mt-4"
+          >
+            @if (testingPrinter() === 'Caja') {
+              <i class="fas fa-spinner fa-spin mr-2"></i> Probando...
+            } @else {
+              <i class="fas fa-vial mr-2"></i> Probar Conexión / Ticket
+            }
+          </button>
+        </div>
+
+        <!-- Impresora Cocina: Parrilla -->
+        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg relative overflow-hidden group hover:border-red-500 transition-colors flex flex-col justify-between">
+          <div class="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
+          <div>
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 bg-red-500/20 text-red-400 rounded-lg flex items-center justify-center text-xl mr-4 group-hover:scale-110 transition-transform">
+                <i class="fas fa-fire"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-bold text-white">Cocina: Parrilla</h3>
+                <p class="text-xs text-gray-400">Comandas de parrilla y bebidas</p>
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <label class="block text-gray-400 text-sm font-bold mb-1">Nombre o IP de Impresora</label>
+              <input type="text" formControlName="printer_parrilla_ip" class="w-full bg-gray-900 text-white border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-red-500 transition-colors text-sm" placeholder="Ej: POS-80C o 192.168.0.9">
+              
+              @if (systemPrinters().length > 0) {
+                <div class="mt-2.5 pt-2 border-t border-gray-700/80">
+                  <label class="block text-gray-400 text-xs font-semibold mb-1">
+                    <i class="fas fa-plug text-red-400 mr-1"></i> Seleccionar impresora USB de Windows:
+                  </label>
+                  <select (change)="selectPrinterFor('Parrilla', $any($event.target).value)" class="w-full bg-gray-900 text-red-300 border border-red-500/40 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-red-500 transition-colors">
+                    <option value="">-- Seleccionar impresora USB --</option>
+                    @for (p of systemPrinters(); track p) {
+                      <option [value]="p" [selected]="configForm.get('printer_parrilla_ip')?.value === p">🖨️ {{ p }}</option>
+                    }
+                  </select>
+                </div>
+              }
+            </div>
+          </div>
+
+          <button 
+            type="button" 
+            (click)="testPrinter('Parrilla')" 
+            [disabled]="testingPrinter() === 'Parrilla'"
+            class="w-full bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/40 font-semibold py-2 px-4 rounded-lg transition-all flex items-center justify-center text-sm disabled:opacity-50 mt-4"
+          >
+            @if (testingPrinter() === 'Parrilla') {
+              <i class="fas fa-spinner fa-spin mr-2"></i> Probando...
+            } @else {
+              <i class="fas fa-vial mr-2"></i> Probar Conexión / Ticket
+            }
+          </button>
+        </div>
+
+        <!-- Impresora Cocina: Pizzas -->
+        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg relative overflow-hidden group hover:border-yellow-500 transition-colors flex flex-col justify-between">
+          <div class="absolute top-0 left-0 w-full h-1 bg-yellow-500"></div>
+          <div>
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 bg-yellow-500/20 text-yellow-400 rounded-lg flex items-center justify-center text-xl mr-4 group-hover:scale-110 transition-transform">
+                <i class="fas fa-pizza-slice"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-bold text-white">Cocina: Pizzas</h3>
+                <p class="text-xs text-gray-400">Comandas de pizzería</p>
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <label class="block text-gray-400 text-sm font-bold mb-1">Nombre o IP de Impresora</label>
+              <input type="text" formControlName="printer_pizzas_ip" class="w-full bg-gray-900 text-white border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-yellow-500 transition-colors text-sm" placeholder="Ej: POS-80C o 192.168.0.9">
+              
+              @if (systemPrinters().length > 0) {
+                <div class="mt-2.5 pt-2 border-t border-gray-700/80">
+                  <label class="block text-gray-400 text-xs font-semibold mb-1">
+                    <i class="fas fa-plug text-yellow-400 mr-1"></i> Seleccionar impresora USB de Windows:
+                  </label>
+                  <select (change)="selectPrinterFor('Pizzas', $any($event.target).value)" class="w-full bg-gray-900 text-yellow-300 border border-yellow-500/40 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-yellow-500 transition-colors">
+                    <option value="">-- Seleccionar impresora USB --</option>
+                    @for (p of systemPrinters(); track p) {
+                      <option [value]="p" [selected]="configForm.get('printer_pizzas_ip')?.value === p">🖨️ {{ p }}</option>
+                    }
+                  </select>
+                </div>
+              }
+            </div>
+          </div>
+
+          <button 
+            type="button" 
+            (click)="testPrinter('Pizzas')" 
+            [disabled]="testingPrinter() === 'Pizzas'"
+            class="w-full bg-yellow-500/20 hover:bg-yellow-500 text-yellow-300 hover:text-white border border-yellow-500/40 font-semibold py-2 px-4 rounded-lg transition-all flex items-center justify-center text-sm disabled:opacity-50 mt-4"
+          >
+            @if (testingPrinter() === 'Pizzas') {
+              <i class="fas fa-spinner fa-spin mr-2"></i> Probando...
+            } @else {
+              <i class="fas fa-vial mr-2"></i> Probar Conexión / Ticket
+            }
+          </button>
+        </div>
+
+      </div>
+
+      <div class="flex justify-end pt-6 border-t border-gray-700">
+        <button type="submit" [disabled]="configForm.invalid || isSaving()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-lg transition-colors flex items-center shadow-lg shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+          @if (isSaving()) {
+            <i class="fas fa-spinner fa-spin mr-2"></i> Guardando...
+          } @else {
+            <i class="fas fa-save mr-2"></i> Guardar Configuración
+          }
+        </button>
+      </div>
+    </form>
+    
+    <div class="mt-8 bg-blue-900/20 border border-blue-800 p-4 rounded-xl flex items-start gap-3">
+      <i class="fas fa-info-circle text-blue-400 text-xl mt-1"></i>
+      <div>
+        <h4 class="text-blue-400 font-bold mb-1">Información sobre la conexión de impresoras</h4>
+        <p class="text-gray-300 text-sm leading-relaxed mb-2">
+          • <strong>Impresoras de Red (Ethernet/Wi-Fi):</strong> Ingresa la dirección IP estática asignada por tu router (ej: <code>192.168.1.100</code>). El sistema utiliza el puerto <code>9100</code> estándar ESC/POS.
+        </p>
+        <p class="text-gray-300 text-sm leading-relaxed">
+          • <strong>Impresoras USB directas:</strong> Si la impresora está conectada por cable USB a la computadora servidor donde corre el backend, coloca la IP local <code>127.0.0.1</code> y asegúrate de tener un puente de impresión RAW/Spooler (como <em>RawPrint</em> o compartir en Windows mediante bucle de puerto 9100).
+        </p>
+      </div>
+    </div>
+
+    <!-- Sección de Copias de Seguridad de Base de Datos -->
+    <div class="mt-8 bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg relative overflow-hidden group hover:border-emerald-500 transition-colors">
+      <div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div>
+      
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="flex items-center">
+          <div class="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-center text-xl mr-4 group-hover:scale-110 transition-transform flex-shrink-0">
+            <i class="fas fa-database"></i>
+          </div>
+          <div>
+            <h3 class="text-xl font-bold text-white">Copia de Seguridad de la Base de Datos</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Descarga una copia completa del archivo de base de datos (.sqlite) con todas las ventas, productos e inventario.</p>
+          </div>
+        </div>
+
+        <button 
+          type="button" 
+          (click)="downloadDatabaseBackup()"
+          [disabled]="isDownloadingDb()"
+          class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+        >
+          @if (isDownloadingDb()) {
+            <i class="fas fa-spinner fa-spin mr-2"></i> Generando Respaldo...
+          } @else {
+            <i class="fas fa-download mr-2"></i> Exportar Base de Datos
+          }
+        </button>
+      </div>
+    </div>
+
+    <!-- Sección de Importar Base de Datos -->
+    <div class="mt-6 bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg relative overflow-hidden group hover:border-purple-500 transition-colors">
+      <div class="absolute top-0 left-0 w-full h-1 bg-purple-500"></div>
+      
+      <div class="flex flex-col space-y-4">
+        <div class="flex items-center">
+          <div class="w-12 h-12 bg-purple-500/20 text-purple-400 rounded-lg flex items-center justify-center text-xl mr-4 group-hover:scale-110 transition-transform flex-shrink-0">
+            <i class="fas fa-file-import"></i>
+          </div>
+          <div>
+            <h3 class="text-xl font-bold text-white">Importar / Restaurar Base de Datos</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Carga una copia de seguridad previa (.sqlite) para restaurar el sistema. Se creará automáticamente un respaldo preventivo antes de aplicar los cambios.</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2 border-t border-gray-700">
+          <label class="flex-1 cursor-pointer bg-gray-900 border border-dashed border-gray-600 hover:border-purple-400 rounded-lg p-3 text-center transition-colors">
+            <input 
+              type="file" 
+              accept=".sqlite,.db" 
+              (change)="onDbFileSelected($event)" 
+              class="hidden" 
+            />
+            <span class="text-sm text-gray-300">
+              @if (selectedDbFile()) {
+                📄 {{ selectedDbFile()?.name }}
+              } @else {
+                📁 Haz clic aquí para seleccionar archivo de respaldo (.sqlite)
+              }
+            </span>
+          </label>
+
+          <button 
+            type="button" 
+            (click)="importDatabaseBackup()"
+            [disabled]="!selectedDbFile() || isImportingDb()"
+            class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center shadow-lg shadow-purple-600/20 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            @if (isImportingDb()) {
+              <i class="fas fa-spinner fa-spin mr-2"></i> Restaurando Base de Datos...
+            } @else {
+              <i class="fas fa-upload mr-2"></i> Importar y Restaurar
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: MONITOR VISUAL DE COLA DE IMPRESIÓN EN VIVO -->
+    <div class="mt-8 bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-xl relative overflow-hidden">
+      <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 via-yellow-500 to-emerald-500"></div>
+
+      <!-- Cabecera de la Cola -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-gray-700">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+              <i class="fas fa-network-wired text-orange-400"></i> Monitor de Cola de Impresión en Vivo
+            </h2>
+          </div>
+          <p class="text-xs text-gray-400">
+            Control de flujo FIFO secuencial por impresora. Los tickets se envían uno a uno para evitar colisiones en el puerto 9100.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <button 
+            type="button" 
+            (click)="loadPrintQueue()" 
+            [disabled]="isLoadingJobs()" 
+            class="bg-gray-700 hover:bg-gray-600 text-gray-200 hover:text-white font-semibold py-2 px-3.5 rounded-lg transition-colors flex items-center gap-2 text-xs border border-gray-600 disabled:opacity-50"
+            title="Refrescar lista de trabajos"
+          >
+            <i class="fas fa-sync-alt" [class.fa-spin]="isLoadingJobs()"></i>
+            Actualizar
+          </button>
+
+          @if (queueStats().fallidos > 0) {
+            <button 
+              type="button" 
+              (click)="retryAllJobs()" 
+              [disabled]="isRetryingAll()" 
+              class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-all flex items-center gap-2 text-xs shadow-lg shadow-red-600/30 disabled:opacity-50 animate-pulse"
+              title="Reintentar todos los tickets que fallaron"
+            >
+              @if (isRetryingAll()) {
+                <i class="fas fa-spinner fa-spin"></i> Reintentando...
+              } @else {
+                <i class="fas fa-redo"></i> Reintentar Todos los Fallidos ({{ queueStats().fallidos }})
+              }
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Tarjetas de Métricas de la Cola -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5 my-6">
+        <!-- Pendientes -->
+        <div class="bg-gray-900/80 p-4 rounded-xl border border-yellow-500/30 flex items-center justify-between">
+          <div>
+            <div class="text-xs uppercase tracking-wider text-yellow-400 font-bold mb-0.5">Pendientes</div>
+            <div class="text-2xl font-black text-white">{{ queueStats().pendientes }}</div>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-yellow-500/10 text-yellow-400 flex items-center justify-center text-lg">
+            <i class="fas fa-clock" [class.animate-pulse]="queueStats().pendientes > 0"></i>
+          </div>
+        </div>
+
+        <!-- Imprimiendo -->
+        <div class="bg-gray-900/80 p-4 rounded-xl border border-blue-500/30 flex items-center justify-between">
+          <div>
+            <div class="text-xs uppercase tracking-wider text-blue-400 font-bold mb-0.5">En Proceso</div>
+            <div class="text-2xl font-black text-white">{{ queueStats().imprimiendo }}</div>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center text-lg">
+            <i class="fas fa-print" [class.fa-spin]="queueStats().imprimiendo > 0"></i>
+          </div>
+        </div>
+
+        <!-- Impresos Hoy -->
+        <div class="bg-gray-900/80 p-4 rounded-xl border border-emerald-500/30 flex items-center justify-between">
+          <div>
+            <div class="text-xs uppercase tracking-wider text-emerald-400 font-bold mb-0.5">Impresos Hoy</div>
+            <div class="text-2xl font-black text-white">{{ queueStats().impresos_hoy }}</div>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg">
+            <i class="fas fa-check-circle"></i>
+          </div>
+        </div>
+
+        <!-- Fallidos -->
+        <div 
+          class="bg-gray-900/80 p-4 rounded-xl border flex items-center justify-between transition-all"
+          [ngClass]="queueStats().fallidos > 0 ? 'border-red-500 bg-red-950/20 shadow-lg shadow-red-900/20' : 'border-gray-700'"
+        >
+          <div>
+            <div class="text-xs uppercase tracking-wider font-bold mb-0.5" [ngClass]="queueStats().fallidos > 0 ? 'text-red-400' : 'text-gray-400'">
+              Fallidos
+            </div>
+            <div class="text-2xl font-black" [ngClass]="queueStats().fallidos > 0 ? 'text-red-400' : 'text-white'">
+              {{ queueStats().fallidos }}
+            </div>
+          </div>
+          <div 
+            class="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
+            [ngClass]="queueStats().fallidos > 0 ? 'bg-red-500/20 text-red-400' : 'bg-gray-800 text-gray-500'"
+          >
+            <i class="fas fa-exclamation-triangle" [class.animate-bounce]="queueStats().fallidos > 0"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de Trabajos Recientes -->
+      <div class="overflow-x-auto rounded-xl border border-gray-700/80">
+        <table class="w-full text-left text-xs text-gray-300">
+          <thead class="bg-gray-900/90 text-gray-400 uppercase text-[11px] tracking-wider border-b border-gray-700">
+            <tr>
+              <th scope="col" class="py-3 px-3.5">ID / Hora</th>
+              <th scope="col" class="py-3 px-3.5">Tipo de Ticket</th>
+              <th scope="col" class="py-3 px-3.5">Destino</th>
+              <th scope="col" class="py-3 px-3.5">Estado</th>
+              <th scope="col" class="py-3 px-3.5">Intentos</th>
+              <th scope="col" class="py-3 px-3.5">Diagnóstico / Error</th>
+              <th scope="col" class="py-3 px-3.5 text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-700/60 bg-gray-800/40">
+            @if (printJobs().length === 0) {
+              <tr>
+                <td colspan="7" class="py-8 text-center text-gray-500">
+                  <i class="fas fa-inbox text-3xl mb-2 block"></i>
+                  No hay trabajos de impresión registrados en la cola aún.
+                </td>
+              </tr>
+            } @else {
+              @for (job of printJobs(); track job.id) {
+                <tr class="hover:bg-gray-700/40 transition-colors">
+                  <!-- ID / Hora -->
+                  <td class="py-3 px-3.5 font-mono">
+                    <span class="text-orange-400 font-bold">#{{ job.id.slice(0, 8) }}</span>
+                    <span class="block text-[11px] text-gray-400 mt-0.5">
+                      {{ formatJobDate(job.created_at) }}
+                    </span>
+                  </td>
+
+                  <!-- Tipo de Ticket -->
+                  <td class="py-3 px-3.5">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border {{ getTicketBadgeClass(job.tipo_ticket) }}">
+                      {{ getTicketLabel(job.tipo_ticket) }}
+                    </span>
+                    @if (job.pedido_id) {
+                      <span class="block text-[10px] text-gray-400 mt-0.5 font-mono">
+                        Orden: {{ job.pedido_id.slice(0, 8) }}
+                      </span>
+                    }
+                  </td>
+
+                  <!-- Destino -->
+                  <td class="py-3 px-3.5 font-mono text-gray-300">
+                    <span class="bg-gray-900 px-2 py-0.5 rounded text-[11px] border border-gray-700">
+                      {{ job.destino }}
+                    </span>
+                  </td>
+
+                  <!-- Estado -->
+                  <td class="py-3 px-3.5">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border {{ getStatusBadgeClass(job.estado) }}">
+                      @if (job.estado === 'pendiente') {
+                        <i class="fas fa-clock"></i> Pendiente
+                      } @else if (job.estado === 'imprimiendo') {
+                        <i class="fas fa-spinner fa-spin"></i> Imprimiendo
+                      } @else if (job.estado === 'impreso') {
+                        <i class="fas fa-check"></i> Impreso
+                      } @else if (job.estado === 'fallido') {
+                        <i class="fas fa-times"></i> Fallido
+                      }
+                    </span>
+                  </td>
+
+                  <!-- Intentos -->
+                  <td class="py-3 px-3.5 font-mono text-xs">
+                    <span [ngClass]="job.intentos >= job.max_intentos ? 'text-red-400 font-bold' : 'text-gray-300'">
+                      {{ job.intentos }}/{{ job.max_intentos }}
+                    </span>
+                  </td>
+
+                  <!-- Diagnóstico / Error -->
+                  <td class="py-3 px-3.5 max-w-xs truncate">
+                    @if (job.ultimo_error) {
+                      <span class="text-red-400 text-xs flex items-center gap-1" [title]="job.ultimo_error">
+                        <i class="fas fa-exclamation-circle flex-shrink-0"></i>
+                        <span class="truncate">{{ job.ultimo_error }}</span>
+                      </span>
+                    } @else if (job.estado === 'impreso') {
+                      <span class="text-emerald-400 text-xs">
+                        <i class="fas fa-check mr-1"></i> Impreso correctamente
+                      </span>
+                    } @else {
+                      <span class="text-gray-500 text-xs italic">En cola</span>
+                    }
+                  </td>
+
+                  <!-- Acción -->
+                  <td class="py-3 px-3.5 text-right">
+                    @if (job.estado === 'fallido' || job.estado === 'pendiente') {
+                      <button 
+                        type="button" 
+                        (click)="retryJob(job.id)" 
+                        [disabled]="isRetryingJob() === job.id" 
+                        class="bg-orange-500/20 hover:bg-orange-500 text-orange-300 hover:text-white border border-orange-500/40 text-[11px] font-bold py-1 px-2.5 rounded transition-all disabled:opacity-50"
+                        title="Reintentar enviar ticket"
+                      >
+                        @if (isRetryingJob() === job.id) {
+                          <i class="fas fa-spinner fa-spin mr-1"></i>
+                        } @else {
+                          <i class="fas fa-redo mr-1"></i>
+                        }
+                        Reintentar
+                      </button>
+                    } @else {
+                      <span class="text-gray-600 text-xs">-</span>
+                    }
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>
+

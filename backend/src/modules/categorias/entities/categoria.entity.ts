@@ -14,6 +14,9 @@ export class CategoriaEntity {
   @Column({ type: 'varchar', length: 50, default: 'menu' })
   tipo: 'menu' | 'inventario';
 
+  @Column({ type: 'varchar', length: 50, default: 'Parrilla' })
+  seccion: 'Parrilla' | 'Pizzas' | 'Bebidas';
+
   @Column({ type: 'boolean', default: true })
   activo: boolean;
 

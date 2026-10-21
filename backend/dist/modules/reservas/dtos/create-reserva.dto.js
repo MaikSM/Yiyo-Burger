@@ -51,3 +51,8 @@ __decorate([
     (0, class_validator_1.IsEnum)(['pendiente', 'confirmado', 'cancelada', 'completada']),
     __metadata("design:type", String)
 ], CreateReservaDto.prototype, "estado", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], CreateReservaDto.prototype, "user_id", void 0);
