@@ -271,9 +271,9 @@ PORT=3000
 
 Este proyecto está bajo la Licencia ISC.
 
-## 👥 Contribuidores
+## 👤 Autor
 
-- JEBC-DeV - Desarrollador principal
+- **MaikSM** - Desarrollador y Creador (Yiyo Burger POS)
 
 ## 📞 Soporte
 
