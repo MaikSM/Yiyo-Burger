@@ -37,7 +37,8 @@ export class MesasService {
     if (!forceRefresh && this._cachedMesas) {
       return of(this._cachedMesas);
     }
-    return this._http.get<Mesa[]>(this.apiUrl).pipe(
+    const url = forceRefresh ? `${this.apiUrl}?_t=${Date.now()}` : this.apiUrl;
+    return this._http.get<Mesa[]>(url).pipe(
       tap(mesas => this._cachedMesas = mesas)
     );
   }

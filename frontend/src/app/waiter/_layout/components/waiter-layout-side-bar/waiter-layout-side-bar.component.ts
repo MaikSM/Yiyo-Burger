@@ -24,7 +24,11 @@ export class WaiterLayoutSideBarComponent implements OnInit, OnDestroy {
   private _router: Router = inject(Router);
 
   currentTime = signal<Date>(new Date());
+  isFullscreen = signal<boolean>(false);
   private timeInterval?: number;
+  private fullscreenListener = () => {
+    this.isFullscreen.set(!!document.fullscreenElement);
+  };
 
   menuItems = signal<iMenuItem[]>([
     { path: '/waiter/mesas', label: 'Mesas', icon: 'fas fa-chair' },
@@ -35,11 +39,27 @@ export class WaiterLayoutSideBarComponent implements OnInit, OnDestroy {
     this.timeInterval = window.setInterval(() => {
       this.currentTime.set(new Date());
     }, 1000);
+    if (typeof document !== 'undefined') {
+      this.isFullscreen.set(!!document.fullscreenElement);
+      document.addEventListener('fullscreenchange', this.fullscreenListener);
+    }
   }
 
   ngOnDestroy(): void {
     if (this.timeInterval) {
       clearInterval(this.timeInterval);
+    }
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('fullscreenchange', this.fullscreenListener);
+    }
+  }
+
+  toggleFullscreen(): void {
+    if (typeof document === 'undefined') return;
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
     }
   }
 

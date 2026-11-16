@@ -44,11 +44,39 @@ export class ImpresionService {
   }
 
   /**
+   * Limpia y normaliza texto eliminando acentos, caracteres especiales y emojis
+   * para prevenir desbordes o bloqueos de buffer en impresoras térmicas ESC/POS.
+   */
+  public sanitizeTextForThermal(text: string): string {
+    if (!text) return '';
+    return text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ñ/g, 'n')
+      .replace(/Ñ/g, 'N')
+      .replace(/[^\x20-\x7E\r\n\t]/g, '');
+  }
+
+  /**
+   * Determina si un ítem pertenece a la categoría de Adicionales o empaques/desechables
+   * que NO deben enviarse a las impresoras térmicas de cocina (comandas).
+   */
+  public isItemAdicional(item: any): boolean {
+    if (!item) return false;
+    const catText = `${item.seccion || ''} ${item.categoria || ''}`.toLowerCase();
+    const nameText = `${item.nombre || ''}`.toLowerCase();
+    if (catText.includes('adicional')) return true;
+    if (/\b(icopor|icopores|desechable|desechables|empaque|empaques)\b/i.test(nameText)) return true;
+    return false;
+  }
+
+  /**
    * Helper function to wrap text by words.
    * Prints the text to the printer instance, respecting the max columns.
    */
   private printWrappedText(printer: any, text: string, maxCols: number): void {
-    const words = text.split(' ');
+    const cleanText = this.sanitizeTextForThermal(text);
+    const words = cleanText.split(' ');
     let currentLine = '';
 
     for (const word of words) {
@@ -108,9 +136,12 @@ export class ImpresionService {
   }
 
   public formatKitchenTicketText(pedido: any, items: ImpresionItem[], tipo: 'Pizzas' | 'Parrilla'): string {
+    const printableItems = (items || []).filter((i) => !this.isItemAdicional(i));
+    if (printableItems.length === 0) return '';
+
     const numMesa = String(pedido.mesa || '').replace(/barra\s*/i, '').trim();
     const esDomicilio = pedido.tipo === 'Domicilio';
-    const esLlevar = pedido.tipo === 'Llevar' || items.some((i) => i.tipoEntrega === 'llevar');
+    const esLlevar = pedido.tipo === 'Llevar' || printableItems.some((i) => i.tipoEntrega === 'llevar');
     const esBarra =
       pedido.ubicacion === 'Barra' ||
       String(pedido.mesa || '').toLowerCase().includes('barra') ||
@@ -134,7 +165,7 @@ export class ImpresionService {
     if (pedido.mesero) text += `Atendido por: ${pedido.mesero}\n`;
     text += `--------------------------------\n`;
 
-    for (const item of items) {
+    for (const item of printableItems) {
       text += `${item.qty}x ${item.nombre}\n`;
       if (item.tipoEntrega === 'llevar') text += `   *** PARA LLEVAR ***\n`;
       if (item.notas) text += `   * NOTA: ${String(item.notas).toUpperCase()}\n`;
@@ -344,37 +375,58 @@ export class ImpresionService {
       const nameText = `${item.nombre || ''}`.toLowerCase();
       const idStr = String(item.id || '').toLowerCase();
 
+      // 1. Si la sección o categoría explícitamente dice Pizzas
+      if (categoryText.includes('pizza')) return true;
+
+      // 2. Exclusión de productos que son evidentemente parrilla o comida rápida y no pizzas
       const isExplicitParrilla =
-        /parrilla|carne|carnes|pollo|pollos|arepa|arepas|hamburguesa|burger|perro|patacon|patacón|empana|salchipapa|desgranado|mazorca|chuzo|alita|costilla/i.test(
+        /\b(parrilla|carne|carnes|pollo|pollos|arepa|arepas|hamburguesa|burger|perro|patacon|patacón|empanada|empanadas|salchipapa|desgranado|mazorca|mazorcada|chuzo|alita|alitas|costilla|churrasco|pechuga|nachos|tacos|burro)\b/i.test(
           `${categoryText} ${nameText}`
         );
       if (isExplicitParrilla && !categoryText.includes('pizza') && !nameText.includes('pizza')) {
         return false;
       }
 
-      if (categoryText.includes('pizza') || nameText.includes('pizza')) return true;
+      // 3. Si el nombre tiene la palabra pizza o calzone
+      if (nameText.includes('pizza') || nameText.includes('calzone')) return true;
+
+      // 4. Reconocimiento de tamaños de pizzas (ej: "Personal Jamon y Queso", "Familiar Carnes", "Mediana")
+      const isPizzaSize =
+        /\b(personal|mediana|familiar|gigante)\b/i.test(nameText) &&
+        !/\b(combo|infantil|perro|hamburguesa|burger|salchipapa)\b/i.test(nameText);
+      if (isPizzaSize) return true;
+
+      // 5. Prefijos o sufijos de id usados por el menú de pizzas
       if (
         idStr.startsWith('half-') ||
         idStr.includes('-personal') ||
         idStr.includes('-mediana') ||
         idStr.includes('-familiar') ||
         idStr.includes('-gigante')
-      )
+      ) {
         return true;
+      }
 
       return false;
     };
 
     const isBebida = (item: any) => {
-      const text = `${item.seccion || ''} ${item.categoria || ''} ${item.nombre || ''}`.toLowerCase();
-      return /bebida|gaseosa|jugo|cerveza|agua|refresco|soda|jugos|licor|té|te|boba/i.test(text);
+      const categoryText = `${item.seccion || ''} ${item.categoria || ''}`.toLowerCase();
+      const nameText = `${item.nombre || ''}`.toLowerCase();
+      if (categoryText.includes('bebida') || categoryText.includes('jugo')) return true;
+      return /\b(bebida|bebidas|gaseosa|gaseosas|jugo|jugos|cerveza|cervezas|agua|refresco|refrescos|soda|sodas|licor|licores|malteada|malteadas|hit|coca-cola|postobon|bretaña|bretana|speed)\b/i.test(
+        `${categoryText} ${nameText}`
+      );
     };
 
     const isParrilla = (item: any) => !isPizza(item) && !isBebida(item);
 
-    const hasPizza = formattedItems.some((item) => isPizza(item));
-    const hasBebida = formattedItems.some((item) => isBebida(item));
-    const hasParrilla = formattedItems.some((item) => isParrilla(item));
+    // Regla de negocio: productos de 'Adicionales' (empaques, icopor, etc.) no van a cocina
+    const kitchenItems = formattedItems.filter((item) => !this.isItemAdicional(item));
+
+    const hasPizza = kitchenItems.some((item) => isPizza(item));
+    const hasBebida = kitchenItems.some((item) => isBebida(item));
+    const hasParrilla = kitchenItems.some((item) => isParrilla(item));
 
     const shouldPrintPizza = hasPizza;
     const isSoloPizza = hasPizza && !hasBebida && !hasParrilla;
@@ -383,7 +435,7 @@ export class ImpresionService {
     return {
       shouldPrintPizza,
       shouldPrintParrilla,
-      allItems: formattedItems,
+      allItems: kitchenItems,
     };
   }
 
@@ -573,14 +625,15 @@ export class ImpresionService {
     tipo: 'Pizzas' | 'Parrilla',
     customIp?: string
   ): Promise<boolean> {
-    if (items.length === 0 || process.env.NODE_ENV === 'test') return true;
+    const printableItems = (items || []).filter((i) => !this.isItemAdicional(i));
+    if (printableItems.length === 0 || process.env.NODE_ENV === 'test') return true;
 
     const ip = (customIp || this.getIpForTipo(tipo) || '').trim();
     const port = 9100;
     const isIpAddress = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip);
 
     if (!isIpAddress && ip && ip.toLowerCase() !== '127.0.0.1' && ip.toLowerCase() !== 'localhost') {
-      const text = this.formatKitchenTicketText(pedido, items, tipo);
+      const text = this.formatKitchenTicketText(pedido, printableItems, tipo);
       const res = await this.printWindowsSpooler(text, ip);
       return res.success;
     }
@@ -656,7 +709,7 @@ export class ImpresionService {
 
             printer.text('--------------------------------');
 
-            items.forEach((item) => {
+            printableItems.forEach((item) => {
               printer.style('b').size(1, 1);
               const lineText = `${item.qty}x ${item.nombre}`;
               this.printWrappedText(printer, lineText, 16);
@@ -700,14 +753,15 @@ export class ImpresionService {
     tipo: 'Pizzas' | 'Parrilla',
     customIp?: string
   ): Promise<boolean> {
-    if (items.length === 0) return true;
+    const printableItems = (items || []).filter((i) => !this.isItemAdicional(i));
+    if (printableItems.length === 0) return true;
 
     const ip = (customIp || this.getIpForTipo(tipo) || '').trim();
     const port = 9100;
     const isIpAddress = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip);
 
     if (!isIpAddress && ip && ip.toLowerCase() !== '127.0.0.1' && ip.toLowerCase() !== 'localhost') {
-      const text = this.formatKitchenTicketText(pedido, items, tipo);
+      const text = this.formatKitchenTicketText(pedido, printableItems, tipo);
       const res = await this.printWindowsSpooler(text, ip);
       return res.success;
     }
@@ -755,7 +809,7 @@ export class ImpresionService {
               .text(`Fecha: ${this.formatDate(fechaPedido)}`)
               .text('--------------------------------');
 
-            items.forEach((item) => {
+            printableItems.forEach((item) => {
               printer.style('b').size(1, 1);
               const lineText = `${item.qty}x ${item.nombre}`;
               this.printWrappedText(printer, lineText, 16);
@@ -1321,22 +1375,25 @@ export class ImpresionService {
           fs.writeFileSync(tempFile, buf);
         }
 
-        const command = `powershell -ExecutionPolicy Bypass -File "${psScript}" -PrinterName "${targetPrinter}" -FilePath "${tempFile}"`;
-
-        exec(command, (psErr: any, psStdout: string) => {
-          try {
-            fs.unlinkSync(tempFile);
-          } catch (_) {}
-          if (psErr || (psStdout && !psStdout.includes('True'))) {
-            console.error(`[Impresion] Error en print-raw.ps1 (${targetPrinter}):`, psErr?.message || psStdout);
-            return resolve({
-              success: false,
-              message: `Error imprimiendo en ${targetPrinter}: ${psErr?.message || psStdout}`,
-            });
+        const { execFile } = require('child_process');
+        execFile(
+          'powershell.exe',
+          ['-ExecutionPolicy', 'Bypass', '-File', psScript, '-PrinterName', targetPrinter, '-FilePath', tempFile],
+          (psErr: any, psStdout: string) => {
+            try {
+              fs.unlinkSync(tempFile);
+            } catch (_) {}
+            if (psErr || (psStdout && !psStdout.includes('True'))) {
+              console.error(`[Impresion] Error en print-raw.ps1 (${targetPrinter}):`, psErr?.message || psStdout);
+              return resolve({
+                success: false,
+                message: `Error imprimiendo en ${targetPrinter}: ${psErr?.message || psStdout}`,
+              });
+            }
+            console.log(`[Impresion] Ticket impreso con éxito en Win32 Raw Spooler (${targetPrinter}).`);
+            return resolve({ success: true, printerName: targetPrinter });
           }
-          console.log(`[Impresion] Ticket impreso con éxito en Win32 Raw Spooler (${targetPrinter}).`);
-          return resolve({ success: true, printerName: targetPrinter });
-        });
+        );
       } catch (e: any) {
         console.error('[Impresion] Error en archivo temporal de impresión:', e.message);
         return resolve({ success: false, message: e.message });

@@ -11,3 +11,65 @@
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* Visible sleek scrollbar for POS grids and order lists */
+.pos-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) rgba(17, 24, 39, 0.4);
+}
+.pos-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.pos-scroll::-webkit-scrollbar-track {
+  background: rgba(17, 24, 39, 0.4);
+  border-radius: 9999px;
+}
+.pos-scroll::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.45);
+  border-radius: 9999px;
+}
+.pos-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(249, 115, 22, 0.8);
+}
+
+/* Toasts ultra-compactos y no invasivos para tablet / móvil POS */
+[data-sonner-toaster] {
+  --width: 210px !important;
+  --offset: 6px !important;
+  pointer-events: none !important;
+}
+
+[data-sonner-toast] {
+  padding: 5px 10px !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+  border-radius: 9999px !important;
+  min-height: 28px !important;
+  width: max-content !important;
+  max-width: 240px !important;
+  margin: 0 auto !important;
+  gap: 5px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+  pointer-events: none !important;
+}
+
+[data-sonner-toast] [data-icon] {
+  width: 13px !important;
+  height: 13px !important;
+  margin-right: 2px !important;
+}
+
+[data-sonner-toast] [data-title] {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 195px !important;
+}
+
+[data-sonner-toast] [data-description] {
+  font-size: 10px !important;
+  line-height: 1.15 !important;
+}

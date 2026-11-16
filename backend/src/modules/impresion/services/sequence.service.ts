@@ -107,18 +107,15 @@ export class SequenceService {
       this.cache = currentData;
       this.isDbSynced = true;
 
-      // Guardar o actualizar en SQLite
-      if (!seqRecord) {
-        seqRecord = seqRepo.create({
+      // Guardar o actualizar en SQLite mediante upsert
+      await seqRepo.upsert(
+        {
           date: today,
           global_count: highestGlobal,
           domicilio_count: highestDomi,
-        });
-      } else {
-        seqRecord.global_count = highestGlobal;
-        seqRecord.domicilio_count = highestDomi;
-      }
-      await seqRepo.save(seqRecord);
+        },
+        ['date']
+      );
 
       // Guardar en JSON como respaldo
       this.saveDataToJson(currentData);
@@ -179,11 +176,14 @@ export class SequenceService {
 
     const seqRepo = DatabaseConnection.appDataSource.getRepository(DailySequenceEntity);
     seqRepo
-      .save({
-        date: today,
-        global_count: globalCount,
-        domicilio_count: domiCount,
-      })
+      .upsert(
+        {
+          date: today,
+          global_count: globalCount,
+          domicilio_count: domiCount,
+        },
+        ['date']
+      )
       .catch((err) => console.error('[SequenceService] Error auto-persistiendo secuencia en SQLite:', err.message));
   }
 

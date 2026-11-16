@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -42,6 +42,7 @@ export interface Order {
 })
 export class PedidosService {
   private http = inject(HttpClient);
+  private ngZone = inject(NgZone);
   private apiUrl = `${environment.apiUrl}/pedidos`;
   private _cachedActiveOrders: Order[] | null = null;
 
@@ -61,7 +62,10 @@ export class PedidosService {
     if (!forceRefresh && this._cachedActiveOrders) {
       return of(this._cachedActiveOrders);
     }
-    return this.http.get<Order[]>(`${this.apiUrl}?active=true`).pipe(
+    const url = forceRefresh
+      ? `${this.apiUrl}?active=true&_t=${Date.now()}`
+      : `${this.apiUrl}?active=true`;
+    return this.http.get<Order[]>(url).pipe(
       tap(orders => this._cachedActiveOrders = orders)
     );
   }
@@ -122,12 +126,14 @@ export class PedidosService {
     return new Observable<any>((observer) => {
       const eventSource = new EventSource(`${this.apiUrl}/events`);
       eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          observer.next(data);
-        } catch (e) {
-          console.error('Error parsing SSE event:', e);
-        }
+        this.ngZone.run(() => {
+          try {
+            const data = JSON.parse(event.data);
+            observer.next(data);
+          } catch (e) {
+            console.error('Error parsing SSE event:', e);
+          }
+        });
       };
       eventSource.onerror = (error) => {
         console.warn('SSE connection warning (will auto-reconnect):', error);

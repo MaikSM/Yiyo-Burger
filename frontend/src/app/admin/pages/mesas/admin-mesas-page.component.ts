@@ -58,7 +58,7 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
   });
 
   mesasResource = rxResource({
-    loader: () => this._mesasService.getAll(),
+    loader: () => this._mesasService.getAll(true),
   });
 
   mesaForm: FormGroup = this._fb.group({
@@ -108,8 +108,25 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
   ];
   activeNotesItemId = signal<any | null>(null);
 
+  syncedMesas = computed<Mesa[]>(() => {
+    const rawMesas = this.mesasResource.value() || [];
+    const activeOrders = this.activeOrdersList() || [];
+    return rawMesas.map((m) => {
+      const hasActiveOrder = activeOrders.some(
+        (o: any) =>
+          this.isSameMesa(o.mesa, m) &&
+          o.estado !== 'Completado' &&
+          o.estado !== 'Cancelado',
+      );
+      return {
+        ...m,
+        estado: hasActiveOrder ? ('ocupada' as const) : m.estado,
+      };
+    });
+  });
+
   mesasLibresParaCambio = computed(() => {
-    const allMesas = this.mesasResource.value() || [];
+    const allMesas = this.syncedMesas();
     const current = this.selectedMesa();
     return allMesas.filter(m => m.estado === 'libre' && (!current || m.mesa_id !== current.mesa_id));
   });
@@ -465,18 +482,10 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
     if (!pedidoMesa || !mesa) return false;
     const pStr = String(pedidoMesa).trim().toLowerCase();
     const mNum = String(mesa.numero).trim().toLowerCase();
+    const isMesaBarra = mesa.ubicacion === 'Barra';
+    const isPedidoBarra = /^barra\b|^b\d/i.test(pStr);
 
-    if (pStr === mNum) return true;
-
-    if (mesa.ubicacion === 'Barra') {
-      if (pStr === `barra ${mNum}` || pStr === `barra b${mNum}` || pStr === `b${mNum}`) {
-        return true;
-      }
-    } else {
-      if (pStr === `mesa ${mNum}`) {
-        return true;
-      }
-    }
+    if (isMesaBarra !== isPedidoBarra) return false;
 
     const normP = pStr.replace(/^barra\s*/i, '').replace(/^mesa\s*/i, '').replace(/^b/i, '').trim();
     const normM = mNum.replace(/^barra\s*/i, '').replace(/^mesa\s*/i, '').replace(/^b/i, '').trim();
@@ -488,18 +497,38 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
     const mesa = this.selectedMesa();
     if (!mesa) return;
     const label = mesa.ubicacion === 'Barra' ? `la BARRA B${mesa.numero}` : `la Mesa ${mesa.numero}`;
-    if (!confirm(`¿Deseas cambiar el estado de ${label} a libre?`)) return;
+    const orderId = this.activeOrderId();
+    const confirmMsg = orderId
+      ? `¿Deseas liberar ${label} y cancelar su pedido activo actual sin cobrar?`
+      : `¿Deseas cambiar el estado de ${label} a libre?`;
+    if (!confirm(confirmMsg)) return;
 
-    this._mesasService.cambiarEstado(mesa.mesa_id, 'libre').subscribe({
-      next: () => {
-        this.mesasResource.reload();
-        this.closeOrderModal();
-      },
-      error: (err: any) => {
-        console.error('Error liberando mesa:', err);
-        alert('Error al cambiar el estado de la mesa.');
-      }
-    });
+    const finalizeRelease = () => {
+      this._mesasService.cambiarEstado(mesa.mesa_id, 'libre').subscribe({
+        next: () => {
+          this.clearDraftForMesa(mesa.mesa_id);
+          this.loadActiveOrders(true);
+          this.mesasResource.reload();
+          this.closeOrderModal();
+        },
+        error: (err: any) => {
+          console.error('Error liberando mesa:', err);
+          alert('Error al cambiar el estado de la mesa.');
+        }
+      });
+    };
+
+    if (orderId) {
+      this._pedidosService.update(String(orderId), { estado: 'Cancelado' } as any).subscribe({
+        next: () => finalizeRelease(),
+        error: (err: any) => {
+          console.error('Error cancelando orden al liberar mesa:', err);
+          finalizeRelease();
+        }
+      });
+    } else {
+      finalizeRelease();
+    }
   }
 
   openCambiarMesaModal() {
@@ -868,8 +897,8 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
 
     this.updateTotals();
 
-    // 2. Sincronización silenciosa en segundo plano sin bloqueos
-    this._pedidosService.getActive().subscribe({
+    // 2. Sincronización silenciosa en segundo plano sin bloqueos (forzando actualización real)
+    this._pedidosService.getActive(true).subscribe({
       next: (pedidos) => {
         this.activeOrdersList.set(pedidos || []);
         const currentMesa = this.selectedMesa();
@@ -1469,12 +1498,13 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
       impuesto_valor: 0,
       propina_valor: 0,
       total: this.checkoutTotal(),
-      items: formattedItems
+      items: formattedItems,
+      autoPrint: !skipPrint
     };
 
     if (currentId) {
       const newItems = this.calculateNewItems(this.originalOrderItems(), formattedItems);
-      this._pedidosService.update(currentId, payload).subscribe({
+      this._pedidosService.update(currentId, { ...payload, newItemsToPrint: newItems }).subscribe({
         next: (order: any) => {
           this.onOrderSavedYOcupar(mesa, order, formattedItems, newItems, mesaNombre, esBarra, true, skipPrint);
         },
@@ -1516,15 +1546,10 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
       mesero: order.mesero || currentUserName
     };
 
-    if (!skipPrint && newItemsToPrint && newItemsToPrint.length > 0) {
-      this._mesasService.confirmarPedido(pedidoInfo, newItemsToPrint).subscribe({
-        next: (res: any) => console.log('Comanda enviada a impresión:', res),
-        error: (err: any) => console.error('Error al imprimir comanda:', err)
-      });
-    } else if (skipPrint) {
-      console.log('Impresión omitida a petición del usuario.');
+    if (skipPrint) {
+      console.log('[AdminMesas] Impresión omitida por solicitud del usuario (skipPrint=true).');
     } else {
-      console.log('No hay productos nuevos para imprimir comanda a cocina.');
+      console.log('[AdminMesas] Comanda de pedido/adición encolada automáticamente por el backend.');
     }
 
     if (mesa) {

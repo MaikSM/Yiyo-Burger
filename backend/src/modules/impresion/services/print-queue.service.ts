@@ -1,4 +1,5 @@
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan, Not } from 'typeorm';
+import crypto from 'crypto';
 import { DatabaseConnection } from '../../../core/database/DatabaseConnection';
 import { PrintJobEntity, PrintJobType, PrintJobStatus } from '../entities/print-job.entity';
 import { realTimeEmitter } from '../../../core/events/realtime.events';
@@ -24,6 +25,7 @@ export class PrintQueueService {
   private activeWorkers: Set<string> = new Set();
   private interJobDelayMs = 300; // 300ms de guarda térmica entre trabajos para el mismo destino
   private isInitialized = false;
+  private sweepInterval?: NodeJS.Timeout;
 
   public static getInstance(): PrintQueueService {
     if (!PrintQueueService.instance) {
@@ -41,6 +43,21 @@ export class PrintQueueService {
       this.jobRepo = DatabaseConnection.appDataSource.getRepository(PrintJobEntity);
     }
     return this.jobRepo;
+  }
+
+  private computePayloadHash(payload: any): string {
+    try {
+      const items = (payload?.items || payload?.pedido?.items || []).map((i: any) => ({
+        id: String(i.id || i.nombre),
+        qty: Number(i.qty || 1),
+        notas: String(i.notas || '').trim(),
+      }));
+      const esAdicion = Boolean(payload?.pedido?.esAdicion || payload?.esAdicion);
+      const str = JSON.stringify({ items, esAdicion });
+      return crypto.createHash('md5').update(str).digest('hex');
+    } catch (_) {
+      return '';
+    }
   }
 
   /**
@@ -63,6 +80,13 @@ export class PrintQueueService {
 
       // Disparar procesamiento de trabajos pendientes
       this.triggerPendingJobs();
+
+      // Barrido periódico cada 30 segundos para garantizar que ningún trabajo quede atascado
+      if (!this.sweepInterval) {
+        this.sweepInterval = setInterval(() => {
+          this.triggerPendingJobs();
+        }, 30000);
+      }
     } catch (err: any) {
       console.error('[PrintQueue] Error inicializando motor de cola de impresión:', err.message);
     }
@@ -70,34 +94,65 @@ export class PrintQueueService {
 
   /**
    * Encola un nuevo trabajo de impresión de manera persistente en SQLite.
-   * Cuenta con deduplicación por idempotencia para evitar comandas duplicadas por doble clic o reintentos HTTP.
+   * Cuenta con deduplicación por idempotencia inteligente por hash de contenido.
    */
   public async enqueue(options: EnqueueJobOptions): Promise<PrintJobEntity> {
     const repo = this.getRepository();
+    const cleanDestino = (options.destino || '').trim();
 
-    // Verificación de idempotencia (15 segundos para el mismo pedido y tipo de ticket)
+    // Si el destino no está configurado, marcarlo de inmediato como fallido y alertar
+    if (!cleanDestino) {
+      console.warn(`[PrintQueue] ⚠️ Intento de encolar trabajo (${options.tipo_ticket}) sin destino de impresora.`);
+      const failedJob = repo.create({
+        pedido_id: options.pedido_id,
+        tipo_ticket: options.tipo_ticket,
+        destino: 'NO_CONFIGURADO',
+        payload: options.payload || {},
+        estado: 'fallido',
+        intentos: 1,
+        max_intentos: 1,
+        ultimo_error: 'Impresora no configurada o dirección vacía en el sistema',
+      });
+      const savedFailed = await repo.save(failedJob);
+      realTimeEmitter.broadcast('impresion_fallida' as any, {
+        jobId: savedFailed.id,
+        pedidoId: savedFailed.pedido_id,
+        tipo: savedFailed.tipo_ticket,
+        destino: 'NO_CONFIGURADO',
+        error: savedFailed.ultimo_error,
+      });
+      return savedFailed;
+    }
+
+    // Verificación de idempotencia por hash de contenido (15 segundos para el mismo pedido)
     if (options.pedido_id && options.tipo_ticket !== 'prueba' && options.tipo_ticket !== 'cajon') {
       const fifteenSecondsAgo = new Date(Date.now() - 15000);
+      const incomingHash = this.computePayloadHash(options.payload);
+
       const existingJob = await repo.findOne({
         where: {
           pedido_id: options.pedido_id,
           tipo_ticket: options.tipo_ticket,
           created_at: MoreThan(fifteenSecondsAgo),
+          estado: Not('fallido'),
         },
       });
 
       if (existingJob) {
-        console.log(
-          `[PrintQueue] ⚠️ Trabajo duplicado ignorado por idempotencia (pedido ${options.pedido_id}, tipo ${options.tipo_ticket}).`
-        );
-        return existingJob;
+        const existingHash = this.computePayloadHash(existingJob.payload);
+        if (existingHash === incomingHash) {
+          console.log(
+            `[PrintQueue] ⚠️ Trabajo idéntico duplicado ignorado por idempotencia (pedido ${options.pedido_id}, tipo ${options.tipo_ticket}).`
+          );
+          return existingJob;
+        }
       }
     }
 
     const job = repo.create({
       pedido_id: options.pedido_id,
       tipo_ticket: options.tipo_ticket,
-      destino: (options.destino || '').trim(),
+      destino: cleanDestino,
       payload: options.payload || {},
       estado: 'pendiente',
       intentos: 0,

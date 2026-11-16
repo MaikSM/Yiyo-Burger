@@ -102,14 +102,25 @@ export class PedidosService {
    */
   private async syncMesaStatus(mesaIdentifier: string, nuevoEstado: 'libre' | 'ocupada'): Promise<void> {
     try {
-      const num = parseInt(String(mesaIdentifier).replace(/\D/g, ''), 10);
+      const rawStr = String(mesaIdentifier || '').trim();
+      const num = parseInt(rawStr.replace(/\D/g, ''), 10);
       if (!num || isNaN(num)) return;
 
-      const mesa = await this.mesaRepository.findOneBy({ numero: num });
+      const isBarra = /^barra\b|^b\d/i.test(rawStr);
+      const mesasConNumero = await this.mesaRepository.findBy({ numero: num });
+      const mesa =
+        mesasConNumero.find((m) => (isBarra ? m.ubicacion === 'Barra' : m.ubicacion !== 'Barra')) ||
+        mesasConNumero[0];
+
       if (mesa && mesa.estado !== nuevoEstado && mesa.estado !== 'mantenimiento' && mesa.estado !== 'reservada') {
         mesa.estado = nuevoEstado;
         await this.mesaRepository.save(mesa);
-        realTimeEmitter.broadcast('mesa_changed', { mesa_id: mesa.mesa_id, numero: mesa.numero, estado: nuevoEstado });
+        realTimeEmitter.broadcast('mesa_changed', {
+          mesa_id: mesa.mesa_id,
+          numero: mesa.numero,
+          ubicacion: mesa.ubicacion,
+          estado: nuevoEstado,
+        });
       }
     } catch (err: any) {
       console.warn('[PedidosService] Advertencia sincronizando estado de mesa:', err.message);
@@ -169,7 +180,36 @@ export class PedidosService {
         },
       });
       if (activeForMesa) {
-        return this.update(activeForMesa.id, { ...data, autoPrint });
+        const existingItems = Array.isArray(activeForMesa.items)
+          ? activeForMesa.items.map((i: any) => ({ ...i }))
+          : [];
+        const incomingItems = Array.isArray(data.items) ? data.items : [];
+        for (const inc of incomingItems) {
+          const key = `${inc.id || inc.nombre}_${inc.notas || ''}_${inc.tipoEntrega || 'mesa'}`;
+          const match = existingItems.find(
+            (ex: any) => `${ex.id || ex.nombre}_${ex.notas || ''}_${ex.tipoEntrega || 'mesa'}` === key,
+          );
+          if (match) {
+            match.qty = (Number(match.qty) || 0) + (Number(inc.qty) || 1);
+          } else {
+            existingItems.push({ ...inc });
+          }
+        }
+        const mergedSubtotal = existingItems.reduce(
+          (sum: number, item: any) => sum + (Number(item.precio) || 0) * (Number(item.qty) || 1),
+          0,
+        );
+        return this.update(activeForMesa.id, {
+          ...data,
+          items: existingItems,
+          subtotal: mergedSubtotal,
+          total:
+            mergedSubtotal +
+            (Number(activeForMesa.impuesto_valor) || 0) +
+            (Number(activeForMesa.propina_valor) || 0),
+          newItemsToPrint: incomingItems,
+          autoPrint,
+        });
       }
     }
 
@@ -225,6 +265,7 @@ export class PedidosService {
     const pedido = await this.pedidoRepository.findOneBy({ id });
     if (!pedido) return null;
 
+    const previousMesa = pedido.mesa;
     const autoPrint = data.autoPrint !== false;
     delete (data as any).autoPrint;
 
@@ -263,6 +304,19 @@ export class PedidosService {
     const saved = await this.pedidoRepository.save(pedido);
     const result = this.attachSequence(saved, false);
 
+    // Si el pedido cambió de mesa (o migró a Domicilio), liberar la mesa anterior si no tiene más pedidos activos
+    if (previousMesa && previousMesa !== result.mesa && previousMesa !== 'Domicilio' && previousMesa !== 'Venta Rápida') {
+      const otherOnPrev = await this.pedidoRepository.findOne({
+        where: {
+          mesa: previousMesa,
+          estado: Not(In(['Completado', 'Cancelado'])),
+        },
+      });
+      if (!otherOnPrev) {
+        await this.syncMesaStatus(previousMesa, 'libre');
+      }
+    }
+
     // Si el pedido se completó o canceló, liberar la mesa si no hay más pedidos activos en ella
     if (result.mesa && (result.estado === 'Completado' || result.estado === 'Cancelado')) {
       const otherActive = await this.pedidoRepository.findOne({
@@ -274,6 +328,8 @@ export class PedidosService {
       if (!otherActive) {
         await this.syncMesaStatus(result.mesa, 'libre');
       }
+    } else if (result.mesa && result.tipo !== 'Llevar' && result.tipo !== 'Domicilio') {
+      await this.syncMesaStatus(result.mesa, 'ocupada');
     }
 
     // Encolar comanda de adición si hay productos nuevos y autoPrint está activo

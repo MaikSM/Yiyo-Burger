@@ -78,8 +78,8 @@ class RootRoutes {
     initializeRoutes() {
         // Registrar la ruta raíz usando el prefijo de la API
         this.router.get('/', _root_controller_1.RootController.root.bind(_root_controller_1.RootController));
-        // Ruta pública para obtener platos
-        this.router.get('/platos/public', (req, res) => __awaiter(this, void 0, void 0, function* () {
+        // Ruta pública para obtener platos (soporta /platos/public y /platos-public)
+        const publicPlatosHandler = (_req, res) => __awaiter(this, void 0, void 0, function* () {
             try {
                 const { DatabaseConnection } = yield Promise.resolve().then(() => __importStar(require('../../core/database/DatabaseConnection')));
                 const { PlatoEntity } = yield Promise.resolve().then(() => __importStar(require('../menu/entities/plato.entity')));
@@ -98,6 +98,7 @@ class RootRoutes {
                     disponible: plato.disponible,
                     tiempo_preparacion_minutos: plato.tiempo_preparacion_minutos,
                     alergenos: plato.alergenos,
+                    precios_por_tamano: plato.precios_por_tamano,
                     created_at: plato.created_at,
                 }));
                 res.status(200).json(platos);
@@ -105,7 +106,9 @@ class RootRoutes {
             catch (error) {
                 res.status(500).json({ message: 'Error fetching dishes', error: error.message });
             }
-        }));
+        });
+        this.router.get('/platos/public', publicPlatosHandler);
+        this.router.get('/platos-public', publicPlatosHandler);
         this.router.use('/roles', tokenExists_middleware_1.TokenExistsMiddleware.check, isAdmin_middleware_1.IsAdminMiddleware.check, new role_routes_1.RoleRoutes().router); // Registrar las rutas de los roles
         this.router.use('/users', tokenExists_middleware_1.TokenExistsMiddleware.check, // Verifica si el token existe
         isAdmin_middleware_1.IsAdminMiddleware.check, // Verifica si el usuario es administrador
@@ -119,7 +122,7 @@ class RootRoutes {
         this.router.use('/proveedores', tokenExists_middleware_1.TokenExistsMiddleware.check, isAdmin_middleware_1.IsAdminMiddleware.check, new proveedores_routes_1.ProveedoresRoutes().router);
         this.router.use('/auth', new auth_routes_1.AuthRoutes().router); // Registrar las rutas de autenticación
         this.router.use('/system-security', new system_security_routes_1.SystemSecurityRoutes().router); // Registrar rutas de seguridad del sistema
-        this.router.use('/seed', new seeder_routes_1.SeederRoutes().router); // Registrar las rutas de seeder
+        this.router.use('/seed', tokenExists_middleware_1.TokenExistsMiddleware.check, isAdmin_middleware_1.IsAdminMiddleware.check, new seeder_routes_1.SeederRoutes().router); // Registrar las rutas de seeder protegidas con rol Admin
         // Mesas routes - GET and waiter operations require waiter or admin, others require admin
         this.router.use('/mesas', (req, res, next) => {
             // GET or waiter specific actions (changing table status, confirming orders, printing)
@@ -182,7 +185,6 @@ class RootRoutes {
         this.router.use('/barrios', tokenExists_middleware_1.TokenExistsMiddleware.check, new barrios_routes_1.BarriosRoutes().router);
         this.router.use('/gastos', tokenExists_middleware_1.TokenExistsMiddleware.check, new gastos_routes_1.GastosRoutes().router);
         this.router.use('/nomina', tokenExists_middleware_1.TokenExistsMiddleware.check, new nomina_routes_1.NominaRoutes().router);
-        this.router.use('/impresion', tokenExists_middleware_1.TokenExistsMiddleware.check, isWaiterOrAdmin_middleware_1.IsWaiterOrAdminMiddleware.check, new impresion_routes_1.ImpresionRoutes().router);
     }
 }
 exports.RootRoutes = RootRoutes;

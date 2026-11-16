@@ -42,8 +42,8 @@ export class RootRoutes {
     // Registrar la ruta raíz usando el prefijo de la API
     this.router.get('/', RootController.root.bind(RootController));
 
-    // Ruta pública para obtener platos
-    this.router.get('/platos/public', async (req, res) => {
+    // Ruta pública para obtener platos (soporta /platos/public y /platos-public)
+    const publicPlatosHandler = async (_req: any, res: any) => {
       try {
         const { DatabaseConnection } = await import('../../core/database/DatabaseConnection');
         const { PlatoEntity } = await import('../menu/entities/plato.entity');
@@ -62,13 +62,16 @@ export class RootRoutes {
           disponible: plato.disponible,
           tiempo_preparacion_minutos: plato.tiempo_preparacion_minutos,
           alergenos: plato.alergenos,
+          precios_por_tamano: plato.precios_por_tamano,
           created_at: plato.created_at,
         }));
         res.status(200).json(platos);
       } catch (error: any) {
         res.status(500).json({ message: 'Error fetching dishes', error: error.message });
       }
-    });
+    };
+    this.router.get('/platos/public', publicPlatosHandler);
+    this.router.get('/platos-public', publicPlatosHandler);
 
     this.router.use(
       '/roles',
@@ -102,7 +105,12 @@ export class RootRoutes {
     );
     this.router.use('/auth', new AuthRoutes().router); // Registrar las rutas de autenticación
     this.router.use('/system-security', new SystemSecurityRoutes().router); // Registrar rutas de seguridad del sistema
-    this.router.use('/seed', new SeederRoutes().router); // Registrar las rutas de seeder
+    this.router.use(
+      '/seed',
+      TokenExistsMiddleware.check,
+      IsAdminMiddleware.check,
+      new SeederRoutes().router
+    ); // Registrar las rutas de seeder protegidas con rol Admin
     // Mesas routes - GET and waiter operations require waiter or admin, others require admin
     this.router.use(
       '/mesas',
@@ -215,13 +223,6 @@ export class RootRoutes {
       '/nomina',
       TokenExistsMiddleware.check,
       new NominaRoutes().router,
-    );
-
-    this.router.use(
-      '/impresion',
-      TokenExistsMiddleware.check,
-      IsWaiterOrAdminMiddleware.check,
-      new ImpresionRoutes().router,
     );
   }
 }

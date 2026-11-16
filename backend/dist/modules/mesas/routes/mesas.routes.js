@@ -11,11 +11,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MesasRoutes = void 0;
 const express_1 = require("express");
+const typeorm_1 = require("typeorm");
 const mesa_entity_1 = require("../entities/mesa.entity");
+const pedido_entity_1 = require("../../pedidos/entities/pedido.entity");
 const mesas_controller_1 = require("../controllers/mesas.controller");
 const mesas_service_1 = require("../services/mesas.service");
 const mesa_repository_1 = require("../repositories/mesa.repository");
 const DatabaseConnection_1 = require("../../../core/database/DatabaseConnection");
+const realtime_events_1 = require("../../../core/events/realtime.events");
 class MesasRoutes {
     constructor() {
         this.router = (0, express_1.Router)();
@@ -57,6 +60,7 @@ class MesasRoutes {
             try {
                 const createMesaDto = req.body;
                 const mesa = yield this.mesasController.create(createMesaDto);
+                realtime_events_1.realTimeEmitter.broadcast('mesa_changed', mesa);
                 res.status(201).json(mesa);
             }
             catch (error) {
@@ -74,6 +78,7 @@ class MesasRoutes {
                 const id = parseInt(req.params.id);
                 const updateMesaDto = req.body;
                 const mesa = yield this.mesasController.update(id, updateMesaDto);
+                realtime_events_1.realTimeEmitter.broadcast('mesa_changed', mesa);
                 res.json(mesa);
             }
             catch (error) {
@@ -90,6 +95,7 @@ class MesasRoutes {
             try {
                 const id = parseInt(req.params.id);
                 yield this.mesasController.delete(id);
+                realtime_events_1.realTimeEmitter.broadcast('mesa_changed', { mesa_id: id, deleted: true });
                 res.status(200).json({ message: 'Mesa eliminada correctamente' });
             }
             catch (error) {
@@ -111,6 +117,37 @@ class MesasRoutes {
                 const id = parseInt(req.params.id);
                 const { estado } = req.body;
                 const mesa = yield this.mesasController.cambiarEstado(id, estado);
+                // Si se libera la mesa manualmente, asegurar que no quede ningún pedido huérfano activo bloqueándola
+                if (estado === 'libre' && mesa) {
+                    try {
+                        const pedidoRepo = DatabaseConnection_1.DatabaseConnection.appDataSource.getRepository(pedido_entity_1.PedidoEntity);
+                        const activeOrders = yield pedidoRepo.find({
+                            where: {
+                                estado: (0, typeorm_1.Not)((0, typeorm_1.In)(['Completado', 'Cancelado'])),
+                            },
+                        });
+                        const isMesaBarra = mesa.ubicacion === 'Barra';
+                        const normM = String(mesa.numero).trim().toLowerCase();
+                        for (const ord of activeOrders) {
+                            if (!ord.mesa)
+                                continue;
+                            const pStr = String(ord.mesa).trim().toLowerCase();
+                            const isPedidoBarra = /^barra\b|^b\d/i.test(pStr);
+                            if (isMesaBarra !== isPedidoBarra)
+                                continue;
+                            const normP = pStr.replace(/^barra\s*/i, '').replace(/^mesa\s*/i, '').replace(/^b/i, '').trim();
+                            if (normP.length > 0 && normP === normM) {
+                                ord.estado = 'Cancelado';
+                                const savedOrd = yield pedidoRepo.save(ord);
+                                realtime_events_1.realTimeEmitter.broadcast('pedido_updated', savedOrd);
+                            }
+                        }
+                    }
+                    catch (cleanupErr) {
+                        console.error('[MesasRoutes] Error limpiando pedidos activos al liberar mesa:', cleanupErr.message);
+                    }
+                }
+                realtime_events_1.realTimeEmitter.broadcast('mesa_changed', mesa);
                 res.json(mesa);
             }
             catch (error) {

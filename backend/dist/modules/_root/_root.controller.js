@@ -21,10 +21,10 @@ class RootController {
             try {
                 // Enviar respuesta exitosa al cliente
                 res.status(200).json({
-                    version: '0.0.3',
-                    author: '{ JEBC-DeV }',
-                    description: 'API RESTful with TypeScript, Node.js, Express',
-                    contact: '@jebcdev',
+                    version: '1.0.0',
+                    author: 'MaikSM',
+                    description: 'Yiyo Burger POS API RESTful with TypeScript, Node.js, Express',
+                    contact: 'salamancamai12@gmail.com',
                 });
             }
             catch (error) {

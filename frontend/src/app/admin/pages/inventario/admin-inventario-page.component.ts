@@ -440,7 +440,7 @@ export class AdminInventarioPageComponent implements OnInit {
 
         };
 
-        // Agregar campos opcionales
+        if (platoToSend.categoria !== undefined) updateData.categoria = platoToSend.categoria;
         if (platoToSend.descripcion !== undefined) updateData.descripcion = platoToSend.descripcion;
         if (platoToSend.tiempo_preparacion_minutos !== undefined) updateData.tiempo_preparacion_minutos = platoToSend.tiempo_preparacion_minutos;
         if (platoToSend.imagen_url !== undefined) updateData.imagen_url = platoToSend.imagen_url;

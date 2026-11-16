@@ -81,17 +81,17 @@
   <div class="bg-gray-800 rounded-lg shadow p-6 border border-gray-700 h-full mt-4">
     <h2 class="text-xl text-white mb-4"><i class="fas fa-list"></i> Mesas Registradas</h2>
     
-    @if (mesasResource.isLoading()) {
+    @if (mesasResource.isLoading() && !mesasResource.value()) {
       <div class="flex justify-center items-center py-10">
         <i class="fas fa-spinner fa-spin text-4xl text-orange-500"></i>
       </div>
-    } @else if (mesasResource.error()) {
+    } @else if (mesasResource.error() && !mesasResource.value()) {
       <div class="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded text-center">
         <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
         <p>Ocurrió un error al cargar las mesas.</p>
       </div>
     } @else {
-      @if (mesasResource.value(); as mesas) {
+      @if (syncedMesas(); as mesas) {
         @if (mesas.length === 0) {
           <div class="text-center text-gray-400 py-10 border-2 border-dashed border-gray-700 rounded-lg">
             <i class="fas fa-inbox text-4xl mb-3"></i>
@@ -259,9 +259,9 @@
   <!-- Vista POS Completa (Punto de Venta por Mesa) -->
   <div class="bg-gray-800 rounded-xl shadow-2xl border border-gray-700 w-full flex flex-col h-[calc(100vh-120px)] overflow-hidden">
     <!-- Header Modal POS -->
-    <div class="flex justify-between items-center p-4 bg-gray-900 border-b border-gray-700">
-      <div>
-        <h2 class="text-2xl font-bold" [class]="isQuickOrderMode() ? 'text-purple-400' : (selectedMesa()?.ubicacion === 'Barra' ? 'text-amber-400' : 'text-orange-500')">
+    <div class="flex flex-wrap justify-between items-center gap-3 p-3 sm:p-4 bg-gray-900 border-b border-gray-700 shrink-0">
+      <div class="min-w-0">
+        <h2 class="text-lg sm:text-2xl font-bold truncate" [class]="isQuickOrderMode() ? 'text-purple-400' : (selectedMesa()?.ubicacion === 'Barra' ? 'text-amber-400' : 'text-orange-500')">
           @if (isQuickOrderMode()) {
             <i class="fas fa-bolt mr-2"></i> Venta Rápida (Sin Impresión)
           } @else if (selectedMesa()?.ubicacion === 'Barra') {
@@ -270,10 +270,10 @@
             <i class="fas fa-concierge-bell mr-2"></i> Pedido - Mesa {{ selectedMesa()?.numero }}
           }
           @if (activeOrderId()) {
-            <span class="ml-2 text-sm bg-orange-500/20 text-orange-400 px-2 py-1 rounded border border-orange-500/30">ID: {{ activeOrderId() }}</span>
+            <span class="ml-2 text-xs sm:text-sm bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded border border-orange-500/30">ID: {{ activeOrderId() }}</span>
           }
         </h2>
-        <p class="text-gray-400 text-sm">
+        <p class="text-gray-400 text-xs sm:text-sm">
           @if (activeOrderId()) {
             Puedes editar este pedido o cerrarlo para liberar la mesa.
           } @else if (selectedMesa()?.estado === 'ocupada') {
@@ -283,36 +283,36 @@
           }
         </p>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-2">
         @if (activeOrderId() || orderItems().length > 0) {
-          <button (click)="imprimirPrecuentaMesaActual()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-md" title="Imprimir Pre-cuenta informativa en la Impresora Principal (Caja)">
+          <button (click)="imprimirPrecuentaMesaActual()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs xl:text-sm font-bold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-md whitespace-nowrap" title="Imprimir Pre-cuenta informativa en la Impresora Principal (Caja)">
             <i class="fas fa-receipt"></i> Pre-cuenta
           </button>
         }
         @if (activeOrderId()) {
-          <button (click)="reimprimirTicketMesaActual()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-md" title="Reimprimir Ticket / Precuenta">
+          <button (click)="reimprimirTicketMesaActual()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs xl:text-sm font-bold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-md whitespace-nowrap" title="Reimprimir Ticket / Precuenta">
             <i class="fas fa-print"></i> Reimprimir Factura
           </button>
-          <button (click)="openCambiarMesaModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-md">
+          <button (click)="openCambiarMesaModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs xl:text-sm font-bold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-md whitespace-nowrap">
             <i class="fas fa-exchange-alt"></i> Cambiar de Mesa
           </button>
         }
         @if (activeOrderId() || orderItems().length > 0) {
-          <button (click)="openMigrarADomicilioModal()" class="bg-orange-600 hover:bg-orange-500 text-white font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-md">
+          <button (click)="openMigrarADomicilioModal()" class="bg-orange-600 hover:bg-orange-500 text-white text-xs xl:text-sm font-bold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-md whitespace-nowrap">
             <i class="fas fa-motorcycle"></i> Migrar a Domicilio
           </button>
         }
         @if (!activeOrderId() && orderItems().length > 0) {
-          <button (click)="descartarBorradorActual()" class="bg-gray-800 hover:bg-rose-900/60 text-gray-400 hover:text-rose-300 border border-gray-700 px-3 py-2 rounded-lg font-semibold flex items-center gap-1.5 transition-colors" title="Descartar borrador no guardado">
+          <button (click)="descartarBorradorActual()" class="bg-gray-800 hover:bg-rose-900/60 text-gray-400 hover:text-rose-300 border border-gray-700 text-xs xl:text-sm px-3 py-2 rounded-lg font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap" title="Descartar borrador no guardado">
             <i class="fas fa-trash-alt text-xs"></i> Descartar
           </button>
         }
-        @if (!activeOrderId() && selectedMesa()?.estado === 'ocupada') {
-          <button (click)="liberarMesaActual()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-md">
+        @if (selectedMesa()?.estado === 'ocupada') {
+          <button (click)="liberarMesaActual()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs xl:text-sm font-semibold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-md whitespace-nowrap">
             <i class="fas fa-unlock"></i> Liberar {{ selectedMesa()?.ubicacion === 'Barra' ? 'Barra' : 'Mesa' }}
           </button>
         }
-        <button (click)="closeOrderModal()" class="text-gray-400 hover:text-white transition-colors bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg border border-gray-700 font-semibold flex items-center gap-2">
+        <button (click)="closeOrderModal()" class="text-gray-400 hover:text-white transition-colors bg-gray-800 hover:bg-gray-700 text-xs xl:text-sm px-3 py-2 rounded-lg border border-gray-700 font-semibold flex items-center gap-1.5 whitespace-nowrap">
           <i class="fas fa-arrow-left"></i> Volver a Mesas
         </button>
       </div>
@@ -460,7 +460,7 @@
       </div>
 
       <!-- Derecha: Ticket / Carrito -->
-      <div class="w-full lg:w-2/5 xl:w-1/3 bg-gray-900 p-4 flex flex-col">
+      <div class="w-full lg:w-2/5 xl:w-1/3 min-w-0 bg-gray-900 p-4 flex flex-col overflow-hidden">
         <h3 class="text-white text-lg font-bold mb-4 border-b border-gray-700 pb-2">Ticket Actual</h3>
         
         <div class="flex-1 overflow-y-auto pr-2">
@@ -576,34 +576,41 @@
             <span class="text-orange-500">{{ orderTotal() | currency }}</span>
           </div>
           
-          <div class="flex flex-col sm:flex-row gap-2 mt-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
             @if (isQuickOrderMode()) {
-              <button (click)="abrirCobroMesa()" [disabled]="orderItems().length === 0" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg">
-                <i class="fas fa-bolt"></i> Registrar Pago de Venta Rápida
+              <button (click)="abrirCobroMesa()" [disabled]="orderItems().length === 0" class="sm:col-span-2 w-full min-w-0 bg-purple-600 hover:bg-purple-700 text-white text-xs xl:text-sm font-bold py-2.5 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg">
+                <i class="fas fa-bolt shrink-0"></i>
+                <span class="truncate">Registrar Pago de Venta Rápida</span>
               </button>
             } @else if (!activeOrderId()) {
-              <button (click)="guardarYOcuparMesa(true)" [disabled]="orderItems().length === 0" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg" title="Guardar pedido y ocupar mesa sin enviar comanda a impresoras">
-                <i class="fas fa-save"></i> Guardar (Sin Impresión)
+              <button (click)="guardarYOcuparMesa(true)" [disabled]="orderItems().length === 0" class="w-full min-w-0 bg-teal-600 hover:bg-teal-700 text-white text-xs xl:text-[13px] font-bold py-2.5 px-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-lg text-center leading-tight" title="Guardar pedido y ocupar mesa sin enviar comanda a impresoras">
+                <i class="fas fa-save shrink-0"></i>
+                <span class="truncate">Guardar (Sin Impresión)</span>
               </button>
 
-              <button (click)="guardarYOcuparMesa()" [disabled]="orderItems().length === 0" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg">
-                <i class="fas fa-paper-plane"></i> Enviar a Cocina y Ocupar Mesa
+              <button (click)="guardarYOcuparMesa()" [disabled]="orderItems().length === 0" class="w-full min-w-0 bg-green-600 hover:bg-green-700 text-white text-xs xl:text-[13px] font-bold py-2.5 px-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-lg text-center leading-tight">
+                <i class="fas fa-paper-plane shrink-0"></i>
+                <span class="truncate">Enviar a Cocina y Ocupar</span>
               </button>
             } @else {
-              <button (click)="reimprimirTicketMesaActual()" class="bg-blue-700 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded transition-colors flex items-center justify-center gap-2 shadow-lg" title="Reimprimir Ticket / Precuenta de la Mesa">
-                <i class="fas fa-print"></i> Reimprimir Ticket
+              <button (click)="reimprimirTicketMesaActual()" class="w-full min-w-0 bg-blue-700 hover:bg-blue-600 text-white text-xs xl:text-[13px] font-bold py-2.5 px-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-lg text-center leading-tight" title="Reimprimir Ticket / Precuenta de la Mesa">
+                <i class="fas fa-print shrink-0"></i>
+                <span class="truncate">Reimprimir Ticket</span>
               </button>
 
-              <button (click)="guardarYOcuparMesa(true)" [disabled]="orderItems().length === 0" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg" title="Guardar cambios sin enviar a impresoras">
-                <i class="fas fa-save"></i> Guardar (Sin Impresión)
+              <button (click)="guardarYOcuparMesa(true)" [disabled]="orderItems().length === 0" class="w-full min-w-0 bg-teal-600 hover:bg-teal-700 text-white text-xs xl:text-[13px] font-bold py-2.5 px-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-lg text-center leading-tight" title="Guardar cambios sin enviar a impresoras">
+                <i class="fas fa-save shrink-0"></i>
+                <span class="truncate">Guardar (Sin Impresión)</span>
               </button>
 
-              <button (click)="guardarYOcuparMesa()" [disabled]="orderItems().length === 0" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg">
-                <i class="fas fa-paper-plane"></i> Enviar Adición a Cocina
+              <button (click)="guardarYOcuparMesa()" [disabled]="orderItems().length === 0" class="w-full min-w-0 bg-amber-600 hover:bg-amber-700 text-white text-xs xl:text-[13px] font-bold py-2.5 px-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-lg text-center leading-tight">
+                <i class="fas fa-paper-plane shrink-0"></i>
+                <span class="truncate">Enviar Adición a Cocina</span>
               </button>
 
-              <button (click)="abrirCobroMesa()" [disabled]="orderItems().length === 0" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg">
-                <i class="fas fa-cash-register"></i> Cobrar y Desocupar Mesa
+              <button (click)="abrirCobroMesa()" [disabled]="orderItems().length === 0" class="w-full min-w-0 bg-emerald-600 hover:bg-emerald-700 text-white text-xs xl:text-[13px] font-bold py-2.5 px-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-lg text-center leading-tight">
+                <i class="fas fa-cash-register shrink-0"></i>
+                <span class="truncate">Cobrar y Desocupar Mesa</span>
               </button>
             }
           </div>

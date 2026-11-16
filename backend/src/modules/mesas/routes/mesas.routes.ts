@@ -1,12 +1,14 @@
 import { Router } from 'express';
-import { Repository } from 'typeorm';
+import { Repository, Not, In } from 'typeorm';
 import { MesaEntity } from '../entities/mesa.entity';
+import { PedidoEntity } from '../../pedidos/entities/pedido.entity';
 import { CreateMesaDto } from '../dtos/create-mesa.dto';
 import { UpdateMesaDto } from '../dtos/update-mesa.dto';
 import { MesasController } from '../controllers/mesas.controller';
 import { MesasService } from '../services/mesas.service';
 import { MesaRepository } from '../repositories/mesa.repository';
 import { DatabaseConnection } from '../../../core/database/DatabaseConnection';
+import { realTimeEmitter } from '../../../core/events/realtime.events';
 
 export class MesasRoutes {
   public router: Router;
@@ -53,6 +55,7 @@ export class MesasRoutes {
       try {
         const createMesaDto: CreateMesaDto = req.body;
         const mesa = await this.mesasController.create(createMesaDto);
+        realTimeEmitter.broadcast('mesa_changed', mesa);
         res.status(201).json(mesa);
       } catch (error: any) {
         if (error.message && error.message.includes('Ya existe')) {
@@ -69,6 +72,7 @@ export class MesasRoutes {
         const id = parseInt(req.params.id);
         const updateMesaDto: UpdateMesaDto = req.body;
         const mesa = await this.mesasController.update(id, updateMesaDto);
+        realTimeEmitter.broadcast('mesa_changed', mesa);
         res.json(mesa);
       } catch (error: any) {
         if (error.message.includes('no encontrada')) {
@@ -84,6 +88,7 @@ export class MesasRoutes {
       try {
         const id = parseInt(req.params.id);
         await this.mesasController.delete(id);
+        realTimeEmitter.broadcast('mesa_changed', { mesa_id: id, deleted: true });
         res.status(200).json({ message: 'Mesa eliminada correctamente' });
       } catch (error: any) {
         const msg = error.message || 'Error al eliminar la mesa';
@@ -103,6 +108,36 @@ export class MesasRoutes {
         const id = parseInt(req.params.id);
         const { estado } = req.body;
         const mesa = await this.mesasController.cambiarEstado(id, estado);
+
+        // Si se libera la mesa manualmente, asegurar que no quede ningún pedido huérfano activo bloqueándola
+        if (estado === 'libre' && mesa) {
+          try {
+            const pedidoRepo = DatabaseConnection.appDataSource.getRepository(PedidoEntity);
+            const activeOrders = await pedidoRepo.find({
+              where: {
+                estado: Not(In(['Completado', 'Cancelado'])),
+              },
+            });
+            const isMesaBarra = mesa.ubicacion === 'Barra';
+            const normM = String(mesa.numero).trim().toLowerCase();
+            for (const ord of activeOrders) {
+              if (!ord.mesa) continue;
+              const pStr = String(ord.mesa).trim().toLowerCase();
+              const isPedidoBarra = /^barra\b|^b\d/i.test(pStr);
+              if (isMesaBarra !== isPedidoBarra) continue;
+              const normP = pStr.replace(/^barra\s*/i, '').replace(/^mesa\s*/i, '').replace(/^b/i, '').trim();
+              if (normP.length > 0 && normP === normM) {
+                ord.estado = 'Cancelado';
+                const savedOrd = await pedidoRepo.save(ord);
+                realTimeEmitter.broadcast('pedido_updated', savedOrd);
+              }
+            }
+          } catch (cleanupErr: any) {
+            console.error('[MesasRoutes] Error limpiando pedidos activos al liberar mesa:', cleanupErr.message);
+          }
+        }
+
+        realTimeEmitter.broadcast('mesa_changed', mesa);
         res.json(mesa);
       } catch (error: any) {
         if (error.message.includes('no encontrada')) {

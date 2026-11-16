@@ -37,9 +37,9 @@ export class ConfigService {
     const configPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
 
     const defaultConfig: PosConfig = {
-      printer_caja_ip: '192.168.0.9',
-      printer_pizzas_ip: '192.168.0.10',
-      printer_parrilla_ip: '192.168.0.13',
+      printer_caja_ip: 'POS-58',
+      printer_pizzas_ip: '192.168.0.200',
+      printer_parrilla_ip: '192.168.0.201',
     };
 
     if (!fs.existsSync(configPath)) {

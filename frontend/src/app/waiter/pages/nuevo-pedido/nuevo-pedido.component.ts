@@ -158,6 +158,7 @@ export class NuevoPedidoComponent implements OnInit {
         nombre: plato.nombre,
         precio: Number(plato.precio) || 0,
         qty,
+        categoria: plato.categoria || '',
       });
     }
     this.updateTotals();
@@ -272,7 +273,7 @@ export class NuevoPedidoComponent implements OnInit {
       nombre: i.nombre,
       precio: i.precio,
       qty: i.qty,
-      categoria: '',
+      categoria: (i as any).categoria || '',
       tipoEntrega: 'mesa',
       notas: '',
     }));
@@ -285,6 +286,13 @@ export class NuevoPedidoComponent implements OnInit {
         o.estado !== 'Completado' &&
         o.estado !== 'Cancelado',
     );
+
+    const confirmMsg = existingOrder
+      ? `¿Confirmas enviar la adición de ${this.order.items.length} ítems para la Mesa ${mesaVal} e imprimir en cocina?`
+      : `¿Confirmas enviar el pedido de la Mesa ${mesaVal} e imprimir la comanda en cocina?`;
+    if (!confirm(confirmMsg)) {
+      return;
+    }
 
     this.isSubmitting = true;
 
@@ -306,22 +314,7 @@ export class NuevoPedidoComponent implements OnInit {
           this.isSubmitting = false;
           localStorage.removeItem('draftOrder');
 
-          // Imprimir comanda de adición a cocina
-          const mesaObj = this.mesas.find((m) => String(m.numero) === mesaVal);
-          const pedidoInfo = {
-            id: existingOrder.id,
-            orderNumber: existingOrder.orderNumber,
-            mesa: `Mesa ${mesaVal}`,
-            ubicacion: mesaObj?.ubicacion || 'Salón',
-            tipo: 'Mesa',
-            esAdicion: true,
-            mesero: meseroName,
-          };
-
-          this.mesasService.confirmarPedido(pedidoInfo, formattedItems).subscribe({
-            next: () => console.log('Comanda de adición enviada a cocina'),
-            error: (err) => console.error('Error al enviar comanda:', err),
-          });
+          console.log('[NuevoPedido] Comanda de adición gestionada automáticamente por el backend');
 
           toast.success(`✅ Platos añadidos a la Mesa ${mesaVal}!`);
           this.router.navigate(['/waiter/mesas']);
@@ -365,21 +358,7 @@ export class NuevoPedidoComponent implements OnInit {
           });
         }
 
-        // Imprimir comanda a cocina
-        const pedidoInfo = {
-          id: createdOrder.id,
-          orderNumber: createdOrder.orderNumber,
-          mesa: `Mesa ${mesaVal}`,
-          ubicacion: mesaObj?.ubicacion || 'Salón',
-          tipo: 'Mesa',
-          esAdicion: false,
-          mesero: meseroName,
-        };
-
-        this.mesasService.confirmarPedido(pedidoInfo, formattedItems).subscribe({
-          next: () => console.log('Comanda enviada a cocina'),
-          error: (err) => console.error('Error al enviar comanda:', err),
-        });
+        console.log('[NuevoPedido] Comanda enviada a cocina de forma atómica por el backend.');
 
         toast.success(`🎉 Pedido registrado para la Mesa ${mesaVal}!`);
         this.router.navigate(['/waiter/mesas']);

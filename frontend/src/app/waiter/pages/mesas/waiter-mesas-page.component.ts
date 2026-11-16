@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, forkJoin } from 'rxjs';
 import { MesasService, Mesa } from '../../../admin/services/mesas.service';
 import { PlatosService, Plato } from '../../../admin/services/platos.service';
 import { CategoriasService, Categoria } from '../../../admin/services/categorias.service';
@@ -18,6 +18,7 @@ import { PedidosService, Order } from '../../../admin/services/pedidos.service';
 import { BarriosService, BarrioTarifa } from '../../../admin/services/barrios.service';
 import { ClientesService } from '../../../admin/services/clientes.service';
 import { AuthService } from '@auth/services/auth.service';
+import { CurrencyPipe as CopCurrencyPipe } from '@shared/pipes';
 import { toast } from 'ngx-sonner';
 
 export interface WaiterOrderItem {
@@ -31,10 +32,19 @@ export interface WaiterOrderItem {
   notas?: string;
 }
 
+export interface PrintConfirmConfig {
+  title: string;
+  message: string;
+  printerLabel: string;
+  confirmLabel: string;
+  accent: 'emerald' | 'orange' | 'blue' | 'cyan';
+  onConfirm: () => void;
+}
+
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'waiter-mesas-page',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, CopCurrencyPipe],
   templateUrl: './waiter-mesas-page.component.html',
   styles: ``,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -99,6 +109,52 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
   ];
   activeNotesItemId = signal<any | null>(null);
 
+  // Estado UI del POS Híbrido y Botonera Compacta
+  readonly MENU_SECCIONES = [
+    {
+      id: 'Todos',
+      label: 'Todos',
+      icon: 'fas fa-th',
+      emoji: '',
+      activeClass: 'bg-orange-500 text-white shadow-md shadow-orange-500/20',
+    },
+    {
+      id: 'Parrilla',
+      label: 'Parrilla',
+      icon: '',
+      emoji: '🥩',
+      activeClass: 'bg-orange-500 text-white shadow-md shadow-orange-500/20',
+    },
+    {
+      id: 'Pizzas',
+      label: 'Pizzas',
+      icon: '',
+      emoji: '🍕',
+      activeClass: 'bg-red-600 text-white shadow-md shadow-red-600/20',
+    },
+    {
+      id: 'Bebidas',
+      label: 'Bebidas',
+      icon: '',
+      emoji: '🥤',
+      activeClass: 'bg-sky-600 text-white shadow-md shadow-sky-600/20',
+    },
+  ] as const;
+
+  readonly PIZZA_SIZES = [
+    { key: 'Personal', short: 'P' },
+    { key: 'Mediana', short: 'M' },
+    { key: 'Grande', short: 'G' },
+    { key: 'Extragrande', short: 'EG' },
+    { key: 'Gigante', short: 'GG' },
+    { key: 'Familiar', short: 'F' },
+  ] as const;
+
+  mobileTab = signal<'menu' | 'comanda'>('menu');
+  showHeaderActionsMenu = signal<boolean>(false);
+  showCategoriesPopover = signal<boolean>(false);
+  printConfirmConfig = signal<PrintConfirmConfig | null>(null);
+
   // Feature 3: Cambio Rápido de Mesa
   showCambiarMesaModal = signal<boolean>(false);
   targetMesaCambio = signal<Mesa | null>(null);
@@ -141,6 +197,66 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
     const p1 = this.getPizzaPrice(f1, size);
     const p2 = this.getPizzaPrice(f2, size);
     return Math.max(p1, p2);
+  });
+
+  platoQtyMap = computed(() => {
+    const map = new Map<string, number>();
+    for (const item of this.orderItems()) {
+      const rawId = String(item.id ?? '');
+      const qty = Number(item.qty) || 0;
+      if (!rawId || qty <= 0) continue;
+      map.set(rawId, (map.get(rawId) || 0) + qty);
+      if (!rawId.startsWith('half-') && rawId.includes('-')) {
+        const baseId = rawId.split('-')[0];
+        if (baseId) {
+          map.set(baseId, (map.get(baseId) || 0) + qty);
+        }
+      }
+    }
+    return map;
+  });
+
+  pizzaSizeQtyMap = computed(() => {
+    const map = new Map<string, number>();
+    for (const item of this.orderItems()) {
+      const rawId = String(item.id ?? '');
+      const qty = Number(item.qty) || 0;
+      if (rawId && qty > 0) {
+        map.set(rawId, (map.get(rawId) || 0) + qty);
+      }
+    }
+    return map;
+  });
+
+  originalQtyMap = computed(() => {
+    const map = new Map<string, number>();
+    for (const item of this.originalOrderItems()) {
+      const key = String(item.id ?? '');
+      map.set(key, (map.get(key) || 0) + (Number(item.qty) || 0));
+    }
+    return map;
+  });
+
+  totalOrderUnits = computed(() =>
+    this.orderItems().reduce((sum, item) => sum + (Number(item.qty) || 0), 0),
+  );
+
+  halfAndHalfInCartCount = computed(() =>
+    this.orderItems()
+      .filter((item) => String(item.id ?? '').startsWith('half-'))
+      .reduce((sum, item) => sum + (Number(item.qty) || 0), 0),
+  );
+
+  hasPendingChanges = computed(
+    () => JSON.stringify(this.orderItems()) !== JSON.stringify(this.originalOrderItems()),
+  );
+
+  private categoriaSeccionMap = computed(() => {
+    const map = new Map<string, string>();
+    for (const cat of this.todasLasCategorias()) {
+      map.set(cat.nombre, cat.seccion || 'Parrilla');
+    }
+    return map;
   });
 
   get filteredCategories(): string[] {
@@ -254,6 +370,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.printConfirmConfig.set(null);
     if (this.realTimeSub) {
       this.realTimeSub.unsubscribe();
     }
@@ -304,29 +421,36 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
   }
 
   silentSync() {
-    // Sincronización silenciosa sin pantalla de carga
-    this._pedidosService.getActive(true).subscribe({
-      next: (orders) => {
+    // Sincronización silenciosa sin pantalla de carga (consulta mesas y pedidos frescos en paralelo)
+    forkJoin({
+      mesas: this._mesasService.getAll(true),
+      orders: this._pedidosService.getActive(true),
+    }).subscribe({
+      next: ({ mesas, orders }) => {
         this.activeOrdersList.set(orders || []);
-        const currentMesas = this.mesas();
-        if (currentMesas.length > 0) {
-          const updated = currentMesas.map((m) => {
-            const active = (orders || []).find(
-              (o) =>
-                this.isSameMesa(o.mesa, m) &&
-                o.estado !== 'Completado' &&
-                o.estado !== 'Cancelado',
-            );
-            return {
-              ...m,
-              estado: active ? ('ocupada' as const) : m.estado,
-            };
-          });
-          this.mesas.set(updated);
+        const syncedMesas = (mesas || []).map((m) => {
+          const active = (orders || []).find(
+            (o) =>
+              this.isSameMesa(o.mesa, m) &&
+              o.estado !== 'Completado' &&
+              o.estado !== 'Cancelado',
+          );
+          return {
+            ...m,
+            estado: active ? ('ocupada' as const) : m.estado,
+          };
+        });
+        this.mesas.set(syncedMesas);
+
+        const curMesa = this.selectedMesa();
+        if (curMesa) {
+          const freshMesa = syncedMesas.find((m) => m.mesa_id === curMesa.mesa_id);
+          if (freshMesa) {
+            this.selectedMesa.set(freshMesa);
+          }
         }
 
-        // Si el mesero tiene el modal abierto para una mesa, actualizar la orden si cambió
-        const curMesa = this.selectedMesa();
+        // Si el mesero tiene el modal abierto para una mesa, actualizar la orden si cambió o se liberó
         if (curMesa && this.showOrderModal()) {
           const updatedOrder = (orders || []).find(
             (o) =>
@@ -346,6 +470,11 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
               this.originalOrderItems.set(JSON.parse(JSON.stringify(itemsCopy)));
               this.updateTotals();
             }
+          } else if (this.activeOrderId()) {
+            const label = this.getMesaDisplayLabel(curMesa);
+            this.clearDraftForMesa(curMesa.mesa_id);
+            this.closeOrderModal();
+            toast.info(`${label} fue liberada desde Caja`);
           }
         }
         this.cdr.detectChanges();
@@ -380,18 +509,10 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
     if (!pedidoMesa || !mesa) return false;
     const pStr = String(pedidoMesa).trim().toLowerCase();
     const mNum = String(mesa.numero).trim().toLowerCase();
+    const isMesaBarra = mesa.ubicacion === 'Barra';
+    const isPedidoBarra = /^barra\b|^b\d/i.test(pStr);
 
-    if (pStr === mNum) return true;
-
-    if (mesa.ubicacion === 'Barra') {
-      if (pStr === `barra ${mNum}` || pStr === `barra b${mNum}` || pStr === `b${mNum}`) {
-        return true;
-      }
-    } else {
-      if (pStr === `mesa ${mNum}`) {
-        return true;
-      }
-    }
+    if (isMesaBarra !== isPedidoBarra) return false;
 
     const normP = pStr.replace(/^barra\s*/i, '').replace(/^mesa\s*/i, '').replace(/^b/i, '').trim();
     const normM = mNum.replace(/^barra\s*/i, '').replace(/^mesa\s*/i, '').replace(/^b/i, '').trim();
@@ -463,6 +584,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
   }
 
   descartarBorradorActual() {
+    this.showHeaderActionsMenu.set(false);
     const mesa = this.selectedMesa();
     if (!mesa) return;
     this.clearDraftForMesa(mesa.mesa_id);
@@ -476,36 +598,35 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
   openOrderModal(mesa: Mesa) {
     this.selectedMesa.set(mesa);
     this.showOrderModal.set(true);
+    this.showHeaderActionsMenu.set(false);
+    this.showCategoriesPopover.set(false);
+    this.activeNotesItemId.set(null);
 
     const activeOrder = this.getActiveOrderForMesa(mesa);
     const savedDraft = this.getDraftForMesa(mesa.mesa_id);
 
     if (activeOrder) {
       this.activeOrderId.set(activeOrder.id);
+      this.mobileTab.set('comanda');
       const itemsCopy = JSON.parse(JSON.stringify(activeOrder.items || []));
       this.originalOrderItems.set(JSON.parse(JSON.stringify(itemsCopy)));
 
       // Si existe un borrador con más ítems o adiciones sin guardar
       if (savedDraft && Array.isArray(savedDraft.items) && savedDraft.items.length > itemsCopy.length) {
         this.orderItems.set(savedDraft.items);
-        toast.info(
-          `📝 Se recuperaron adiciones no guardadas en ${mesa.ubicacion === 'Barra' ? 'Barra' : 'Mesa'} ${mesa.numero}.`,
-          { duration: 4500 }
-        );
+        toast.info(`📝 Borrador recuperado (${savedDraft.items.length} ítems)`, { duration: 2200 });
       } else {
         this.orderItems.set(itemsCopy);
       }
     } else {
       this.activeOrderId.set(null);
+      this.mobileTab.set('menu');
       this.originalOrderItems.set([]);
 
       // Si la mesa está libre pero tenía un borrador en proceso
       if (savedDraft && Array.isArray(savedDraft.items) && savedDraft.items.length > 0) {
         this.orderItems.set(savedDraft.items);
-        toast.info(
-          `📝 Se restauró un pedido en borrador para ${mesa.ubicacion === 'Barra' ? 'Barra' : 'Mesa'} ${mesa.numero} (${savedDraft.items.length} productos).`,
-          { duration: 5000 }
-        );
+        toast.info(`📝 Borrador restaurado (${savedDraft.items.length} ítems)`, { duration: 2200 });
       } else {
         this.orderItems.set([]);
       }
@@ -517,6 +638,11 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
 
   closeOrderModal() {
     this.showOrderModal.set(false);
+    this.mobileTab.set('menu');
+    this.showHeaderActionsMenu.set(false);
+    this.showCategoriesPopover.set(false);
+    this.printConfirmConfig.set(null);
+    this.activeNotesItemId.set(null);
     this.selectedMesa.set(null);
     this.activeOrderId.set(null);
     this.orderItems.set([]);
@@ -524,8 +650,69 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  private getMesaDisplayLabel(mesa: Mesa): string {
+    return mesa.ubicacion === 'Barra' ? `Barra B${mesa.numero}` : `Mesa M${mesa.numero}`;
+  }
+
+  private formatCop(value: number): string {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Number(value) || 0);
+  }
+
+  openPrintConfirm(config: PrintConfirmConfig) {
+    this.printConfirmConfig.set(config);
+    this.cdr.detectChanges();
+  }
+
+  cancelPrintConfirm() {
+    this.printConfirmConfig.set(null);
+    this.cdr.detectChanges();
+  }
+
+  executePrintConfirm() {
+    const cfg = this.printConfirmConfig();
+    if (!cfg) return;
+    this.printConfirmConfig.set(null);
+    cfg.onConfirm();
+  }
+
   selectCategory(category: string) {
     this.selectedCategory.set(category);
+    this.showCategoriesPopover.set(false);
+  }
+
+  getPlatoQty(platoId: number): number {
+    return this.platoQtyMap().get(String(platoId)) || 0;
+  }
+
+  getPizzaSizeQty(platoId: number, size: string): number {
+    return this.pizzaSizeQtyMap().get(`${platoId}-${size}`) || 0;
+  }
+
+  getItemDeltaQty(item: WaiterOrderItem): number {
+    const origQty = this.originalQtyMap().get(String(item.id ?? '')) || 0;
+    return Math.max(0, (Number(item.qty) || 0) - origQty);
+  }
+
+  getPlatoSection(plato: Plato): 'Parrilla' | 'Pizzas' | 'Bebidas' {
+    const catName = plato.categoria || '';
+    const mapped = this.categoriaSeccionMap().get(catName);
+    if (mapped === 'Pizzas' || catName.toLowerCase().includes('pizza')) return 'Pizzas';
+    if (mapped === 'Bebidas') return 'Bebidas';
+    return 'Parrilla';
+  }
+
+  getCategoryCount(categoria: string): number {
+    if (categoria === 'Todos') {
+      if (this.activeSeccion() === 'Todos') return this.menuPlatos().length;
+      const validCats = this.filteredCategories;
+      return this.menuPlatos().filter((p) => p.categoria && validCats.includes(p.categoria)).length;
+    }
+    return this.menuPlatos().filter((p) => p.categoria === categoria).length;
   }
 
   isPizzaPlato(plato: Plato): boolean {
@@ -685,6 +872,9 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
       } else {
         const index = items.indexOf(existing);
         items.splice(index, 1);
+        if (String(this.activeNotesItemId()) === targetId) {
+          this.activeNotesItemId.set(null);
+        }
       }
     }
     this.orderItems.set(items);
@@ -703,14 +893,11 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
   }
 
   updateItemOption(platoId: any, option: 'tipoEntrega' | 'notas', value: any) {
-    const items = [...this.orderItems()];
     const targetId = String(platoId);
-    const existing = items.find((i) => String(i.id) === targetId);
-    if (existing) {
-      if (option === 'tipoEntrega') existing.tipoEntrega = value;
-      if (option === 'notas') existing.notas = value;
-      this.orderItems.set(items);
-    }
+    const items = this.orderItems().map((item) =>
+      String(item.id) === targetId ? { ...item, [option]: value } : item,
+    );
+    this.orderItems.set(items);
   }
 
   // Métodos de Feature 1: Notas Rápidas para Cocina
@@ -764,6 +951,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
 
   // Métodos de Feature 3: Cambio Rápido de Mesa
   openCambiarMesaModal() {
+    this.showHeaderActionsMenu.set(false);
     this.targetMesaCambio.set(null);
     this.showCambiarMesaModal.set(true);
     this.cdr.detectChanges();
@@ -858,6 +1046,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
   }
 
   openMigrarADomicilioModal() {
+    this.showHeaderActionsMenu.set(false);
     this.migrarForm.reset();
     this.loadBarrios();
     this.showMigrarADomicilioModal.set(true);
@@ -912,6 +1101,36 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const currentMesa = this.selectedMesa();
+    const clientData = this.migrarForm.value;
+    const mesaLabel = currentMesa ? this.getMesaDisplayLabel(currentMesa) : 'Mesa';
+    const subtotal = currentItems.reduce(
+      (sum, item) => sum + (Number(item.precio) || 0) * (Number(item.qty) || 1),
+      0,
+    );
+
+    this.openPrintConfirm({
+      title: '¿Confirmar migración e impresión a domicilio?',
+      message: `Se trasladará el pedido de ${mesaLabel} a Domicilio para ${clientData.cliente_nombre} (${this.formatCop(subtotal)}) y se enviará la comanda a la impresora.`,
+      printerLabel: 'Impresión Domicilios',
+      confirmLabel: 'Sí, Migrar e Imprimir',
+      accent: 'cyan',
+      onConfirm: () => this.executeMigracionADomicilio(),
+    });
+  }
+
+  private executeMigracionADomicilio() {
+    if (this.migrarForm.invalid) {
+      toast.error('Completa Nombre, Teléfono y Dirección del cliente.');
+      return;
+    }
+
+    const currentItems = this.orderItems();
+    if (!currentItems || currentItems.length === 0) {
+      toast.error('Agrega al menos un platillo al pedido antes de migrar.');
+      return;
+    }
+
     const orderId = this.activeOrderId();
     const currentMesa = this.selectedMesa();
     const clientData = this.migrarForm.value;
@@ -941,16 +1160,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
 
     this.isSubmitting.set(true);
 
-    const formattedItems = currentItems.map((i: any) => ({
-      id: String(i.id),
-      nombre: i.nombre,
-      precio: Number(i.precio) || 0,
-      qty: Number(i.qty) || 1,
-      seccion: i.seccion || i.categoria || '',
-      categoria: i.categoria || i.seccion || '',
-      tipoEntrega: 'llevar',
-      notas: i.notas || '',
-    }));
+    const formattedItems = this.buildFormattedItems(currentItems, 'llevar');
 
     if (orderId) {
       // CASO 1: El pedido ya existía en la base de datos
@@ -1080,7 +1290,67 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
     return newItems;
   }
 
+  private buildFormattedItems(items: WaiterOrderItem[], forceTipoEntrega?: 'mesa' | 'llevar') {
+    return items.map((i) => ({
+      id: String(i.id),
+      nombre: i.nombre,
+      precio: Number(i.precio) || 0,
+      qty: Number(i.qty) || 1,
+      seccion: i.seccion || i.categoria || '',
+      categoria: i.categoria || i.seccion || '',
+      tipoEntrega: forceTipoEntrega || i.tipoEntrega || 'mesa',
+      notas: i.notas || '',
+    }));
+  }
+
   guardarYOcuparMesa(skipPrint: boolean = false) {
+    const mesa = this.selectedMesa();
+    if (!mesa) return;
+
+    const items = this.orderItems();
+    if (items.length === 0) {
+      toast.error('Agrega al menos un platillo al pedido.');
+      return;
+    }
+
+    if (skipPrint) {
+      this.executeGuardarYOcuparMesa(true);
+      return;
+    }
+
+    const currentId = this.activeOrderId();
+    const mesaLabel = this.getMesaDisplayLabel(mesa);
+
+    if (currentId) {
+      const formattedItems = this.buildFormattedItems(items);
+      const newItems = this.calculateNewItems(this.originalOrderItems(), formattedItems);
+      const newUnits = newItems.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+
+      this.openPrintConfirm({
+        title: '¿Enviar adición e imprimir en cocina?',
+        message:
+          newUnits > 0
+            ? `Se actualizará ${mesaLabel} y se enviarán a imprimir ${newUnits} ${newUnits === 1 ? 'producto nuevo' : 'productos nuevos'} en cocina.`
+            : `Se actualizará la comanda de ${mesaLabel} (${this.totalOrderUnits()} uds · ${this.formatCop(this.orderTotal())}).`,
+        printerLabel: 'Impresoras de Cocina',
+        confirmLabel: 'Sí, Enviar e Imprimir',
+        accent: 'orange',
+        onConfirm: () => this.executeGuardarYOcuparMesa(false),
+      });
+    } else {
+      const units = this.totalOrderUnits();
+      this.openPrintConfirm({
+        title: '¿Enviar comanda e imprimir en cocina?',
+        message: `Se ocupará ${mesaLabel} con ${units} ${units === 1 ? 'unidad' : 'unidades'} (${this.formatCop(this.orderTotal())}) y se enviará la comanda a cocina.`,
+        printerLabel: 'Impresoras de Cocina',
+        confirmLabel: 'Sí, Enviar e Imprimir',
+        accent: 'emerald',
+        onConfirm: () => this.executeGuardarYOcuparMesa(false),
+      });
+    }
+  }
+
+  private executeGuardarYOcuparMesa(skipPrint: boolean = false) {
     const mesa = this.selectedMesa();
     if (!mesa) return;
 
@@ -1100,16 +1370,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
       : 'Mesero';
     const currentUserId = currentUser?.id;
 
-    const formattedItems = items.map((i: any) => ({
-      id: String(i.id),
-      nombre: i.nombre,
-      precio: Number(i.precio) || 0,
-      qty: Number(i.qty) || 1,
-      seccion: i.seccion || i.categoria || '',
-      categoria: i.categoria || i.seccion || '',
-      tipoEntrega: i.tipoEntrega || 'mesa',
-      notas: i.notas || '',
-    }));
+    const formattedItems = this.buildFormattedItems(items);
 
     const payload: any = {
       tipo: esBarra ? 'Barra' : 'Mesa',
@@ -1124,6 +1385,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
       propina_valor: 0,
       total: this.orderTotal(),
       items: formattedItems,
+      autoPrint: !skipPrint,
     };
 
     this.isSubmitting.set(true);
@@ -1131,7 +1393,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
     if (currentId) {
       // ADICIÓN A PEDIDO EXISTENTE
       const newItems = this.calculateNewItems(this.originalOrderItems(), formattedItems);
-      this._pedidosService.update(currentId, payload).subscribe({
+      this._pedidosService.update(currentId, { ...payload, newItemsToPrint: newItems }).subscribe({
         next: (order: any) => {
           this.isSubmitting.set(false);
           this.onOrderSavedYOcupar(mesa, order, formattedItems, newItems, mesaNombre, esBarra, true, skipPrint);
@@ -1184,11 +1446,10 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
       mesero: order.mesero || currentUserName,
     };
 
-    if (!skipPrint && newItemsToPrint && newItemsToPrint.length > 0) {
-      this._mesasService.confirmarPedido(pedidoInfo, newItemsToPrint).subscribe({
-        next: (res: any) => console.log('Comanda enviada a cocina:', res),
-        error: (err: any) => console.error('Error al imprimir comanda:', err),
-      });
+    if (skipPrint) {
+      console.log('[WaiterMesas] Impresión de comanda omitida por solicitud del usuario (skipPrint=true).');
+    } else {
+      console.log('[WaiterMesas] Comanda gestionada de forma automática por el backend.');
     }
 
     this.clearDraftForMesa(mesa.mesa_id);
@@ -1227,6 +1488,22 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const mesaLabel = this.getMesaDisplayLabel(mesa);
+    this.openPrintConfirm({
+      title: '¿Imprimir pre-cuenta?',
+      message: `Se enviará la pre-cuenta informativa de ${mesaLabel} (${this.formatCop(this.orderTotal())}) a la impresora de Caja.`,
+      printerLabel: 'Impresora de Caja',
+      confirmLabel: 'Sí, Imprimir Pre-cuenta',
+      accent: 'emerald',
+      onConfirm: () => this.executeImprimirPrecuentaMesaActual(),
+    });
+  }
+
+  private executeImprimirPrecuentaMesaActual() {
+    const mesa = this.selectedMesa();
+    const items = this.orderItems();
+    if (!mesa || items.length === 0) return;
+
     const activeOrder = this.getActiveOrderForMesa(mesa);
     const mesaNombre = mesa.ubicacion === 'Barra' ? `BARRA ${mesa.numero}` : mesa.numero.toString();
     const currentUser = this.authService.user();
@@ -1255,6 +1532,22 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
   }
 
   reimprimirTicketMesaActual() {
+    const mesa = this.selectedMesa();
+    const orderId = this.activeOrderId();
+    if (!mesa || !orderId) return;
+
+    const mesaLabel = this.getMesaDisplayLabel(mesa);
+    this.openPrintConfirm({
+      title: '¿Reimprimir ticket de comanda?',
+      message: `Se enviará una copia de la comanda #${this.shortId(orderId)} de ${mesaLabel} a la impresora.`,
+      printerLabel: 'Impresora de Comanda',
+      confirmLabel: 'Sí, Reimprimir',
+      accent: 'blue',
+      onConfirm: () => this.executeReimprimirTicketMesaActual(),
+    });
+  }
+
+  private executeReimprimirTicketMesaActual() {
     const mesa = this.selectedMesa();
     const orderId = this.activeOrderId();
     if (!mesa || !orderId) return;
@@ -1289,6 +1582,19 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const mesaLabel = this.getMesaDisplayLabel(mesa);
+    const itemsCount = (activeOrder.items || []).length;
+    this.openPrintConfirm({
+      title: '¿Reimprimir comanda de mesa?',
+      message: `Se enviará una copia de la comanda de ${mesaLabel} (${itemsCount} ${itemsCount === 1 ? 'producto' : 'productos'} · ${this.formatCop(activeOrder.total || 0)}) a la impresora.`,
+      printerLabel: 'Impresora de Comanda',
+      confirmLabel: 'Sí, Reimprimir',
+      accent: 'blue',
+      onConfirm: () => this.executeReimprimirTicketDesdeMapa(mesa, activeOrder),
+    });
+  }
+
+  private executeReimprimirTicketDesdeMapa(mesa: Mesa, activeOrder: Order) {
     const mesaNombre = mesa.ubicacion === 'Barra' ? `BARRA ${mesa.numero}` : mesa.numero.toString();
     const pedidoInfo = {
       id: activeOrder.id,

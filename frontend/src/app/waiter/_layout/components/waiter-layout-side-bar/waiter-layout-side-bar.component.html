@@ -49,8 +49,19 @@
     </ul>
   </div>
 
-  <!-- Derecha: Perfil del Mesero y Salir -->
+  <!-- Derecha: Pantalla Completa, Perfil del Mesero y Salir -->
   <div class="flex items-stretch border-l border-gray-700 flex-shrink-0">
+    <!-- Botón Pantalla Completa (App Mode en Tablet) -->
+    <button
+      type="button"
+      (click)="toggleFullscreen()"
+      class="flex items-center justify-center px-3 bg-gray-900/40 hover:bg-gray-700/60 text-gray-300 hover:text-orange-400 transition-colors border-r border-gray-700"
+      [title]="isFullscreen() ? 'Salir de pantalla completa' : 'Pantalla completa (Modo App)'"
+      [attr.aria-label]="isFullscreen() ? 'Salir de pantalla completa' : 'Pantalla completa'"
+    >
+      <i class="fas text-xs sm:text-sm" [class.fa-compress]="isFullscreen()" [class.fa-expand]="!isFullscreen()"></i>
+    </button>
+
     <!-- Info del Mesero -->
     <a
       routerLink="/waiter/perfil"

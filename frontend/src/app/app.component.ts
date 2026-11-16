@@ -6,10 +6,12 @@ import { NgxSonnerToaster } from 'ngx-sonner';
   imports: [RouterOutlet, NgxSonnerToaster],
   template: `
     <ngx-sonner-toaster
-      [expand]="true"
-      position="top-right"
+      [expand]="false"
+      [visibleToasts]="1"
+      [duration]="1600"
+      [closeButton]="false"
+      position="top-center"
       richColors
-      closeButton
     />
 
     <router-outlet />
