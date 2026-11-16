@@ -242,6 +242,43 @@ export class SequenceService {
     return { orderNumber: orderNum || 0, domicilioNumber: domNum };
   }
 
+  /**
+   * Asocia el ID definitivo de base de datos con el número de orden generado previamente con un tempId.
+   */
+  public bindOrderId(
+    tempId: string,
+    realId: string,
+    orderNumber?: number,
+    domicilioNumber?: number
+  ): void {
+    if (!realId) return;
+    const data = this.loadData();
+    let changed = false;
+
+    const mappedOrder = orderNumber || (tempId ? data.order_mapping[tempId] : undefined);
+    if (mappedOrder) {
+      data.order_mapping[String(realId)] = mappedOrder;
+      if (tempId && tempId !== String(realId)) {
+        delete data.order_mapping[tempId];
+      }
+      changed = true;
+    }
+
+    const mappedDomi = domicilioNumber || (tempId ? data.domicilio_mapping[tempId] : undefined);
+    if (mappedDomi) {
+      data.domicilio_mapping[String(realId)] = mappedDomi;
+      if (tempId && tempId !== String(realId)) {
+        delete data.domicilio_mapping[tempId];
+      }
+      changed = true;
+    }
+
+    if (changed) {
+      this.cache = data;
+      this.saveDataToJson(data);
+    }
+  }
+
   public resetSequence(): void {
     const today = this.getCurrentDateString();
     const data = this.loadData();

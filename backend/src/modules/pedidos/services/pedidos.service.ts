@@ -59,20 +59,37 @@ export class PedidosService {
   }
 
   /**
-   * Calcula los productos adicionales comparando los ítems anteriores con los actuales.
+   * Calcula los productos adicionales comparando los ítems anteriores con los actuales,
+   * consolidando cantidades por clave para evitar errores si llegan filas repetidas.
    */
   private calculateNewItems(original: any[], current: any[]): any[] {
+    const getKey = (it: any) =>
+      `${it.id || it.nombre}_${String(it.notas || '').trim()}_${it.tipoEntrega || 'mesa'}`;
+
+    const origMap = new Map<string, number>();
+    for (const o of original || []) {
+      const k = getKey(o);
+      origMap.set(k, (origMap.get(k) || 0) + (Number(o.qty) || 0));
+    }
+
+    const currMap = new Map<string, { item: any; qty: number }>();
+    for (const c of current || []) {
+      const k = getKey(c);
+      const existing = currMap.get(k);
+      if (existing) {
+        existing.qty += Number(c.qty) || 0;
+      } else {
+        currMap.set(k, { item: { ...c }, qty: Number(c.qty) || 0 });
+      }
+    }
+
     const newItems: any[] = [];
-    for (const item of current) {
-      const itemKey = `${item.id || item.nombre}_${item.notas || ''}_${item.tipoEntrega || 'mesa'}`;
-      const origMatch = (original || []).find(
-        (o) => `${o.id || o.nombre}_${o.notas || ''}_${o.tipoEntrega || 'mesa'}` === itemKey
-      );
-      const origQty = origMatch ? Number(origMatch.qty || 0) : 0;
-      const diffQty = Number(item.qty || 0) - origQty;
+    for (const [k, entry] of currMap.entries()) {
+      const origQty = origMap.get(k) || 0;
+      const diffQty = entry.qty - origQty;
       if (diffQty > 0) {
         newItems.push({
-          ...item,
+          ...entry.item,
           qty: diffQty,
         });
       }
@@ -238,14 +255,21 @@ export class PedidosService {
 
     const pedido = this.pedidoRepository.create(data);
     const saved = await this.pedidoRepository.save(pedido);
+    this.sequenceService.bindOrderId(tempId, saved.id, saved.orderNumber, saved.domicilioNumber);
 
     // Si es pedido en mesa, marcar mesa automáticamente como ocupada
     if (saved.mesa && saved.tipo !== 'Llevar' && saved.tipo !== 'Domicilio') {
       await this.syncMesaStatus(saved.mesa, 'ocupada');
     }
 
-    // Encolado automático y resiliente de comanda a cocina
-    if (autoPrint && saved.items && saved.items.length > 0) {
+    // Encolado automático y resiliente de comanda a cocina (salvo Venta Rápida o Cancelado)
+    if (
+      autoPrint &&
+      saved.estado !== 'Cancelado' &&
+      saved.mesa !== 'Venta Rápida' &&
+      saved.items &&
+      saved.items.length > 0
+    ) {
       if (saved.tipo === 'Domicilio') {
         this.impresionService
           .encolarComandaDomicilio(saved, saved.items, false)
@@ -266,6 +290,7 @@ export class PedidosService {
     if (!pedido) return null;
 
     const previousMesa = pedido.mesa;
+    const previousTipo = pedido.tipo;
     const autoPrint = data.autoPrint !== false;
     delete (data as any).autoPrint;
 
@@ -303,6 +328,7 @@ export class PedidosService {
 
     const saved = await this.pedidoRepository.save(pedido);
     const result = this.attachSequence(saved, false);
+    this.sequenceService.bindOrderId(result.id, result.id, result.orderNumber, result.domicilioNumber);
 
     // Si el pedido cambió de mesa (o migró a Domicilio), liberar la mesa anterior si no tiene más pedidos activos
     if (previousMesa && previousMesa !== result.mesa && previousMesa !== 'Domicilio' && previousMesa !== 'Venta Rápida') {
@@ -332,8 +358,21 @@ export class PedidosService {
       await this.syncMesaStatus(result.mesa, 'ocupada');
     }
 
-    // Encolar comanda de adición si hay productos nuevos y autoPrint está activo
-    if (autoPrint && newItemsToPrint && newItemsToPrint.length > 0) {
+    const migratedToDomicilio = previousTipo !== 'Domicilio' && result.tipo === 'Domicilio';
+
+    // Si el pedido fue migrado de Mesa/Barra a Domicilio, imprimir comanda de domicilio completa
+    if (autoPrint && migratedToDomicilio && result.estado !== 'Cancelado' && result.items && result.items.length > 0) {
+      console.log(`[PedidosService] Encolando comanda de migración a domicilio para pedido #${result.orderNumber || result.id}`);
+      this.impresionService
+        .encolarComandaDomicilio(result, result.items, false)
+        .catch((err) => console.error('[PedidosService] Error encolando migración domicilio:', err.message));
+    } else if (
+      autoPrint &&
+      !migratedToDomicilio &&
+      result.estado !== 'Cancelado' &&
+      newItemsToPrint &&
+      newItemsToPrint.length > 0
+    ) {
       console.log(`[PedidosService] Encolando comanda de adición (${newItemsToPrint.length} ítems) para pedido #${result.orderNumber || result.id}`);
       if (result.tipo === 'Domicilio') {
         this.impresionService

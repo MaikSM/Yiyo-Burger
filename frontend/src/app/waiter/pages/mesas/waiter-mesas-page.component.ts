@@ -1554,6 +1554,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
 
     const activeOrder = this.getActiveOrderForMesa(mesa);
     const mesaNombre = mesa.ubicacion === 'Barra' ? `BARRA ${mesa.numero}` : mesa.numero.toString();
+    const itemsToPrint = activeOrder?.items || this.orderItems();
 
     const pedidoInfo = {
       id: orderId,
@@ -1565,12 +1566,13 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
       total: activeOrder?.total || this.orderTotal(),
       cliente_nombre: activeOrder?.cliente_nombre || 'Cliente Mesa',
       mesero: activeOrder?.mesero || this.authService.user()?.name,
-      items: activeOrder?.items || this.orderItems(),
+      items: itemsToPrint,
+      esReimpresion: true,
     };
 
-    this._mesasService.imprimirFactura(pedidoInfo, 'comanda').subscribe({
-      next: () => toast.success('Ticket enviado a reimpresión'),
-      error: (err) => toast.error('Error al reimprimir ticket'),
+    this._mesasService.confirmarPedido(pedidoInfo, itemsToPrint).subscribe({
+      next: () => toast.success('Comanda de cocina enviada a reimpresión'),
+      error: () => toast.error('Error al reimprimir comanda de cocina'),
     });
   }
 
@@ -1587,7 +1589,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
     this.openPrintConfirm({
       title: '¿Reimprimir comanda de mesa?',
       message: `Se enviará una copia de la comanda de ${mesaLabel} (${itemsCount} ${itemsCount === 1 ? 'producto' : 'productos'} · ${this.formatCop(activeOrder.total || 0)}) a la impresora.`,
-      printerLabel: 'Impresora de Comanda',
+      printerLabel: 'Impresoras de Cocina',
       confirmLabel: 'Sí, Reimprimir',
       accent: 'blue',
       onConfirm: () => this.executeReimprimirTicketDesdeMapa(mesa, activeOrder),
@@ -1596,6 +1598,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
 
   private executeReimprimirTicketDesdeMapa(mesa: Mesa, activeOrder: Order) {
     const mesaNombre = mesa.ubicacion === 'Barra' ? `BARRA ${mesa.numero}` : mesa.numero.toString();
+    const itemsToPrint = activeOrder.items || [];
     const pedidoInfo = {
       id: activeOrder.id,
       orderNumber: activeOrder.orderNumber,
@@ -1606,12 +1609,13 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
       total: activeOrder.total,
       cliente_nombre: activeOrder.cliente_nombre || 'Cliente Mesa',
       mesero: activeOrder.mesero || this.authService.user()?.name,
-      items: activeOrder.items || [],
+      items: itemsToPrint,
+      esReimpresion: true,
     };
 
-    this._mesasService.imprimirFactura(pedidoInfo, 'comanda').subscribe({
-      next: () => toast.success(`Ticket Mesa ${mesa.numero} reimpreso`),
-      error: (err) => toast.error('Error al reimprimir ticket'),
+    this._mesasService.confirmarPedido(pedidoInfo, itemsToPrint).subscribe({
+      next: () => toast.success(`Comanda de ${mesaNombre} reimpresa en cocina`),
+      error: () => toast.error('Error al reimprimir comanda'),
     });
   }
 }

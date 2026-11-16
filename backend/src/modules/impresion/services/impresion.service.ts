@@ -172,7 +172,7 @@ export class ImpresionService {
     }
 
     text += `--------------------------------\n          Yiyo Burguer\n================================\n\n\n\n\n`;
-    return text;
+    return this.sanitizeTextForThermal(text);
   }
 
   public formatFacturaText(pedido: any): string {
@@ -279,15 +279,16 @@ export class ImpresionService {
         if (pedido.vuelto > 0) text += `Vuelto / Cambio: $${Number(pedido.vuelto).toLocaleString('es-CO')}\n`;
       }
     }
-    text += `--------------------------------\n   ¡Gracias por su compra!\n================================\n\n\n\n\n`;
+    text += `--------------------------------\n   Gracias por su compra!\n================================\n\n\n\n\n`;
+    let cleanText = this.sanitizeTextForThermal(text);
 
     const tieneEfectivo =
       pedido.metodo_pago === 'Efectivo' ||
       pagosMixtosList.some((p) => String(p.metodo).toLowerCase().includes('efectivo'));
     if (tieneEfectivo) {
-      text += '\x1b\x70\x00\x19\xfa\x1b\x70\x01\x19\xfa';
+      cleanText += '\x1b\x70\x00\x19\xfa\x1b\x70\x01\x19\xfa';
     }
-    return text;
+    return cleanText;
   }
 
   public formatPrecuentaText(pedido: any): string {
@@ -342,9 +343,9 @@ export class ImpresionService {
     text += `TOTAL NETO (sin propina):   $${subtotal.toLocaleString('es-CO')}\n`;
     text += `TOTAL SUGERIDO (+propina):  $${totalConPropina.toLocaleString('es-CO')}\n`;
     text += `--------------------------------\n`;
-    text += `    ¡Gracias por su visita!\nSolicite su factura electronica o\ncomprobante oficial al pagar en caja\n================================\n\n\n\n\n`;
+    text += `    Gracias por su visita!\nSolicite su factura electronica o\ncomprobante oficial al pagar en caja\n================================\n\n\n\n\n`;
 
-    return text;
+    return this.sanitizeTextForThermal(text);
   }
 
   /**
@@ -390,10 +391,10 @@ export class ImpresionService {
       // 3. Si el nombre tiene la palabra pizza o calzone
       if (nameText.includes('pizza') || nameText.includes('calzone')) return true;
 
-      // 4. Reconocimiento de tamaños de pizzas (ej: "Personal Jamon y Queso", "Familiar Carnes", "Mediana")
+      // 4. Reconocimiento de tamaños de pizzas (ej: "Personal Jamon y Queso", "Familiar Carnes", "Mediana", "Grande", "Extragrande")
       const isPizzaSize =
-        /\b(personal|mediana|familiar|gigante)\b/i.test(nameText) &&
-        !/\b(combo|infantil|perro|hamburguesa|burger|salchipapa)\b/i.test(nameText);
+        /\b(personal|mediana|grande|extragrande|familiar|gigante)\b/i.test(nameText) &&
+        !/\b(combo|infantil|perro|hamburguesa|burger|salchipapa|papas|porcion|porción|gaseosa|jugo|cerveza|limonada|malteada)\b/i.test(nameText);
       if (isPizzaSize) return true;
 
       // 5. Prefijos o sufijos de id usados por el menú de pizzas
@@ -401,6 +402,8 @@ export class ImpresionService {
         idStr.startsWith('half-') ||
         idStr.includes('-personal') ||
         idStr.includes('-mediana') ||
+        idStr.includes('-grande') ||
+        idStr.includes('-extragrande') ||
         idStr.includes('-familiar') ||
         idStr.includes('-gigante')
       ) {
@@ -444,6 +447,67 @@ export class ImpresionService {
   // =========================================================================
 
   /**
+   * Enriquecer los ítems con su categoría y sección real desde la base de datos SQLite
+   * cuando no vengan especificados en el payload.
+   */
+  private async enrichItemsFromDatabase(items: any[]): Promise<any[]> {
+    if (!items || !Array.isArray(items) || items.length === 0) return [];
+    try {
+      if (!DatabaseConnection.appDataSource.isInitialized) return items;
+      const { PlatoEntity } = require('../../menu/entities/plato.entity');
+      const { CategoriaEntity } = require('../../categorias/entities/categoria.entity');
+      const platoRepo = DatabaseConnection.appDataSource.getRepository(PlatoEntity);
+      const catRepo = DatabaseConnection.appDataSource.getRepository(CategoriaEntity);
+
+      const [platos, categorias] = await Promise.all([platoRepo.find(), catRepo.find()]);
+
+      const catMap = new Map<string, string>();
+      for (const c of categorias) {
+        if (c.nombre && c.seccion) {
+          catMap.set(String(c.nombre).trim().toLowerCase(), c.seccion);
+        }
+      }
+
+      return items.map((item) => {
+        let categoria = item.categoria || '';
+        let seccion = item.seccion || '';
+
+        const rawId = String(item.id || '').trim();
+        const baseNumericId = parseInt(rawId.split('-')[0], 10);
+
+        if (!categoria || !seccion || (seccion !== 'Pizzas' && seccion !== 'Parrilla' && seccion !== 'Bebidas')) {
+          const matchedPlato =
+            (!isNaN(baseNumericId) ? platos.find((p: any) => Number(p.plato_id) === baseNumericId) : null) ||
+            platos.find(
+              (p: any) =>
+                p.nombre &&
+                item.nombre &&
+                String(p.nombre).trim().toLowerCase() === String(item.nombre).trim().toLowerCase()
+            );
+
+          if (matchedPlato && matchedPlato.categoria && !categoria) {
+            categoria = matchedPlato.categoria;
+          }
+          if (categoria) {
+            const mappedSec = catMap.get(String(categoria).trim().toLowerCase());
+            if (mappedSec) {
+              seccion = mappedSec;
+            }
+          }
+        }
+
+        return {
+          ...item,
+          categoria: categoria || item.categoria || '',
+          seccion: seccion || item.seccion || categoria || '',
+        };
+      });
+    } catch (_) {
+      return items;
+    }
+  }
+
+  /**
    * Encola una comanda de cocina para un pedido (Mesa, Barra o Llevar).
    * Clasifica los productos y los encola en sus respectivas impresoras.
    */
@@ -456,27 +520,40 @@ export class ImpresionService {
       return { shouldPrintPizza: false, shouldPrintParrilla: false };
     }
 
-    const { shouldPrintPizza, shouldPrintParrilla, allItems } = this.classifyItemsForPrinters(items);
+    const enrichedItems = await this.enrichItemsFromDatabase(items);
+    const { shouldPrintPizza, shouldPrintParrilla, allItems } = this.classifyItemsForPrinters(enrichedItems);
+    if (allItems.length === 0) {
+      return { shouldPrintPizza: false, shouldPrintParrilla: false };
+    }
+
     const queue = PrintQueueService.getInstance();
     const pedidoConAdicion = { ...pedido, esAdicion };
+    const forceReprint = Boolean(pedido?.esReimpresion);
+    const destPizza = (this.getIpForTipo('Pizzas') || '').trim();
+    const destParrilla = (this.getIpForTipo('Parrilla') || '').trim();
+    const sameDestination =
+      shouldPrintPizza &&
+      shouldPrintParrilla &&
+      destPizza.length > 0 &&
+      destPizza.toLowerCase() === destParrilla.toLowerCase();
 
     if (shouldPrintPizza) {
-      const dest = this.getIpForTipo('Pizzas');
       await queue.enqueue({
         pedido_id: pedido.id ? String(pedido.id) : undefined,
         tipo_ticket: 'cocina_pizzas',
-        destino: dest,
+        destino: destPizza,
         payload: { pedido: pedidoConAdicion, items: allItems },
+        forceReprint,
       });
     }
 
-    if (shouldPrintParrilla) {
-      const dest = this.getIpForTipo('Parrilla');
+    if (shouldPrintParrilla && !sameDestination) {
       await queue.enqueue({
         pedido_id: pedido.id ? String(pedido.id) : undefined,
         tipo_ticket: 'cocina_parrilla',
-        destino: dest,
+        destino: destParrilla,
         payload: { pedido: pedidoConAdicion, items: allItems },
+        forceReprint,
       });
     }
 
@@ -495,27 +572,40 @@ export class ImpresionService {
       return { shouldPrintPizza: false, shouldPrintParrilla: false };
     }
 
-    const { shouldPrintPizza, shouldPrintParrilla, allItems } = this.classifyItemsForPrinters(items);
+    const enrichedItems = await this.enrichItemsFromDatabase(items);
+    const { shouldPrintPizza, shouldPrintParrilla, allItems } = this.classifyItemsForPrinters(enrichedItems);
+    if (allItems.length === 0) {
+      return { shouldPrintPizza: false, shouldPrintParrilla: false };
+    }
+
     const queue = PrintQueueService.getInstance();
     const pedidoConAdicion = { ...pedido, esAdicion, tipo: 'Domicilio' };
+    const forceReprint = Boolean(pedido?.esReimpresion);
+    const destPizza = (this.getIpForTipo('Pizzas') || '').trim();
+    const destParrilla = (this.getIpForTipo('Parrilla') || '').trim();
+    const sameDestination =
+      shouldPrintPizza &&
+      shouldPrintParrilla &&
+      destPizza.length > 0 &&
+      destPizza.toLowerCase() === destParrilla.toLowerCase();
 
     if (shouldPrintPizza) {
-      const dest = this.getIpForTipo('Pizzas');
       await queue.enqueue({
         pedido_id: pedido.id ? String(pedido.id) : undefined,
         tipo_ticket: 'domicilio',
-        destino: dest,
+        destino: destPizza,
         payload: { pedido: pedidoConAdicion, items: allItems, tipo: 'Pizzas' },
+        forceReprint,
       });
     }
 
-    if (shouldPrintParrilla) {
-      const dest = this.getIpForTipo('Parrilla');
+    if (shouldPrintParrilla && !sameDestination) {
       await queue.enqueue({
         pedido_id: pedido.id ? String(pedido.id) : undefined,
         tipo_ticket: 'domicilio',
-        destino: dest,
+        destino: destParrilla,
         payload: { pedido: pedidoConAdicion, items: allItems, tipo: 'Parrilla' },
+        forceReprint,
       });
     }
 
@@ -538,6 +628,7 @@ export class ImpresionService {
       tipo_ticket: 'factura',
       destino: dest.trim(),
       payload: { pedido },
+      forceReprint: Boolean(pedido?.esReimpresion),
     });
     return true;
   }
@@ -558,6 +649,7 @@ export class ImpresionService {
       tipo_ticket: 'precuenta',
       destino: dest.trim(),
       payload: { pedido },
+      forceReprint: Boolean(pedido?.esReimpresion),
     });
     return true;
   }
@@ -639,21 +731,36 @@ export class ImpresionService {
     }
 
     return new Promise((resolve) => {
+      let settled = false;
+      let device: any = null;
+      const done = (val: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(safetyTimer);
+        resolve(val);
+      };
+      const safetyTimer = setTimeout(() => {
+        console.error(`[ImpresionDirecta] Timeout de seguridad (7.5s) alcanzado en impresora ${tipo} (${ip}:${port}).`);
+        try {
+          if (device && typeof device.close === 'function') device.close();
+        } catch (_) {}
+        done(false);
+      }, 7500);
+
       try {
         console.log(`[ImpresionDirecta] Conectando a impresora de ${tipo} en ${ip}:${port}...`);
-        // Timeout balanceado a 5000ms para impresoras térmicas de red
-        const device = new escpos.Network(ip, port, { timeout: 5000 });
+        device = new escpos.Network(ip, port, { timeout: 5000 });
         const printer = new escpos.Printer(device);
 
         device.open(async (error: any) => {
           if (error) {
             console.error(`[ImpresionDirecta] Error abriendo impresora ${tipo} en ${ip}:`, error.message);
-            return resolve(false);
+            return done(false);
           }
 
           try {
             const esDomicilio = pedido.tipo === 'Domicilio';
-            const esLlevar = pedido.tipo === 'Llevar' || items.some((i) => i.tipoEntrega === 'llevar');
+            const esLlevar = pedido.tipo === 'Llevar' || printableItems.some((i) => i.tipoEntrega === 'llevar');
             const esBarra =
               pedido.ubicacion === 'Barra' ||
               String(pedido.mesa || '').toLowerCase().includes('barra') ||
@@ -662,9 +769,9 @@ export class ImpresionService {
 
             this.triggerBuzzer(printer, beepCount);
 
-            const numMesa = String(pedido.mesa || '').replace(/barra\s*/i, '').trim();
+            const numMesa = this.sanitizeTextForThermal(String(pedido.mesa || '').replace(/barra\s*/i, '').trim());
             const tituloTipoHeader = pedido.esAdicion
-              ? '*** ADICIÓN ***'
+              ? '*** ADICION ***'
               : esDomicilio
               ? '*** DOMICILIO ***'
               : esLlevar || esBarra
@@ -696,7 +803,9 @@ export class ImpresionService {
             }
 
             const shortId = String(pedido.id || '').length > 8 ? String(pedido.id).slice(0, 8) : pedido.id || '';
-            const mesaDisplay = esDomicilio ? 'DOMICILIO' : esLlevar || esBarra ? 'PARA LLEVAR' : `Mesa ${pedido.mesa || ''}`;
+            const mesaDisplay = this.sanitizeTextForThermal(
+              esDomicilio ? 'DOMICILIO' : esLlevar || esBarra ? 'PARA LLEVAR' : `Mesa ${pedido.mesa || ''}`
+            );
             const fechaPedido = pedido?.fecha || pedido?.created_at || pedido?.createdAt || pedido?.fecha_creacion;
 
             printer
@@ -706,6 +815,10 @@ export class ImpresionService {
               .style('normal')
               .text(`Pedido ID: ${shortId}`)
               .text(`Fecha: ${this.formatDate(fechaPedido)}`);
+
+            if (pedido.mesero) {
+              printer.text(`Atendido por: ${this.sanitizeTextForThermal(String(pedido.mesero))}`);
+            }
 
             printer.text('--------------------------------');
 
@@ -734,15 +847,15 @@ export class ImpresionService {
               .close();
 
             console.log(`[ImpresionDirecta] Ticket enviado a cocina de ${tipo} exitosamente.`);
-            resolve(true);
+            done(true);
           } catch (ticketErr: any) {
             console.error(`[ImpresionDirecta] Error formateando ticket de ${tipo}:`, ticketErr.message);
-            resolve(false);
+            done(false);
           }
         });
       } catch (err: any) {
         console.error(`[ImpresionDirecta] Excepción al imprimir en ${tipo}:`, err.message);
-        resolve(false);
+        done(false);
       }
     });
   }
@@ -767,15 +880,31 @@ export class ImpresionService {
     }
 
     return new Promise((resolve) => {
+      let settled = false;
+      let device: any = null;
+      const done = (val: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(safetyTimer);
+        resolve(val);
+      };
+      const safetyTimer = setTimeout(() => {
+        console.error(`[ImpresionDirecta] Timeout de seguridad (7.5s) alcanzado en domicilio ${tipo} (${ip}:${port}).`);
+        try {
+          if (device && typeof device.close === 'function') device.close();
+        } catch (_) {}
+        done(false);
+      }, 7500);
+
       try {
         console.log(`[ImpresionDirecta] Conectando a impresora de ${tipo} en ${ip}:${port}...`);
-        const device = new escpos.Network(ip, port, { timeout: 5000 });
+        device = new escpos.Network(ip, port, { timeout: 5000 });
         const printer = new escpos.Printer(device);
 
         device.open(async (error: any) => {
           if (error) {
             console.error(`[ImpresionDirecta] Error abriendo impresora de ${tipo} en ${ip}:`, error.message);
-            return resolve(false);
+            return done(false);
           }
 
           try {
@@ -786,7 +915,7 @@ export class ImpresionService {
               .align('ct')
               .style('b')
               .size(1, 1)
-              .text(pedido.esAdicion ? '*** ADICIÓN DOMICILIO ***' : 'DOMICILIO')
+              .text(pedido.esAdicion ? '*** ADICION DOMICILIO ***' : 'DOMICILIO')
               .size(0, 0)
               .text(`COCINA - ${tipo.toUpperCase()}`)
               .text('--------------------------------');
@@ -801,11 +930,11 @@ export class ImpresionService {
             const fechaPedido = pedido?.fecha || pedido?.created_at || pedido?.createdAt || pedido?.fecha_creacion;
             printer
               .align('lt')
-              .text(`Tel: ${pedido.cliente_telefono || ''}`)
-              .text(`Nombre: ${pedido.cliente_nombre || ''}`)
-              .text(`Dir: ${pedido.cliente_direccion || ''}`)
-              .text(`Barrio: ${pedido.cliente_barrio || ''}`)
-              .text(`Domiciliario: ${pedido.domiciliario || ''}`)
+              .text(`Tel: ${this.sanitizeTextForThermal(String(pedido.cliente_telefono || ''))}`)
+              .text(`Nombre: ${this.sanitizeTextForThermal(String(pedido.cliente_nombre || ''))}`)
+              .text(`Dir: ${this.sanitizeTextForThermal(String(pedido.cliente_direccion || ''))}`)
+              .text(`Barrio: ${this.sanitizeTextForThermal(String(pedido.cliente_barrio || ''))}`)
+              .text(`Domiciliario: ${this.sanitizeTextForThermal(String(pedido.domiciliario || ''))}`)
               .text(`Fecha: ${this.formatDate(fechaPedido)}`)
               .text('--------------------------------');
 
@@ -817,7 +946,7 @@ export class ImpresionService {
               printer.style('normal').size(0, 0);
               if (item.notas) {
                 printer.style('b').size(1, 1);
-                this.printWrappedText(printer, `* NOTA: ${item.notas.toUpperCase()}`, 16);
+                this.printWrappedText(printer, `* NOTA: ${String(item.notas).toUpperCase()}`, 16);
                 printer.style('normal').size(0, 0);
               }
             });
@@ -831,15 +960,15 @@ export class ImpresionService {
               .close();
 
             console.log(`[ImpresionDirecta] Ticket de domicilio enviado a ${tipo} exitosamente.`);
-            resolve(true);
+            done(true);
           } catch (ticketErr: any) {
             console.error(`[ImpresionDirecta] Error formateando ticket domicilio ${tipo}:`, ticketErr.message);
-            resolve(false);
+            done(false);
           }
         });
       } catch (err: any) {
         console.error(`[ImpresionDirecta] Excepción al imprimir domicilio en ${tipo}:`, err.message);
-        resolve(false);
+        done(false);
       }
     });
   }
@@ -867,22 +996,37 @@ export class ImpresionService {
     const port = 9100;
 
     return new Promise((resolve) => {
+      let settled = false;
+      let device: any = null;
+      const done = (val: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(safetyTimer);
+        resolve(val);
+      };
+      const safetyTimer = setTimeout(() => {
+        try {
+          if (device && typeof device.close === 'function') device.close();
+        } catch (_) {}
+        done(false);
+      }, 4500);
+
       try {
-        const device = new escpos.Network(targetIp, port, { timeout: 3000 });
+        device = new escpos.Network(targetIp, port, { timeout: 3000 });
         const printer = new escpos.Printer(device);
 
         device.open((error: any) => {
           if (error) {
             console.error(`[ImpresionDirecta] Error abriendo impresora de Caja para cajón:`, error.message);
-            return resolve(false);
+            return done(false);
           }
           printer.cashdraw(2).cashdraw(5).close();
           console.log(`[ImpresionDirecta] Pulso de cajón enviado exitosamente.`);
-          resolve(true);
+          done(true);
         });
       } catch (err: any) {
         console.error(`[ImpresionDirecta] Excepción al abrir cajón:`, err.message);
-        resolve(false);
+        done(false);
       }
     });
   }
@@ -898,16 +1042,32 @@ export class ImpresionService {
 
     const port = 9100;
     return new Promise((resolve) => {
+      let settled = false;
+      let device: any = null;
+      const done = (val: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(safetyTimer);
+        resolve(val);
+      };
+      const safetyTimer = setTimeout(() => {
+        console.error(`[ImpresionDirecta] Timeout de seguridad (7.5s) en factura (${targetIpOrName}:${port}).`);
+        try {
+          if (device && typeof device.close === 'function') device.close();
+        } catch (_) {}
+        done(false);
+      }, 7500);
+
       try {
         console.log(`[ImpresionDirecta] Imprimiendo recibo cliente en ${targetIpOrName}:${port}...`);
-        const device = new escpos.Network(targetIpOrName, port, { timeout: 5000 });
+        device = new escpos.Network(targetIpOrName, port, { timeout: 5000 });
         const printer = new escpos.Printer(device);
 
         device.open(async (error: any) => {
           try {
             if (error) {
               console.error(`[ImpresionDirecta] Error abriendo impresora factura (${targetIpOrName}):`, error.message);
-              return resolve(false);
+              return done(false);
             }
 
             const esDomicilio = pedido.tipo === 'Domicilio';
@@ -939,7 +1099,9 @@ export class ImpresionService {
             }
 
             const shortId = String(pedido.id || '').length > 8 ? String(pedido.id).slice(0, 8) : pedido.id || '';
-            const mesaDisplay = esBarra || String(pedido.tipo || '').toLowerCase().includes('llevar') ? 'PARA LLEVAR' : `Mesa ${pedido.mesa || ''}`;
+            const mesaDisplay = this.sanitizeTextForThermal(
+              esBarra || String(pedido.tipo || '').toLowerCase().includes('llevar') ? 'PARA LLEVAR' : `Mesa ${pedido.mesa || ''}`
+            );
             const fechaPedido = pedido?.fecha || pedido?.created_at || pedido?.createdAt || pedido?.fecha_creacion;
 
             printer
@@ -949,14 +1111,15 @@ export class ImpresionService {
               .style('normal')
               .text(`Fecha: ${this.formatDate(fechaPedido)}`);
 
-            const clienteNombreEsc =
-              pedido.cliente_nombre || (typeof pedido.cliente === 'string' ? pedido.cliente : pedido.cliente?.nombre || '');
+            const clienteNombreEsc = this.sanitizeTextForThermal(
+              String(pedido.cliente_nombre || (typeof pedido.cliente === 'string' ? pedido.cliente : pedido.cliente?.nombre || ''))
+            );
             if (pedido.tipo === 'Domicilio' || clienteNombreEsc || pedido.cliente_barrio) {
               if (clienteNombreEsc) printer.text(`Cliente: ${clienteNombreEsc}`);
-              if (pedido.cliente_telefono) printer.text(`Tel: ${pedido.cliente_telefono}`);
-              if (pedido.cliente_direccion) printer.text(`Dir: ${pedido.cliente_direccion}`);
-              if (pedido.cliente_barrio) printer.style('b').text(`Barrio: ${pedido.cliente_barrio}`).style('normal');
-              if (pedido.domiciliario) printer.text(`Repartidor: ${pedido.domiciliario}`);
+              if (pedido.cliente_telefono) printer.text(`Tel: ${this.sanitizeTextForThermal(String(pedido.cliente_telefono))}`);
+              if (pedido.cliente_direccion) printer.text(`Dir: ${this.sanitizeTextForThermal(String(pedido.cliente_direccion))}`);
+              if (pedido.cliente_barrio) printer.style('b').text(`Barrio: ${this.sanitizeTextForThermal(String(pedido.cliente_barrio))}`).style('normal');
+              if (pedido.domiciliario) printer.text(`Repartidor: ${this.sanitizeTextForThermal(String(pedido.domiciliario))}`);
             }
 
             printer.text('--------------------------------');
@@ -974,10 +1137,11 @@ export class ImpresionService {
             if (itemsListEsc.length > 0) {
               itemsListEsc.forEach((item: any) => {
                 const sub = (Number(item.precio) || 0) * (Number(item.qty) || 1);
-                printer.align('lt').text(`${item.qty || 1}x ${item.nombre || ''} - $${sub.toLocaleString('es-CO')}`);
+                const cleanItemName = this.sanitizeTextForThermal(String(item.nombre || ''));
+                printer.align('lt').text(`${item.qty || 1}x ${cleanItemName} - $${sub.toLocaleString('es-CO')}`);
                 if (item.notas) {
                   printer.style('b').size(1, 1);
-                  this.printWrappedText(printer, `* NOTA: ${item.notas.toUpperCase()}`, 16);
+                  this.printWrappedText(printer, `* NOTA: ${String(item.notas).toUpperCase()}`, 16);
                   printer.style('normal').size(0, 0);
                 }
               });
@@ -999,7 +1163,9 @@ export class ImpresionService {
             printer.align('rt');
             printer.text(`Subtotal: $${(Number(pedido.subtotal) || 0).toLocaleString('es-CO')}`);
             if (costoDomi > 0) {
-              printer.text(`Domicilio (${pedido.cliente_barrio || 'Barrio'}): $${Number(costoDomi).toLocaleString('es-CO')}`);
+              printer.text(
+                `Domicilio (${this.sanitizeTextForThermal(String(pedido.cliente_barrio || 'Barrio'))}): $${Number(costoDomi).toLocaleString('es-CO')}`
+              );
             }
             if (pedido.impuesto_valor > 0) {
               printer.text(`Impuesto (${pedido.impuesto_porcentaje || 0}%): $${Number(pedido.impuesto_valor).toLocaleString('es-CO')}`);
@@ -1024,12 +1190,12 @@ export class ImpresionService {
             if (pagosMixtosEsc.length > 0) {
               printer.text(`Metodo de Pago: PAGO MIXTO`);
               pagosMixtosEsc.forEach((sub: any) => {
-                printer.text(` - ${sub.metodo}: $${(Number(sub.monto) || 0).toLocaleString('es-CO')}`);
+                printer.text(` - ${this.sanitizeTextForThermal(String(sub.metodo || ''))}: $${(Number(sub.monto) || 0).toLocaleString('es-CO')}`);
               });
               if (pedido.monto_entregado > 0) printer.text(`Paga en efectivo con: $${(pedido.monto_entregado || 0).toLocaleString('es-CO')}`);
               if (pedido.vuelto > 0) printer.text(`Cambio / Vuelto: $${(pedido.vuelto || 0).toLocaleString('es-CO')}`);
             } else {
-              printer.text(`Metodo de Pago: ${pedido.metodo_pago || 'No especificado'}`);
+              printer.text(`Metodo de Pago: ${this.sanitizeTextForThermal(String(pedido.metodo_pago || 'No especificado'))}`);
               if (pedido.metodo_pago === 'Efectivo' && (pedido.monto_entregado > 0 || pedido.vuelto > 0)) {
                 printer.text(`Entregado: $${(pedido.monto_entregado || 0).toLocaleString('es-CO')}`);
                 printer.text(`Cambio / Vuelto: $${(pedido.vuelto || 0).toLocaleString('es-CO')}`);
@@ -1043,18 +1209,18 @@ export class ImpresionService {
               printer.cashdraw(2);
             }
 
-            printer.align('ct').feed(1).text('¡Gracias por su compra!').feed(1).cut().close();
+            printer.align('ct').feed(1).text('Gracias por su compra!').feed(1).cut().close();
 
             console.log(`[ImpresionDirecta] Recibo impreso exitosamente en ${targetIpOrName}.`);
-            resolve(true);
+            done(true);
           } catch (innerErr: any) {
             console.error(`[ImpresionDirecta] Excepción formateando factura:`, innerErr.message);
-            resolve(false);
+            done(false);
           }
         });
       } catch (err: any) {
         console.error(`[ImpresionDirecta] Excepción al conectar para recibo:`, err.message);
-        resolve(false);
+        done(false);
       }
     });
   }
@@ -1070,16 +1236,32 @@ export class ImpresionService {
 
     const port = 9100;
     return new Promise((resolve) => {
+      let settled = false;
+      let device: any = null;
+      const done = (val: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(safetyTimer);
+        resolve(val);
+      };
+      const safetyTimer = setTimeout(() => {
+        console.error(`[ImpresionDirecta] Timeout de seguridad (7.5s) en pre-cuenta (${targetIpOrName}:${port}).`);
+        try {
+          if (device && typeof device.close === 'function') device.close();
+        } catch (_) {}
+        done(false);
+      }, 7500);
+
       try {
         console.log(`[ImpresionDirecta] Imprimiendo pre-cuenta en ${targetIpOrName}:${port}...`);
-        const device = new escpos.Network(targetIpOrName, port, { timeout: 5000 });
+        device = new escpos.Network(targetIpOrName, port, { timeout: 5000 });
         const printer = new escpos.Printer(device);
 
         device.open(async (error: any) => {
           try {
             if (error) {
               console.error(`[ImpresionDirecta] Error abriendo impresora para pre-cuenta (${targetIpOrName}):`, error.message);
-              return resolve(false);
+              return done(false);
             }
 
             const esBarra =
@@ -1113,7 +1295,7 @@ export class ImpresionService {
             }
 
             const shortId = String(pedido.id || '').length > 8 ? String(pedido.id).slice(0, 8) : pedido.id || '';
-            const mesaDisplay = esBarra ? 'BARRA' : `Mesa ${pedido.mesa || ''}`;
+            const mesaDisplay = this.sanitizeTextForThermal(esBarra ? 'BARRA' : `Mesa ${pedido.mesa || ''}`);
             const fechaPedido = pedido?.fecha || pedido?.created_at || pedido?.createdAt || pedido?.fecha_creacion;
 
             printer
@@ -1121,9 +1303,9 @@ export class ImpresionService {
               .text(`Pedido ID: ${shortId}`)
               .text(`Fecha: ${this.formatDate(fechaPedido)}`);
 
-            if (pedido.mesero) printer.text(`Atendido por: ${pedido.mesero}`);
+            if (pedido.mesero) printer.text(`Atendido por: ${this.sanitizeTextForThermal(String(pedido.mesero))}`);
             if (pedido.cliente_nombre && pedido.cliente_nombre !== 'Cliente Mesa') {
-              printer.text(`Cliente: ${pedido.cliente_nombre}`);
+              printer.text(`Cliente: ${this.sanitizeTextForThermal(String(pedido.cliente_nombre))}`);
             }
 
             printer.text('--------------------------------');
@@ -1141,10 +1323,11 @@ export class ImpresionService {
             if (itemsListEsc.length > 0) {
               itemsListEsc.forEach((item: any) => {
                 const sub = (Number(item.precio) || 0) * (Number(item.qty) || 1);
-                printer.align('lt').text(`${item.qty || 1}x ${item.nombre || ''} - $${sub.toLocaleString('es-CO')}`);
+                const cleanItemName = this.sanitizeTextForThermal(String(item.nombre || ''));
+                printer.align('lt').text(`${item.qty || 1}x ${cleanItemName} - $${sub.toLocaleString('es-CO')}`);
                 if (item.notas) {
                   printer.style('b').size(1, 1);
-                  this.printWrappedText(printer, `* NOTA: ${item.notas.toUpperCase()}`, 16);
+                  this.printWrappedText(printer, `* NOTA: ${String(item.notas).toUpperCase()}`, 16);
                   printer.style('normal').size(0, 0);
                 }
               });
@@ -1174,15 +1357,15 @@ export class ImpresionService {
               .close();
 
             console.log(`[ImpresionDirecta] Pre-cuenta impresa exitosamente en ${targetIpOrName}.`);
-            resolve(true);
+            done(true);
           } catch (innerErr: any) {
             console.error(`[ImpresionDirecta] Excepción formateando pre-cuenta:`, innerErr.message);
-            resolve(false);
+            done(false);
           }
         });
       } catch (err: any) {
         console.error(`[ImpresionDirecta] Excepción al conectar para pre-cuenta:`, err.message);
-        resolve(false);
+        done(false);
       }
     });
   }
@@ -1198,7 +1381,9 @@ export class ImpresionService {
       return { success: false, message: 'Impresora o dirección IP no especificada.', ip: '' };
     }
 
-    const sampleText = `=================================\n      PRUEBA DE IMPRESIÓN\n---------------------------------\nImpresora: ${tipo.toUpperCase()}\nDestino: ${ip}\nFecha: ${this.formatDate(new Date())}\n---------------------------------\nPrueba de Impresión Exitosa\nSistema Yiyo Burger POS OK\n=================================\n\n\n`;
+    const sampleText = this.sanitizeTextForThermal(
+      `=================================\n      PRUEBA DE IMPRESION\n---------------------------------\nImpresora: ${tipo.toUpperCase()}\nDestino: ${ip}\nFecha: ${this.formatDate(new Date())}\n---------------------------------\nPrueba de Impresion Exitosa\nSistema Yiyo Burger POS OK\n=================================\n\n\n`
+    );
 
     const isIpAddress = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip);
     if (!isIpAddress && ip.toLowerCase() !== '127.0.0.1' && ip.toLowerCase() !== 'localhost') {
@@ -1246,14 +1431,14 @@ export class ImpresionService {
               .align('ct')
               .style('b')
               .size(1, 1)
-              .text('PRUEBA DE IMPRESIÓN')
+              .text('PRUEBA DE IMPRESION')
               .size(0, 0)
               .text('--------------------------------')
               .text(`Impresora: ${tipo.toUpperCase()}`)
               .text(`IP: ${ip}:${port}`)
               .text(`Fecha: ${this.formatDate(new Date())}`)
               .text('--------------------------------')
-              .text('Conexión TCP/IP exitosa')
+              .text('Conexion TCP/IP exitosa')
               .text('Sistema Yiyo Burger POS OK')
               .feed(1)
               .cut()
@@ -1300,7 +1485,7 @@ export class ImpresionService {
           console.error('[Impresion] Error listando impresoras de Windows:', err);
           return resolve([]);
         }
-        let printerList = stdout.split('\r\n').map((p: string) => p.trim()).filter(Boolean);
+        let printerList = stdout.split(/\r?\n/).map((p: string) => p.trim()).filter(Boolean);
         printerList = printerList.filter((p) => !/onenote|xps|fax|pdf/i.test(p));
         printerList.sort((a, b) => {
           const aCopy = a.includes('(copy');
@@ -1318,7 +1503,6 @@ export class ImpresionService {
     text: string | Buffer,
     preferredPrinterName?: string
   ): Promise<{ success: boolean; printerName?: string; message?: string }> {
-    const { exec } = require('child_process');
     const fs = require('fs');
     const path = require('path');
     const os = require('os');
@@ -1332,10 +1516,21 @@ export class ImpresionService {
     const isIp = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(preferredPrinterName?.trim() || '');
     const searchName = isIp ? '' : preferredPrinterName?.trim() || '';
 
-    const exactMatch = searchName ? printerList.find((p) => p.trim().toLowerCase() === searchName.toLowerCase()) : null;
+    const exactMatch = searchName
+      ? printerList.find((p) => p.trim().toLowerCase() === searchName.toLowerCase())
+      : null;
+
+    const partialMatch =
+      !exactMatch && searchName
+        ? printerList.find(
+            (p) => !p.toLowerCase().includes('(copy') && p.toLowerCase().includes(searchName.toLowerCase())
+          ) || printerList.find((p) => p.toLowerCase().includes(searchName.toLowerCase()))
+        : null;
 
     if (exactMatch) {
       targetPrinter = exactMatch;
+    } else if (partialMatch) {
+      targetPrinter = partialMatch;
     } else if (searchName && searchName.toLowerCase().includes('pos-58')) {
       targetPrinter =
         printerList.find((p) => p.toLowerCase() === 'pos-58') ||
@@ -1364,7 +1559,14 @@ export class ImpresionService {
     console.log(`[Impresion] Imprimiendo vía Win32 Raw Spooler en: "${targetPrinter}"...`);
     const randomSuffix = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const tempFile = path.join(os.tmpdir(), `ticket_${randomSuffix}.bin`);
-    const psScript = path.join(__dirname, '..', 'utils', 'print-raw.ps1');
+    const distScript = path.join(__dirname, '..', 'utils', 'print-raw.ps1');
+    const srcScript = path.resolve(process.cwd(), 'src', 'modules', 'impresion', 'utils', 'print-raw.ps1');
+    const rootSrcScript = path.resolve(process.cwd(), 'backend', 'src', 'modules', 'impresion', 'utils', 'print-raw.ps1');
+    const psScript = fs.existsSync(distScript)
+      ? distScript
+      : fs.existsSync(srcScript)
+      ? srcScript
+      : rootSrcScript;
 
     return new Promise((resolve) => {
       try {
@@ -1379,6 +1581,7 @@ export class ImpresionService {
         execFile(
           'powershell.exe',
           ['-ExecutionPolicy', 'Bypass', '-File', psScript, '-PrinterName', targetPrinter, '-FilePath', tempFile],
+          { timeout: 10000 },
           (psErr: any, psStdout: string) => {
             try {
               fs.unlinkSync(tempFile);

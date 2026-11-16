@@ -14,6 +14,7 @@ export interface EnqueueJobOptions {
   destino: string;
   payload: any;
   max_intentos?: number;
+  forceReprint?: boolean;
 }
 
 export class PrintQueueService {
@@ -47,13 +48,17 @@ export class PrintQueueService {
 
   private computePayloadHash(payload: any): string {
     try {
-      const items = (payload?.items || payload?.pedido?.items || []).map((i: any) => ({
+      const pedidoObj = payload?.pedido || payload || {};
+      const items = (payload?.items || pedidoObj?.items || []).map((i: any) => ({
         id: String(i.id || i.nombre),
         qty: Number(i.qty || 1),
         notas: String(i.notas || '').trim(),
       }));
-      const esAdicion = Boolean(payload?.pedido?.esAdicion || payload?.esAdicion);
-      const str = JSON.stringify({ items, esAdicion });
+      const esAdicion = Boolean(pedidoObj?.esAdicion || payload?.esAdicion);
+      const mesa = String(pedidoObj?.mesa || '').trim();
+      const total = Number(pedidoObj?.total || 0);
+      const metodoPago = String(pedidoObj?.metodo_pago || '').trim();
+      const str = JSON.stringify({ items, esAdicion, mesa, total, metodoPago });
       return crypto.createHash('md5').update(str).digest('hex');
     } catch (_) {
       return '';
@@ -124,8 +129,18 @@ export class PrintQueueService {
       return savedFailed;
     }
 
-    // Verificación de idempotencia por hash de contenido (15 segundos para el mismo pedido)
-    if (options.pedido_id && options.tipo_ticket !== 'prueba' && options.tipo_ticket !== 'cajon') {
+    // Verificación de idempotencia por hash de contenido (15 segundos para el mismo pedido y destino)
+    const isManualReprint = Boolean(
+      options.forceReprint ||
+      options.payload?.pedido?.esReimpresion ||
+      options.payload?.esReimpresion
+    );
+    if (
+      !isManualReprint &&
+      options.pedido_id &&
+      options.tipo_ticket !== 'prueba' &&
+      options.tipo_ticket !== 'cajon'
+    ) {
       const fifteenSecondsAgo = new Date(Date.now() - 15000);
       const incomingHash = this.computePayloadHash(options.payload);
 
@@ -133,6 +148,7 @@ export class PrintQueueService {
         where: {
           pedido_id: options.pedido_id,
           tipo_ticket: options.tipo_ticket,
+          destino: cleanDestino,
           created_at: MoreThan(fifteenSecondsAgo),
           estado: Not('fallido'),
         },
@@ -142,7 +158,7 @@ export class PrintQueueService {
         const existingHash = this.computePayloadHash(existingJob.payload);
         if (existingHash === incomingHash) {
           console.log(
-            `[PrintQueue] ⚠️ Trabajo idéntico duplicado ignorado por idempotencia (pedido ${options.pedido_id}, tipo ${options.tipo_ticket}).`
+            `[PrintQueue] ⚠️ Trabajo idéntico duplicado ignorado por idempotencia (pedido ${options.pedido_id}, tipo ${options.tipo_ticket}, destino ${cleanDestino}).`
           );
           return existingJob;
         }

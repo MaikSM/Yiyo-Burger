@@ -146,7 +146,7 @@
                 @if (mesa.estado === 'ocupada') {
                   <button (click)="reimprimirTicketMesaDesdeMapa(mesa, $event)" 
                           class="absolute -top-3 -left-3 bg-blue-700 hover:bg-blue-600 text-white w-8 h-8 rounded-full border-2 border-gray-700 opacity-90 hover:opacity-100 transition-all flex items-center justify-center shadow-lg z-20" 
-                          title="Reimprimir Ticket / Factura de esta Mesa">
+                          title="Reimprimir Comanda en Cocina (Parrilla / Pizzas)">
                     <i class="fas fa-print text-xs"></i>
                   </button>
                 }
@@ -290,8 +290,8 @@
           </button>
         }
         @if (activeOrderId()) {
-          <button (click)="reimprimirTicketMesaActual()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs xl:text-sm font-bold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-md whitespace-nowrap" title="Reimprimir Ticket / Precuenta">
-            <i class="fas fa-print"></i> Reimprimir Factura
+          <button (click)="reimprimirTicketMesaActual()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs xl:text-sm font-bold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-md whitespace-nowrap" title="Reimprimir Comanda en la impresora correspondiente (Parrilla / Pizzas)">
+            <i class="fas fa-print"></i> Reimprimir Comanda
           </button>
           <button (click)="openCambiarMesaModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs xl:text-sm font-bold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-md whitespace-nowrap">
             <i class="fas fa-exchange-alt"></i> Cambiar de Mesa
@@ -593,7 +593,7 @@
                 <span class="truncate">Enviar a Cocina y Ocupar</span>
               </button>
             } @else {
-              <button (click)="reimprimirTicketMesaActual()" class="w-full min-w-0 bg-blue-700 hover:bg-blue-600 text-white text-xs xl:text-[13px] font-bold py-2.5 px-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-lg text-center leading-tight" title="Reimprimir Ticket / Precuenta de la Mesa">
+              <button (click)="reimprimirTicketMesaActual()" class="w-full min-w-0 bg-blue-700 hover:bg-blue-600 text-white text-xs xl:text-[13px] font-bold py-2.5 px-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-lg text-center leading-tight" title="Reimprimir Comanda en la impresora correspondiente (Parrilla / Pizzas)">
                 <i class="fas fa-print shrink-0"></i>
                 <span class="truncate">Reimprimir Ticket</span>
               </button>

@@ -23,6 +23,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 
 export interface CambioCaja {
+  id?: string;
   fecha: string;
   monto_anterior: number;
   monto_nuevo: number;
@@ -30,6 +31,7 @@ export interface CambioCaja {
   tipo: 'Ingreso' | 'Gasto' | 'Apertura';
   monto_gasto?: number;
   metodo_pago?: string;
+  categoria?: string;
 }
 
 export interface CajaDiaria {
@@ -38,6 +40,8 @@ export interface CajaDiaria {
   fecha_apertura: string;
   base_inicial: number;
   base_actual: number;
+  gastos_efectivo?: number;
+  total_gastos?: number;
   historial_cambios: CambioCaja[];
   estadisticas?: any;
   ventas_efectivo?: number;
@@ -68,6 +72,7 @@ export class AdminLayoutSideBarComponent implements OnInit, OnDestroy, AfterView
 
   currentTime = signal<Date>(new Date());
   private timer: any;
+  private realTimeSub: any;
 
   caja = signal<CajaDiaria | null>(null);
   showCajaModal = signal(false);
@@ -76,6 +81,8 @@ export class AdminLayoutSideBarComponent implements OnInit, OnDestroy, AfterView
   
   montoGasto = signal<number | string>('');
   motivoGasto = signal<string>('');
+  metodoGasto = signal<string>('Efectivo');
+  categoriaGasto = signal<string>('Operativo');
   
   cajaResumen = signal<any>(null); // For closing stats
   mesasOcupadasError = signal<string | null>(null);
@@ -153,6 +160,21 @@ export class AdminLayoutSideBarComponent implements OnInit, OnDestroy, AfterView
       this.currentTime.set(new Date());
     }, 1000);
     this.loadCaja();
+
+    this.realTimeSub = this._pedidosService.getEventsStream().subscribe({
+      next: (evt) => {
+        if (
+          evt?.type === 'pedido_created' ||
+          evt?.type === 'pedido_updated' ||
+          evt?.type === 'pedido_deleted' ||
+          evt?.type === 'gasto_changed' ||
+          evt?.type === 'caja_changed'
+        ) {
+          this.loadCaja();
+        }
+      },
+      error: () => {},
+    });
   }
 
   ngAfterViewInit(): void {
@@ -189,45 +211,23 @@ export class AdminLayoutSideBarComponent implements OnInit, OnDestroy, AfterView
     if (this.timer) {
       clearInterval(this.timer);
     }
+    if (this.realTimeSub) {
+      this.realTimeSub.unsubscribe();
+    }
   }
 
-  getGastosFromStorage(cajaId: number | string): any[] {
-    try {
-      const key = `restausync_caja_gastos_${cajaId}`;
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (e) {
-      console.error('Error cargando gastos de storage:', e);
-    }
-    return [];
-  }
-
-  saveGastosToStorage(cajaId: number | string, gastos: any[]) {
-    try {
-      const key = `restausync_caja_gastos_${cajaId}`;
-      localStorage.setItem(key, JSON.stringify(gastos));
-      
-      // Sincronizar también con restausync_gastos_diarios para el módulo de Reportes
-      const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
-      const storedReportes = localStorage.getItem('restausync_gastos_diarios');
-      let gastosMap: Record<string, any[]> = storedReportes ? JSON.parse(storedReportes) : {};
-      
-      const reportesGastos = gastos.map(g => ({
-        id: g.fecha,
-        fecha: g.fecha,
-        monto: Number(g.monto_gasto || g.monto || 0),
-        motivo: g.motivo || 'Gasto de caja',
-        metodoPago: g.metodo_pago || 'Efectivo',
-        categoria: 'Operativo'
-      }));
-      
-      gastosMap[todayStr] = reportesGastos;
-      localStorage.setItem('restausync_gastos_diarios', JSON.stringify(gastosMap));
-    } catch (e) {
-      console.error('Error guardando gastos en storage:', e);
-    }
+  private mapBackendGastos(gastosBD: any[]): CambioCaja[] {
+    return (gastosBD || []).map((g: any) => ({
+      id: g.id,
+      fecha: g.created_at || g.fecha,
+      monto_anterior: 0,
+      monto_nuevo: 0,
+      motivo: g.motivo,
+      tipo: 'Gasto' as const,
+      monto_gasto: Number(g.monto) || 0,
+      metodo_pago: g.metodo_pago || 'Efectivo',
+      categoria: g.categoria || 'Operativo',
+    }));
   }
 
   loadCaja() {
@@ -235,78 +235,62 @@ export class AdminLayoutSideBarComponent implements OnInit, OnDestroy, AfterView
       next: (res) => {
         if (res && res.abierto && res.data) {
           const t = res.data;
+          const baseInicial = Number(t.monto_inicial) || 0;
+          const vEfectivo = Number(t.ventas_efectivo) || 0;
+          const vTarjeta = Number(t.ventas_tarjeta) || 0;
+          const vTransferencia = Number(t.ventas_transferencia) || 0;
 
-          this._gastosService.getAll(undefined, Number(t.id)).subscribe({
-            next: (gastosBD) => {
-              const localGastos = (gastosBD || []).map((g: any) => ({
-                id: g.id,
-                fecha: g.created_at || g.fecha,
-                monto_anterior: 0,
-                monto_nuevo: 0,
-                motivo: g.motivo,
-                tipo: 'Gasto' as const,
-                monto_gasto: Number(g.monto) || 0,
-                metodo_pago: g.metodo_pago || 'Efectivo'
-              }));
+          const applyWithGastos = (gastosList: any[]) => {
+            const mappedGastos = this.mapBackendGastos(gastosList);
+            const gastosEfectivo = mappedGastos
+              .filter((g) => (g.metodo_pago || 'Efectivo').toLowerCase().includes('efectivo'))
+              .reduce((sum, g) => sum + Number(g.monto_gasto || 0), 0);
+            const totalGastos = mappedGastos.reduce((sum, g) => sum + Number(g.monto_gasto || 0), 0);
+            const baseActualCalc = baseInicial + vEfectivo - gastosEfectivo;
 
-              this.saveGastosToStorage(t.id, localGastos);
+            this.caja.set({
+              id: t.id,
+              estado: 'Abierta',
+              fecha_apertura: t.fecha_apertura,
+              base_inicial: baseInicial,
+              base_actual: baseActualCalc,
+              gastos_efectivo: gastosEfectivo,
+              total_gastos: totalGastos,
+              historial_cambios: mappedGastos,
+              estadisticas: t,
+              ventas_efectivo: vEfectivo,
+              ventas_tarjeta: vTarjeta,
+              ventas_transferencia: vTransferencia,
+              total_ventas: Number(t.total_ventas) || 0,
+            });
+          };
 
-              const totalGastos = localGastos.reduce((sum: number, g: any) => sum + Number(g.monto_gasto || 0), 0);
-              const baseInicial = Number(t.monto_inicial) || 0;
-              const vEfectivo = Number(t.ventas_efectivo) || 0;
-              const baseActualCalc = baseInicial + vEfectivo - totalGastos;
-
-              this.caja.set({
-                id: t.id,
-                estado: 'Abierta',
-                fecha_apertura: t.fecha_apertura,
-                base_inicial: baseInicial,
-                base_actual: baseActualCalc,
-                historial_cambios: localGastos,
-                estadisticas: t,
-                ventas_efectivo: vEfectivo,
-                ventas_tarjeta: Number(t.ventas_tarjeta) || 0,
-                ventas_transferencia: Number(t.ventas_transferencia) || 0,
-                total_ventas: Number(t.total_ventas) || 0,
-              });
-            },
-            error: () => {
-              const localGastos = this.getGastosFromStorage(t.id);
-              const totalGastos = localGastos.reduce((sum: number, g: any) => sum + Number(g.monto_gasto || g.monto || 0), 0);
-              const baseInicial = Number(t.monto_inicial) || 0;
-              const vEfectivo = Number(t.ventas_efectivo) || 0;
-              const baseActualCalc = baseInicial + vEfectivo - totalGastos;
-
-              this.caja.set({
-                id: t.id,
-                estado: 'Abierta',
-                fecha_apertura: t.fecha_apertura,
-                base_inicial: baseInicial,
-                base_actual: baseActualCalc,
-                historial_cambios: localGastos,
-                estadisticas: t,
-                ventas_efectivo: vEfectivo,
-                ventas_tarjeta: Number(t.ventas_tarjeta) || 0,
-                ventas_transferencia: Number(t.ventas_transferencia) || 0,
-                total_ventas: Number(t.total_ventas) || 0,
-              });
-            }
-          });
+          if (Array.isArray(t.gastos_lista)) {
+            applyWithGastos(t.gastos_lista);
+          } else {
+            this._gastosService.getAll(undefined, Number(t.id)).subscribe({
+              next: (gastosBD) => applyWithGastos(gastosBD || []),
+              error: () => applyWithGastos([]),
+            });
+          }
         } else {
           this.caja.set(null);
         }
       },
-      error: () => this.caja.set(null)
+      error: () => this.caja.set(null),
     });
   }
 
   abrirCajaModal() {
     this.showCajaModal.set(true);
+    this.loadCaja();
     const actualCaja = this.caja();
     this.baseInput.set(actualCaja ? actualCaja.base_actual : 50000);
     this.motivoInput.set('');
     this.montoGasto.set('');
     this.motivoGasto.set('');
+    this.metodoGasto.set('Efectivo');
+    this.categoriaGasto.set('Operativo');
     this.cajaResumen.set(null);
     this.mesasOcupadasError.set(null);
 
@@ -338,7 +322,7 @@ export class AdminLayoutSideBarComponent implements OnInit, OnDestroy, AfterView
       },
       error: (err) => {
         alert(err.error?.message || 'Error al abrir el turno de caja en la base de datos');
-      }
+      },
     });
   }
 
@@ -346,6 +330,8 @@ export class AdminLayoutSideBarComponent implements OnInit, OnDestroy, AfterView
     const actualCaja = this.caja();
     const monto = Number(this.montoGasto()) || 0;
     const motivo = (this.motivoGasto() || '').trim();
+    const metodoPago = this.metodoGasto() || 'Efectivo';
+    const categoria = this.categoriaGasto() || 'Operativo';
     if (!actualCaja || monto <= 0 || !motivo) return;
 
     const user = this._authService.user();
@@ -357,42 +343,42 @@ export class AdminLayoutSideBarComponent implements OnInit, OnDestroy, AfterView
       cierre_id: Number(actualCaja.id),
       fecha: todayStr,
       monto: monto,
-      metodo_pago: 'Efectivo',
+      metodo_pago: metodoPago,
       motivo: motivo,
-      categoria: 'Operativo',
-      usuario_nombre: usuarioNombre
+      categoria: categoria,
+      usuario_nombre: usuarioNombre,
     };
 
     this._gastosService.create(payloadGasto).subscribe({
-      next: (gastoCreado: any) => {
-        const historial = actualCaja.historial_cambios || [];
-        const nuevoMonto = actualCaja.base_actual - monto;
-
-        const gastoItem = {
-          id: gastoCreado?.id,
-          fecha: gastoCreado?.created_at || now.toISOString(),
-          monto_anterior: actualCaja.base_actual,
-          monto_nuevo: nuevoMonto,
-          motivo: motivo,
-          tipo: 'Gasto' as const,
-          monto_gasto: monto,
-          metodo_pago: 'Efectivo'
-        };
-
-        historial.unshift(gastoItem);
-        actualCaja.historial_cambios = historial;
-        actualCaja.base_actual = nuevoMonto;
-
-        this.saveGastosToStorage(actualCaja.id, historial);
-        this.caja.set({ ...actualCaja });
+      next: () => {
         this.montoGasto.set('');
         this.motivoGasto.set('');
-        alert(`✅ Egreso de $${monto.toLocaleString()} registrado exitosamente en la base de datos y descontado del cierre de caja.`);
+        this.metodoGasto.set('Efectivo');
+        this.categoriaGasto.set('Operativo');
+        this.loadCaja();
+        alert(`✅ Egreso de $${monto.toLocaleString('es-CO')} (${metodoPago}) registrado en la base de datos y aplicado al cierre de caja.`);
       },
       error: (err: any) => {
         console.error('Error guardando egreso en el servidor:', err);
         alert(err.error?.message || 'Error al guardar el egreso en la base de datos');
-      }
+      },
+    });
+  }
+
+  eliminarGastoTurno(gastoId?: string) {
+    if (!gastoId) return;
+    if (!confirm('¿Seguro que deseas eliminar este egreso registrado en el turno?')) return;
+
+    this._gastosService.delete(gastoId).subscribe({
+      next: () => {
+        this.loadCaja();
+        if (this.cajaResumen()) {
+          this.prepararCierre();
+        }
+      },
+      error: (err: any) => {
+        alert(err.error?.message || 'Error al eliminar el egreso de la base de datos');
+      },
     });
   }
 
@@ -401,182 +387,80 @@ export class AdminLayoutSideBarComponent implements OnInit, OnDestroy, AfterView
     if (!actualCaja) return;
 
     this.mesasOcupadasError.set(null);
-
-    // Cargar historial de gastos actualizado de storage
-    const localGastos = this.getGastosFromStorage(actualCaja.id);
-    actualCaja.historial_cambios = localGastos;
-
-    const totalGastos = localGastos
-      .filter((c: any) => c.tipo === 'Gasto')
-      .reduce((sum: number, c: any) => sum + Number(c.monto_gasto || c.monto || 0), 0);
-
-    const vEfectivo = actualCaja.ventas_efectivo || 0;
-    const vTarjeta = actualCaja.ventas_tarjeta || 0;
-    const vTransferencia = actualCaja.ventas_transferencia || 0;
-    const vTotales = actualCaja.total_ventas || (vEfectivo + vTarjeta + vTransferencia);
-    const totalEsperadoFisico = actualCaja.base_inicial + vEfectivo - totalGastos;
-    const gastos = (actualCaja.historial_cambios || []).filter((c: any) => c.tipo === 'Gasto');
-
-    this.cajaResumen.set({
-      baseInicial: actualCaja.base_inicial,
-      baseActual: actualCaja.base_actual,
-      ventasMesas: 0,
-      ventasMesasCant: 0,
-      ventasDomicilios: 0,
-      ventasDomiciliosCant: 0,
-      ventasTotales: vTotales,
-      ventasEfectivo: vEfectivo,
-      ventasTarjeta: vTarjeta,
-      ventasTransferencia: vTransferencia,
-      ventasOtros: 0,
-      totalGastos,
-      totalEsperado: totalEsperadoFisico,
-      resumenMetodos: [
-        { metodo: 'Efectivo', total: vEfectivo, cantidad: 0 },
-        { metodo: 'Tarjeta', total: vTarjeta, cantidad: 0 },
-        { metodo: 'Transferencia', total: vTransferencia, cantidad: 0 }
-      ],
-      transacciones: [],
-      gastos,
-      totalTransacciones: 0
-    });
-
-    // Cargar desglose detallado de mesas y transacciones en segundo plano de forma asíncrona
     this.cargandoMesas.set(true);
 
     try {
-      const mesas = await firstValueFrom(this._mesasService.getAll());
-      const mesasNoLibres = (mesas || []).filter(m => m.estado !== 'libre');
+      const [mesas, turnoRes] = await Promise.all([
+        firstValueFrom(this._mesasService.getAll(true)),
+        firstValueFrom(this._cierreCajaService.getTurnoAbierto()),
+      ]);
+
+      const mesasNoLibres = (mesas || []).filter((m) => m.estado !== 'libre');
       if (mesasNoLibres.length > 0) {
         this.mesasOcupadasError.set(
           `No se puede cerrar la caja del día: Existe(n) ${mesasNoLibres.length} mesa(s) que aún no está(n) libre(s). Por favor libera todas las mesas antes de continuar.`
         );
       }
-    } catch (err) {
-      console.error('Error al verificar estado de las mesas:', err);
-    } finally {
-      this.cargandoMesas.set(false);
-    }
 
-    try {
-      const pedidos = await firstValueFrom(this._pedidosService.getToday());
-      const fechaApertura = new Date(actualCaja.fecha_apertura).getTime();
+      const t = turnoRes?.data || actualCaja.estadisticas || {};
+      const baseInicial = Number(t.monto_inicial ?? actualCaja.base_inicial ?? 0);
+      const vEfectivo = Number(t.ventas_efectivo ?? 0);
+      const vTarjeta = Number(t.ventas_tarjeta ?? 0);
+      const vTransferencia = Number(t.ventas_transferencia ?? 0);
+      const vOtros = Number(t.ventas_otros ?? 0);
+      const vTotales = Number(t.total_ventas ?? (vEfectivo + vTarjeta + vTransferencia));
 
-      const pedidosHoy = (pedidos || []).filter((p: any) => p.tipo !== 'Domicilio' && (p.estado === 'Completado' || p.estado === 'Pagado') && new Date(p.fecha).getTime() >= fechaApertura);
-      const domiciliosHoy = (pedidos || []).filter((p: any) => p.tipo === 'Domicilio' && (p.estado === 'Completado' || p.estado === 'Pagado') && new Date(p.fecha).getTime() >= fechaApertura);
+      const gastosList = Array.isArray(t.gastos_lista)
+        ? this.mapBackendGastos(t.gastos_lista)
+        : actualCaja.historial_cambios || [];
 
-      const totalPedidos = pedidosHoy.reduce((sum: number, p: any) => sum + Number(p.total || 0), 0);
-      const totalDomicilios = domiciliosHoy.reduce((sum: number, p: any) => sum + Number(p.total || 0), 0);
-      const ventasTotalesCalc = totalPedidos + totalDomicilios;
-      const totalTransacciones = pedidosHoy.length + domiciliosHoy.length;
+      const gastosEfectivo = Number(
+        t.gastos_efectivo ??
+          gastosList
+            .filter((g: any) => (g.metodo_pago || 'Efectivo').toLowerCase().includes('efectivo'))
+            .reduce((sum: number, g: any) => sum + Number(g.monto_gasto || 0), 0)
+      );
+      const totalGastos = Number(
+        t.total_gastos ?? gastosList.reduce((sum: number, g: any) => sum + Number(g.monto_gasto || 0), 0)
+      );
 
-      const todosLosPedidos = [
-        ...pedidosHoy.map((p: any) => ({ ...p, tipo: 'Mesa' })),
-        ...domiciliosHoy.map((d: any) => ({ ...d, tipo: 'Domicilio' }))
-      ];
-      
-      todosLosPedidos.sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-
-      const normalizarMetodo = (m: string): string => {
-        const normalized = (m || '').trim().toLowerCase();
-        if (normalized.includes('efectivo')) return 'Efectivo';
-        if (normalized.includes('tarjeta') || normalized.includes('datáfono') || normalized.includes('datafono') || normalized.includes('bold') || normalized.includes('debito') || normalized.includes('credito')) return 'Tarjeta';
-        if (
-          normalized.includes('transferencia') || 
-          normalized.includes('daviplata') || 
-          normalized.includes('nequi') || 
-          normalized.includes('transfiya') || 
-          normalized.includes('bancolombia')
-        ) {
-          return 'Transferencia';
-        }
-        return 'Otros';
-      };
-
-      let vEfectivoCalc = 0;
-      let vTarjetaCalc = 0;
-      let vTransferenciaCalc = 0;
-      let vOtrosCalc = 0;
-      let cantEfectivo = 0, cantTarjeta = 0, cantTransferencia = 0, cantOtros = 0;
-
-      for (const p of todosLosPedidos) {
-        let pmList: { metodo: string; monto: number }[] = [];
-        if (Array.isArray(p.pagos_mixtos)) {
-          pmList = p.pagos_mixtos;
-        } else if (typeof p.pagos_mixtos === 'string') {
-          try {
-            const parsed = JSON.parse(p.pagos_mixtos);
-            if (Array.isArray(parsed)) pmList = parsed;
-          } catch (e) {}
-        }
-
-        if (pmList.length > 0) {
-          for (const sub of pmList) {
-            const subMonto = Number(sub.monto) || 0;
-            if (subMonto <= 0) continue;
-            const cat = normalizarMetodo(sub.metodo);
-            if (cat === 'Efectivo') { vEfectivoCalc += subMonto; cantEfectivo++; }
-            else if (cat === 'Tarjeta') { vTarjetaCalc += subMonto; cantTarjeta++; }
-            else if (cat === 'Transferencia') { vTransferenciaCalc += subMonto; cantTransferencia++; }
-            else { vOtrosCalc += subMonto; cantOtros++; }
-          }
-        } else {
-          const monto = Number(p.total) || 0;
-          const cat = normalizarMetodo(p.metodo_pago);
-          if (cat === 'Efectivo') { vEfectivoCalc += monto; cantEfectivo++; }
-          else if (cat === 'Tarjeta') { vTarjetaCalc += monto; cantTarjeta++; }
-          else if (cat === 'Transferencia') { vTransferenciaCalc += monto; cantTransferencia++; }
-          else { vOtrosCalc += monto; cantOtros++; }
-        }
-      }
-
-      const resumenMetodos = [
-        { metodo: 'Efectivo', total: vEfectivoCalc, cantidad: cantEfectivo },
-        { metodo: 'Tarjeta', total: vTarjetaCalc, cantidad: cantTarjeta },
-        { metodo: 'Transferencia', total: vTransferenciaCalc, cantidad: cantTransferencia },
-        { metodo: 'Otros', total: vOtrosCalc, cantidad: cantOtros }
-      ];
-
-      const totalEsperadoCalc = Math.max(0, Number(actualCaja.base_inicial || 0) + vEfectivoCalc - totalGastos);
+      const totalEsperadoCalc = baseInicial + vEfectivo - gastosEfectivo;
       this.montoRealContadoInput.set(String(totalEsperadoCalc));
 
-      const transacciones = todosLosPedidos.map((p: any) => {
-        let descripcion = p.tipo === 'Mesa'
-          ? `Mesa ${p.mesa_numero || p.mesa || 'Llevar/Otros'}`
-          : `Domicilio - ${p.cliente_nombre || p.cliente || 'Sin nombre'}`;
-        return {
-          id: p.id,
-          hora: p.fecha,
-          tipo: p.tipo,
-          descripcion,
-          metodo_pago: p.metodo_pago || 'Otros',
-          total: Number(p.total || 0),
-          vuelto: p.vuelto || 0,
-          propina_valor: Number(p.propina_valor || 0)
-        };
-      });
+      const resumenMetodos = Array.isArray(t.resumen_metodos)
+        ? t.resumen_metodos
+        : [
+            { metodo: 'Efectivo', total: vEfectivo, cantidad: 0 },
+            { metodo: 'Tarjeta', total: vTarjeta, cantidad: 0 },
+            { metodo: 'Transferencia', total: vTransferencia, cantidad: 0 },
+          ];
+
+      const transacciones = Array.isArray(t.transacciones) ? t.transacciones : [];
 
       this.cajaResumen.set({
-        baseInicial: actualCaja.base_inicial,
-        baseActual: actualCaja.base_actual,
-        ventasMesas: totalPedidos,
-        ventasMesasCant: pedidosHoy.length,
-        ventasDomicilios: totalDomicilios,
-        ventasDomiciliosCant: domiciliosHoy.length,
-        ventasTotales: ventasTotalesCalc || vTotales,
-        ventasEfectivo: vEfectivoCalc,
-        ventasTarjeta: vTarjetaCalc,
-        ventasTransferencia: vTransferenciaCalc,
-        ventasOtros: vOtrosCalc,
+        baseInicial,
+        baseActual: totalEsperadoCalc,
+        ventasMesas: Number(t.ventas_mesas ?? 0),
+        ventasMesasCant: Number(t.ventas_mesas_cant ?? 0),
+        ventasDomicilios: Number(t.ventas_domicilios ?? 0),
+        ventasDomiciliosCant: Number(t.ventas_domicilios_cant ?? 0),
+        ventasTotales: vTotales,
+        ventasEfectivo: vEfectivo,
+        ventasTarjeta: vTarjeta,
+        ventasTransferencia: vTransferencia,
+        ventasOtros: vOtros,
+        gastosEfectivo,
         totalGastos,
         totalEsperado: totalEsperadoCalc,
         resumenMetodos,
         transacciones,
-        gastos,
-        totalTransacciones
+        gastos: gastosList,
+        totalTransacciones: Number(t.total_transacciones ?? transacciones.length),
       });
     } catch (e) {
-      console.error('Error cargando pedidos detallados en segundo plano:', e);
+      console.error('Error preparando cierre de caja:', e);
+    } finally {
+      this.cargandoMesas.set(false);
     }
   }
 
@@ -588,7 +472,7 @@ export class AdminLayoutSideBarComponent implements OnInit, OnDestroy, AfterView
     this.cargandoMesas.set(true);
 
     try {
-      const mesas = await firstValueFrom(this._mesasService.getAll());
+      const mesas = await firstValueFrom(this._mesasService.getAll(true));
       const mesasNoLibres = (mesas || []).filter(m => m.estado !== 'libre');
       if (mesasNoLibres.length > 0) {
         this.mesasOcupadasError.set(

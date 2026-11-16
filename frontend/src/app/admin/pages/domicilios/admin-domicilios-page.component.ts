@@ -1509,15 +1509,22 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
 
     if (domicilio.id) {
       const newItems = this.calculateNewItems(this.originalOrderItems(), formattedItems);
-      this._pedidosService.update(domicilio.id, payload).subscribe({
-        next: (updatedOrder: any) => {
-          this.onPagoDespachoExitoso(updatedOrder, payload, formattedItems, newItems, isAlreadyCreated, isCompleting, true);
-        },
-        error: (err: any) => alert(err.error?.message || 'Error al procesar el domicilio')
-      });
+      const shouldPrintInKitchen = !isAlreadyCreated && !isCompleting && newItems.length > 0;
+      this._pedidosService
+        .update(domicilio.id, {
+          ...payload,
+          autoPrint: shouldPrintInKitchen,
+          newItemsToPrint: shouldPrintInKitchen ? newItems : [],
+        } as any)
+        .subscribe({
+          next: (updatedOrder: any) => {
+            this.onPagoDespachoExitoso(updatedOrder, payload, formattedItems, newItems, isAlreadyCreated, isCompleting, true);
+          },
+          error: (err: any) => alert(err.error?.message || 'Error al procesar el domicilio')
+        });
     } else {
       delete payload.id;
-      this._pedidosService.createPedido(payload).subscribe({
+      this._pedidosService.createPedido({ ...payload, autoPrint: true }).subscribe({
         next: (createdOrder: any) => {
           this.onPagoDespachoExitoso(createdOrder, payload, formattedItems, formattedItems, false, false, false);
         },
@@ -1557,13 +1564,10 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
     };
 
     if (!isDispatchingFromCard && !isCompleting) {
-      // 1. Registro inicial de pago / actualización: Imprime ticket de comanda a cocina SOLO con ítems nuevos
+      // 1. Registro inicial o actualización: La comanda de cocina ya fue encolada atómicamente por el backend
       if (newItemsToPrint && newItemsToPrint.length > 0) {
-        this._mesasService.confirmarDomicilio(pedidoInfo, newItemsToPrint).subscribe({
-          next: (res: any) => console.log('[Cocina] Comanda de domicilio enviada a impresión:', res),
-          error: (err: any) => console.error('[Cocina] Error al imprimir comanda:', err)
-        });
-        alert(`Pago de domicilio registrado exitosamente (${this.despachoMetodoPago()}). Comanda de adición (${newItemsToPrint.length} ítems) enviada a cocina.`);
+        const tipoMsg = isUpdate ? 'Comanda de adición' : 'Comanda de domicilio';
+        alert(`Pago de domicilio registrado exitosamente (${this.despachoMetodoPago()}). ${tipoMsg} (${newItemsToPrint.length} ítems) enviada a cocina.`);
       } else {
         alert(`Pago de domicilio registrado exitosamente (${this.despachoMetodoPago()}). Domicilio actualizado (sin ítems nuevos para comanda).`);
       }
@@ -1630,6 +1634,8 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
 
     const pedidoInfo = {
       id: order.id,
+      orderNumber: order.orderNumber,
+      domicilioNumber: order.domicilioNumber,
       tipo: order.tipo || 'Domicilio',
       mesa: order.mesa || 'Domicilio',
       cliente_nombre: order.cliente_nombre || order.cliente || 'Cliente Domicilio',

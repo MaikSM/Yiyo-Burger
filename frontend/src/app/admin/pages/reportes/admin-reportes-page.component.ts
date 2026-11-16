@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, signal, computed, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal, computed, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -40,10 +40,11 @@ interface CierreDiario {
   styles: [],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminReportesPageComponent implements OnInit {
+export class AdminReportesPageComponent implements OnInit, OnDestroy {
   private pedidosService = inject(PedidosService);
   private gastosService = inject(GastosService);
   private cierreCajaService = inject(CierreCajaService);
+  private realTimeSub?: any;
   
   Math = Math;
 
@@ -106,15 +107,74 @@ export class AdminReportesPageComponent implements OnInit {
       this.historialPage.set(this.historialPage() + 1);
     }
   }
+
+  private getLocalDateStr(dateInput?: Date | string): string {
+    const d = dateInput ? new Date(dateInput) : new Date();
+    const valid = isNaN(d.getTime()) ? new Date() : d;
+    const year = valid.getFullYear();
+    const month = String(valid.getMonth() + 1).padStart(2, '0');
+    const day = String(valid.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private formatDateHeading(fechaStr: string): string {
+    if (!fechaStr || fechaStr === 'Fecha Desconocida') return 'Fecha Desconocida';
+    const parts = fechaStr.split('-');
+    if (parts.length !== 3) return fechaStr;
+    const localDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
+    if (isNaN(localDate.getTime())) return fechaStr;
+    const formatted = localDate.toLocaleDateString('es-CO', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  }
+
+  private isOrderPaid(p: any): boolean {
+    if (!p || p.estado === 'Cancelado') return false;
+    if (p.tipo === 'Domicilio') {
+      return (
+        (p.estado === 'Completado' ||
+          p.estado === 'Pagado' ||
+          p.estado === 'Enviado' ||
+          p.estado === 'En camino') &&
+        Boolean(p.metodo_pago)
+      );
+    }
+    return p.estado === 'Completado' || p.estado === 'Pagado';
+  }
   
   ngOnInit() {
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    this.selectedDate.set(todayStr);
+    this.selectedDate.set(this.getLocalDateStr());
     
     this.cargarGastos();
     this.cargarHistorialCierres();
     this.loadData();
+
+    this.realTimeSub = this.pedidosService.getEventsStream().subscribe({
+      next: (evt) => {
+        if (
+          evt?.type === 'pedido_created' ||
+          evt?.type === 'pedido_updated' ||
+          evt?.type === 'pedido_deleted' ||
+          evt?.type === 'gasto_changed' ||
+          evt?.type === 'caja_changed'
+        ) {
+          this.cargarGastos();
+          this.cargarHistorialCierres();
+          this.loadData();
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.realTimeSub) {
+      this.realTimeSub.unsubscribe();
+    }
   }
 
   cargarHistorialCierres() {
@@ -133,7 +193,7 @@ export class AdminReportesPageComponent implements OnInit {
             id: g.id || '',
             fecha: g.fecha,
             monto: Number(g.monto) || 0,
-            metodoPago: g.metodo_pago || 'Efectivo',
+            metodoPago: this.getMetodoPagoValue(g.metodo_pago || 'Efectivo'),
             motivo: g.motivo,
             categoria: (g.categoria as any) || 'Otros',
             fechaRegistro: g.created_at ? new Date(g.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : ''
@@ -161,7 +221,7 @@ export class AdminReportesPageComponent implements OnInit {
 
   registrarGasto() {
     const cierre = this.activeSelectedCierre();
-    if (!cierre) return;
+    const targetFecha = cierre?.fecha || (this.filterType() === 'dia' && this.selectedDate() ? this.selectedDate() : this.getLocalDateStr());
     
     const monto = Number(this.gastoMonto());
     const motivo = (this.gastoMotivo() || '').trim();
@@ -178,7 +238,7 @@ export class AdminReportesPageComponent implements OnInit {
     }
 
     const payload: Partial<Gasto> = {
-      fecha: cierre.fecha,
+      fecha: targetFecha,
       monto,
       metodo_pago: metodo,
       motivo,
@@ -188,6 +248,7 @@ export class AdminReportesPageComponent implements OnInit {
     this.gastosService.create(payload).subscribe({
       next: () => {
         this.cargarGastos();
+        this.cargarHistorialCierres();
         this.closeGastoModal();
       },
       error: (err) => alert(err.error?.message || 'Error al registrar el gasto en la base de datos')
@@ -197,7 +258,10 @@ export class AdminReportesPageComponent implements OnInit {
   eliminarGasto(gastoId: string) {
     if (!confirm('¿Seguro que deseas eliminar este gasto registrado?')) return;
     this.gastosService.delete(gastoId).subscribe({
-      next: () => this.cargarGastos(),
+      next: () => {
+        this.cargarGastos();
+        this.cargarHistorialCierres();
+      },
       error: (err) => alert(err.error?.message || 'Error al eliminar el gasto de la base de datos')
     });
   }
@@ -207,7 +271,7 @@ export class AdminReportesPageComponent implements OnInit {
     this.historialPage.set(1);
     const today = new Date();
     if (type === 'dia') {
-      this.selectedDate.set(today.toISOString().split('T')[0]);
+      this.selectedDate.set(this.getLocalDateStr(today));
     } else if (type === 'mes') {
       const currentMonth = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
       this.selectedDate.set(currentMonth);
@@ -221,7 +285,7 @@ export class AdminReportesPageComponent implements OnInit {
   loadData() {
     this.pedidosService.getAll(true).subscribe({
       next: (apiPedidos) => {
-        const validos = (apiPedidos || []).filter((p: Order) => p.estado !== 'Cancelado');
+        const validos = (apiPedidos || []).filter((p: Order) => this.isOrderPaid(p));
         const uniqueMap = new Map<string | number, Order>();
         validos.forEach((p: Order) => {
           let itemsList = p.items || [];
@@ -255,6 +319,7 @@ export class AdminReportesPageComponent implements OnInit {
     if (m === 'bold') return 'Bold';
     if (m === 'crédito' || m === 'credito') return 'Crédito';
     if (m === 'transferencia' || m === 'transfiya' || m === 'bancolombia' || m === 'banco') return 'Transferencia';
+    if (m === 'pago mixto' || m.includes('mixto')) return 'Pago Mixto';
     if (m === 'otros' || m === 'otro') return 'Otros';
 
     if (m.includes('nequi')) return 'Nequi';
@@ -266,11 +331,36 @@ export class AdminReportesPageComponent implements OnInit {
     if (m.includes('transf') || m.includes('banc')) return 'Transferencia';
     if (m.includes('efec')) return 'Efectivo';
 
-    if (['Efectivo', 'Tarjeta', 'Nequi', 'Daviplata', 'Bre-B', 'Bold', 'Crédito', 'Transferencia', 'Otros'].includes(raw)) {
+    if (['Efectivo', 'Tarjeta', 'Nequi', 'Daviplata', 'Bre-B', 'Bold', 'Crédito', 'Transferencia', 'Pago Mixto', 'Otros'].includes(raw)) {
       return raw;
     }
 
     return 'Otros';
+  }
+
+  private extractOrderPayments(order: any): { metodo: string; monto: number }[] {
+    let pagosMixtos: { metodo: string; monto: number }[] = [];
+    if (Array.isArray(order?.pagos_mixtos)) {
+      pagosMixtos = order.pagos_mixtos;
+    } else if (typeof order?.pagos_mixtos === 'string') {
+      try {
+        const parsed = JSON.parse(order.pagos_mixtos);
+        if (Array.isArray(parsed)) pagosMixtos = parsed;
+      } catch (_) {}
+    }
+
+    if (pagosMixtos.length > 0) {
+      return pagosMixtos
+        .filter((sub) => Number(sub?.monto) > 0)
+        .map((sub) => ({
+          metodo: this.getMetodoPagoValue(sub.metodo),
+          monto: Number(sub.monto) || 0,
+        }));
+    }
+
+    const total = Number(order?.total) || 0;
+    const metodo = this.getMetodoPagoValue(order?.metodo_pago);
+    return [{ metodo: metodo === 'Pago Mixto' ? 'Efectivo' : metodo, monto: total }];
   }
 
   cambiarMetodoPago(order: any, nuevoMetodo: string) {
@@ -282,9 +372,10 @@ export class AdminReportesPageComponent implements OnInit {
     // Forzar actualización de las señales computadas de reportes
     this.allOrders.set([...this.allOrders()]);
 
-    this.pedidosService.update(order.id, { metodo_pago: nuevoMetodo }).subscribe({
+    this.pedidosService.update(order.id, { metodo_pago: nuevoMetodo, autoPrint: false } as any).subscribe({
       next: () => {
         console.log(`[Reportes] Método de pago de orden #${order.orderNumber || order.id} actualizado a: ${nuevoMetodo}`);
+        this.cargarHistorialCierres();
       },
       error: (err) => {
         console.error('Error actualizando método de pago en reportes:', err);
@@ -293,6 +384,15 @@ export class AdminReportesPageComponent implements OnInit {
         alert('Error al actualizar el método de pago en el servidor.');
       }
     });
+  }
+
+  private matchesDateFilter(fechaStr: string): boolean {
+    const type = this.filterType();
+    const dateVal = this.selectedDate();
+    if (type === 'todos' || !dateVal) return true;
+    if (type === 'dia') return fechaStr === dateVal;
+    if (type === 'mes' || type === 'ano') return fechaStr.startsWith(dateVal);
+    return true;
   }
 
   filteredOrders = computed(() => {
@@ -306,24 +406,30 @@ export class AdminReportesPageComponent implements OnInit {
       if (!order.fecha) return false;
       const d = new Date(order.fecha);
       if (isNaN(d.getTime())) return false;
-      const orderDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      if (type === 'dia') {
-        return orderDateStr === dateVal;
-      }
-      if (type === 'mes') {
-        return orderDateStr.startsWith(dateVal);
-      }
-      if (type === 'ano') {
-        return orderDateStr.startsWith(dateVal);
-      }
-      return true;
+      const orderDateStr = this.getLocalDateStr(d);
+      return this.matchesDateFilter(orderDateStr);
     });
   });
 
   // --- DASHBOARD METRICS ---
   
   totalIncome = computed(() => {
-    return this.filteredOrders().reduce((acc, order) => acc + (order.total || 0), 0);
+    return this.filteredOrders().reduce((acc, order) => acc + (Number(order.total) || 0), 0);
+  });
+
+  totalFilteredExpenses = computed(() => {
+    const allGastos = this.gastosStorage();
+    let total = 0;
+    for (const [fecha, list] of Object.entries(allGastos)) {
+      if (this.matchesDateFilter(fecha)) {
+        total += (list || []).reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
+      }
+    }
+    return total;
+  });
+
+  netFilteredIncome = computed(() => {
+    return this.totalIncome() - this.totalFilteredExpenses();
   });
   
   totalOrdersCount = computed(() => this.filteredOrders().length);
@@ -340,7 +446,7 @@ export class AdminReportesPageComponent implements OnInit {
     
     orders.forEach(order => {
       const date = new Date(order.fecha).toLocaleDateString('es-CO', { month: 'short', day: 'numeric' });
-      grouped[date] = (grouped[date] || 0) + order.total;
+      grouped[date] = (grouped[date] || 0) + (Number(order.total) || 0);
     });
     
     const labels = Object.keys(grouped).reverse();
@@ -358,15 +464,15 @@ export class AdminReportesPageComponent implements OnInit {
   // --- FINANZAS METRICS ---
   
   totalSubtotal = computed(() => {
-    return this.filteredOrders().reduce((acc, order) => acc + (order.subtotal || 0), 0);
+    return this.filteredOrders().reduce((acc, order) => acc + (Number(order.subtotal) || 0), 0);
   });
 
   totalTaxes = computed(() => {
-    return this.filteredOrders().reduce((acc, order) => acc + (order.impuesto_valor || 0), 0);
+    return this.filteredOrders().reduce((acc, order) => acc + (Number(order.impuesto_valor) || 0), 0);
   });
   
   totalTips = computed(() => {
-    return this.filteredOrders().reduce((acc, order) => acc + (order.propina_valor || 0), 0);
+    return this.filteredOrders().reduce((acc, order) => acc + (Number(order.propina_valor) || 0), 0);
   });
 
   ingresosPorCanal = computed(() => {
@@ -374,8 +480,8 @@ export class AdminReportesPageComponent implements OnInit {
     let mesas = 0;
     let domicilios = 0;
     orders.forEach(o => {
-      if (o.tipo === 'Mesa') mesas += (o.total || 0);
-      else domicilios += (o.total || 0);
+      if (o.tipo === 'Domicilio') domicilios += (Number(o.total) || 0);
+      else mesas += (Number(o.total) || 0);
     });
     const total = mesas + domicilios || 1;
     return {
@@ -395,7 +501,7 @@ export class AdminReportesPageComponent implements OnInit {
       const fecha = new Date(o.fecha);
       if (!isNaN(fecha.getTime())) {
         const diaStr = dias[fecha.getDay()];
-        stats[diaStr] += (o.total || 0);
+        stats[diaStr] += (Number(o.total) || 0);
       }
     });
 
@@ -422,11 +528,13 @@ export class AdminReportesPageComponent implements OnInit {
     };
     
     orders.forEach(order => {
-      const method = this.getMetodoPagoValue(order.metodo_pago);
-      if (methods[method] !== undefined) {
-        methods[method] += (order.total || 0);
-      } else {
-        methods['Otros'] += (order.total || 0);
+      const parts = this.extractOrderPayments(order);
+      for (const p of parts) {
+        if (methods[p.metodo] !== undefined) {
+          methods[p.metodo] += p.monto;
+        } else {
+          methods['Otros'] += p.monto;
+        }
       }
     });
     
@@ -488,28 +596,12 @@ export class AdminReportesPageComponent implements OnInit {
     const orders = this.filteredOrders();
     const allGastos = this.gastosStorage();
     const grouped: Record<string, CierreDiario> = {};
-    
-    orders.forEach(order => {
-      const fechaObj = new Date(order.fecha);
-      const fecha = isNaN(fechaObj.getTime())
-        ? 'Fecha Desconocida'
-        : `${fechaObj.getFullYear()}-${String(fechaObj.getMonth() + 1).padStart(2, '0')}-${String(fechaObj.getDate()).padStart(2, '0')}`;
-      
-      if (!grouped[fecha]) {
-        let fechaFormateada = 'Fecha Desconocida';
-        if (!isNaN(fechaObj.getTime())) {
-          fechaFormateada = fechaObj.toLocaleDateString('es-CO', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          });
-          fechaFormateada = fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1);
-        }
 
+    const ensureDay = (fecha: string): CierreDiario => {
+      if (!grouped[fecha]) {
         grouped[fecha] = {
           fecha,
-          fechaFormateada,
+          fechaFormateada: this.formatDateHeading(fecha),
           totalVentas: 0,
           ingresoBruto: 0,
           totalGastos: 0,
@@ -520,22 +612,32 @@ export class AdminReportesPageComponent implements OnInit {
           gastos: []
         };
       }
+      return grouped[fecha];
+    };
+    
+    orders.forEach(order => {
+      const fechaObj = new Date(order.fecha);
+      const fecha = isNaN(fechaObj.getTime())
+        ? 'Fecha Desconocida'
+        : this.getLocalDateStr(fechaObj);
       
-      const day = grouped[fecha];
+      const day = ensureDay(fecha);
       day.totalVentas++;
-      day.ingresoBruto += (order.total || 0);
+      day.ingresoBruto += (Number(order.total) || 0);
       day.ingresoTotal = day.ingresoBruto;
       
-      // Payment method
-      const method = this.getMetodoPagoValue(order.metodo_pago);
-      let methodObj = day.metodosPago.find(m => m.nombre === method);
-      if (!methodObj) {
-        methodObj = { nombre: method, bruto: 0, gastos: 0, neto: 0, total: 0 };
-        day.metodosPago.push(methodObj);
+      // Desglosar métodos de pago (incluyendo Pago Mixto)
+      const paymentParts = this.extractOrderPayments(order);
+      for (const part of paymentParts) {
+        let methodObj = day.metodosPago.find(m => m.nombre === part.metodo);
+        if (!methodObj) {
+          methodObj = { nombre: part.metodo, bruto: 0, gastos: 0, neto: 0, total: 0 };
+          day.metodosPago.push(methodObj);
+        }
+        methodObj.bruto += part.monto;
+        methodObj.neto = methodObj.bruto - methodObj.gastos;
+        methodObj.total = methodObj.neto;
       }
-      methodObj.bruto += (order.total || 0);
-      methodObj.neto = methodObj.bruto - methodObj.gastos;
-      methodObj.total = methodObj.neto;
       
       // Products
       let rawItems = order.items || [];
@@ -558,22 +660,30 @@ export class AdminReportesPageComponent implements OnInit {
       }
     });
 
+    // Asegurar también los días que tengan gastos registrados dentro del filtro actual aunque aún no tengan ventas
+    for (const fechaGasto of Object.keys(allGastos)) {
+      if (this.matchesDateFilter(fechaGasto) && (allGastos[fechaGasto]?.length || 0) > 0) {
+        ensureDay(fechaGasto);
+      }
+    }
+
     // Incorporar Gastos/Egresos registrados para cada día
     Object.keys(grouped).forEach(fecha => {
       const day = grouped[fecha];
       const dayGastos = allGastos[fecha] || [];
       day.gastos = dayGastos;
-      day.totalGastos = dayGastos.reduce((sum, g) => sum + g.monto, 0);
+      day.totalGastos = dayGastos.reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
       day.ingresoNeto = day.ingresoBruto - day.totalGastos;
 
-      // Restar gastos del método de pago correspondiente
+      // Restar gastos del método de pago correspondiente (normalizado)
       dayGastos.forEach(gasto => {
-        let methodObj = day.metodosPago.find(m => m.nombre.toLowerCase() === gasto.metodoPago.toLowerCase());
+        const normMetodo = this.getMetodoPagoValue(gasto.metodoPago || 'Efectivo');
+        let methodObj = day.metodosPago.find(m => m.nombre.toLowerCase() === normMetodo.toLowerCase());
         if (!methodObj) {
-          methodObj = { nombre: gasto.metodoPago, bruto: 0, gastos: 0, neto: 0, total: 0 };
+          methodObj = { nombre: normMetodo, bruto: 0, gastos: 0, neto: 0, total: 0 };
           day.metodosPago.push(methodObj);
         }
-        methodObj.gastos += gasto.monto;
+        methodObj.gastos += Number(gasto.monto) || 0;
         methodObj.neto = methodObj.bruto - methodObj.gastos;
         methodObj.total = methodObj.neto;
       });
@@ -690,7 +800,7 @@ export class AdminReportesPageComponent implements OnInit {
         startY: currentY + 4,
         head: [['Hora', 'Descripción / Motivo del Egreso', 'Método Afectado', 'Monto Restado']],
         body: activeCierre.gastos.map(g => [
-          g.fecha ? new Date(g.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--',
+          g.fechaRegistro || '--:--',
           g.motivo || 'Egreso de caja',
           `${g.metodoPago || 'Efectivo'} (${g.categoria || 'Operativo'})`,
           `-$${g.monto.toLocaleString('es-CO')}`
@@ -782,19 +892,21 @@ export class AdminReportesPageComponent implements OnInit {
       startY: 45,
       head: [['Métrica', 'Valor']],
       body: [
-        ['Total Ingreso Bruto', `$${this.totalIncome().toLocaleString()}`],
-        ['Total Órdenes', this.totalOrdersCount().toString()],
-        ['Ticket Promedio', `$${this.averageTicket().toLocaleString()}`],
-        ['Total Ventas Netas', `$${this.totalSubtotal().toLocaleString()}`],
-        ['Impuestos Cobrados', `$${this.totalTaxes().toLocaleString()}`],
-        ['Propinas Recaudadas', `$${this.totalTips().toLocaleString()}`]
+        ['Total Ingreso Bruto', `$${this.totalIncome().toLocaleString('es-CO')}`],
+        ['Total Gastos y Egresos (-)', `-$${this.totalFilteredExpenses().toLocaleString('es-CO')}`],
+        ['Balance Neto (Ingresos - Gastos)', `$${this.netFilteredIncome().toLocaleString('es-CO')}`],
+        ['Total Órdenes Completadas', this.totalOrdersCount().toString()],
+        ['Ticket Promedio', `$${Math.round(this.averageTicket()).toLocaleString('es-CO')}`],
+        ['Total Ventas Netas (Subtotal)', `$${this.totalSubtotal().toLocaleString('es-CO')}`],
+        ['Impuestos Cobrados', `$${this.totalTaxes().toLocaleString('es-CO')}`],
+        ['Propinas Recaudadas', `$${this.totalTips().toLocaleString('es-CO')}`]
       ],
       headStyles: { fillColor: [55, 65, 81] },
       styles: { fontSize: 11 },
       margin: { top: 10 }
     });
 
-    const metodosData = this.paymentMethodsData().map(m => [m.name, `$${m.value.toLocaleString()}`, `${m.percentage.toFixed(1)}%`]);
+    const metodosData = this.paymentMethodsData().map(m => [m.name, `$${m.value.toLocaleString('es-CO')}`, `${m.percentage.toFixed(1)}%`]);
     if (metodosData.length > 0) {
       doc.text('Métodos de Pago', 14, (doc as any).lastAutoTable.finalY + 15);
       autoTable(doc, {
@@ -806,7 +918,7 @@ export class AdminReportesPageComponent implements OnInit {
       });
     }
 
-    doc.save(`Reporte_Financiero_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Reporte_Financiero_${this.getLocalDateStr()}.pdf`);
   }
 }
 

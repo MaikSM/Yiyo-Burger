@@ -1,12 +1,26 @@
-import { Repository } from 'typeorm';
+import { Repository, IsNull, Between, MoreThanOrEqual } from 'typeorm';
 import { DatabaseConnection } from '../../../core/database/DatabaseConnection';
 import { GastoEntity } from '../entities/gasto.entity';
+import { CierreCajaEntity } from '../entities/cierre-caja.entity';
+import { realTimeEmitter } from '../../../core/events/realtime.events';
 
 export class GastosService {
   private gastoRepo: Repository<GastoEntity>;
+  private cierreRepo: Repository<CierreCajaEntity>;
 
   constructor() {
-    this.gastoRepo = DatabaseConnection.appDataSource.getRepository(GastoEntity);
+    const ds = DatabaseConnection.appDataSource;
+    this.gastoRepo = ds.getRepository(GastoEntity);
+    this.cierreRepo = ds.getRepository(CierreCajaEntity);
+  }
+
+  private getLocalDateStr(dateInput?: Date | string): string {
+    const d = dateInput ? new Date(dateInput) : new Date();
+    const valid = isNaN(d.getTime()) ? new Date() : d;
+    const year = valid.getFullYear();
+    const month = String(valid.getMonth() + 1).padStart(2, '0');
+    const day = String(valid.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   async getAll(): Promise<GastoEntity[]> {
@@ -23,10 +37,36 @@ export class GastosService {
   }
 
   async getByCierre(cierreId: number): Promise<GastoEntity[]> {
-    return await this.gastoRepo.find({
-      where: { cierre_id: cierreId },
-      order: { created_at: 'ASC' },
+    const cierre = await this.cierreRepo.findOneBy({ id: cierreId });
+    if (!cierre) {
+      return await this.gastoRepo.find({
+        where: { cierre_id: cierreId },
+        order: { created_at: 'DESC' },
+      });
+    }
+
+    const fechaInicio = new Date(cierre.fecha_apertura);
+    const fechaFin = cierre.fecha_cierre ? new Date(cierre.fecha_cierre) : null;
+    const shiftDateStr = this.getLocalDateStr(fechaInicio);
+
+    const gastos = await this.gastoRepo.find({
+      where: [
+        { cierre_id: cierreId },
+        {
+          cierre_id: IsNull(),
+          created_at: fechaFin ? Between(fechaInicio, fechaFin) : MoreThanOrEqual(fechaInicio),
+        },
+        ...(cierre.estado === 'Abierto' ? [{ cierre_id: IsNull(), fecha: shiftDateStr }] : []),
+      ],
+      order: { created_at: 'DESC' },
     });
+
+    const unique = new Map<string, GastoEntity>();
+    for (const g of gastos) {
+      if (g.cierre_id && Number(g.cierre_id) !== Number(cierreId)) continue;
+      unique.set(g.id, g);
+    }
+    return Array.from(unique.values());
   }
 
   async create(data: Partial<GastoEntity>): Promise<GastoEntity> {
@@ -36,29 +76,48 @@ export class GastosService {
     if (!data.motivo) {
       throw new Error('El motivo o concepto del gasto es requerido');
     }
+    const todayStr = this.getLocalDateStr();
     if (!data.fecha) {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      data.fecha = `${year}-${month}-${day}`;
+      data.fecha = todayStr;
+    }
+
+    let resolvedCierreId = data.cierre_id ? Number(data.cierre_id) : undefined;
+    if (!resolvedCierreId) {
+      try {
+        const turnoAbierto = await this.cierreRepo.findOne({
+          where: { estado: 'Abierto' },
+          order: { fecha_apertura: 'DESC' },
+        });
+        if (turnoAbierto) {
+          const shiftDateStr = this.getLocalDateStr(turnoAbierto.fecha_apertura);
+          if (data.fecha === todayStr || data.fecha === shiftDateStr) {
+            resolvedCierreId = turnoAbierto.id;
+          }
+        }
+      } catch (_) {}
     }
 
     const nuevoGasto = this.gastoRepo.create({
-      cierre_id: data.cierre_id || undefined,
+      cierre_id: resolvedCierreId,
       fecha: data.fecha,
       monto: Number(data.monto),
       metodo_pago: data.metodo_pago || 'Efectivo',
-      motivo: data.motivo,
-      categoria: data.categoria || 'Otros',
+      motivo: String(data.motivo).trim(),
+      categoria: data.categoria || 'Operativo',
       usuario_nombre: data.usuario_nombre || 'Sistema',
     });
 
-    return await this.gastoRepo.save(nuevoGasto);
+    const saved = await this.gastoRepo.save(nuevoGasto);
+    realTimeEmitter.broadcast('gasto_changed' as any, saved);
+    return saved;
   }
 
   async delete(id: string): Promise<boolean> {
     const res = await this.gastoRepo.delete(id);
-    return (res.affected ?? 0) > 0;
+    const deleted = (res.affected ?? 0) > 0;
+    if (deleted) {
+      realTimeEmitter.broadcast('gasto_changed' as any, { id, deleted: true });
+    }
+    return deleted;
   }
 }

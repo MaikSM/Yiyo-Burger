@@ -134,9 +134,21 @@
               <p class="text-gray-400 mt-2">Métricas avanzadas para la toma de decisiones.</p>
             </div>
             <div class="flex flex-col gap-3">
-              <div class="bg-green-500/10 border border-green-500/20 text-green-400 px-6 py-3 rounded-xl text-right">
-                <p class="text-xs uppercase tracking-widest font-bold mb-1">Total Ingreso Bruto</p>
-                <p class="text-3xl font-black">{{ totalIncome() | currency }}</p>
+              <div class="flex flex-wrap items-stretch gap-3 justify-end">
+                <div class="bg-green-500/10 border border-green-500/20 text-green-400 px-5 py-3 rounded-xl text-right">
+                  <p class="text-xs uppercase tracking-widest font-bold mb-1">Total Ingreso Bruto</p>
+                  <p class="text-2xl font-black">{{ totalIncome() | currency }}</p>
+                </div>
+                @if (totalFilteredExpenses() > 0) {
+                  <div class="bg-red-500/10 border border-red-500/20 text-red-400 px-5 py-3 rounded-xl text-right">
+                    <p class="text-xs uppercase tracking-widest font-bold mb-1">Total Egresos (-)</p>
+                    <p class="text-2xl font-black">-{{ totalFilteredExpenses() | currency }}</p>
+                  </div>
+                  <div class="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 px-5 py-3 rounded-xl text-right">
+                    <p class="text-xs uppercase tracking-widest font-bold mb-1">Balance Neto Real</p>
+                    <p class="text-2xl font-black">{{ netFilteredIncome() | currency }}</p>
+                  </div>
+                }
               </div>
               <button (click)="exportGeneralToPDF()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg shadow-red-600/20 w-full">
                 <i class="fas fa-file-pdf"></i> Exportar Reporte a PDF
@@ -693,6 +705,7 @@
                       <th class="py-3 px-4">Cajero</th>
                       <th class="py-3 px-4 text-right">Base Inicial</th>
                       <th class="py-3 px-4 text-right">Ventas Efectivo</th>
+                      <th class="py-3 px-4 text-right">Egresos Efectivo (-)</th>
                       <th class="py-3 px-4 text-right">Ventas Tarjeta/Transf.</th>
                       <th class="py-3 px-4 text-right">Efectivo Esperado</th>
                       <th class="py-3 px-4 text-right">Físico Contado</th>
@@ -710,6 +723,13 @@
                         <td class="py-3 px-4 font-sans text-gray-300">{{ c.usuario_nombre }}</td>
                         <td class="py-3 px-4 text-right text-gray-300">{{ c.monto_inicial | currency }}</td>
                         <td class="py-3 px-4 text-right text-green-400 font-bold">{{ c.ventas_efectivo | currency }}</td>
+                        <td class="py-3 px-4 text-right text-red-400 font-bold">
+                          @if ((c.gastos_efectivo || 0) > 0) {
+                            -{{ (c.gastos_efectivo || 0) | currency }}
+                          } @else {
+                            <span class="text-gray-500">$0</span>
+                          }
+                        </td>
                         <td class="py-3 px-4 text-right text-blue-400">{{ (c.ventas_tarjeta + c.ventas_transferencia) | currency }}</td>
                         <td class="py-3 px-4 text-right text-orange-400 font-bold">{{ c.total_esperado_efectivo | currency }}</td>
                         <td class="py-3 px-4 text-right text-white font-bold">
@@ -750,10 +770,15 @@
 
           <!-- SECCIÓN: RESUMEN CONSOLIDADO POR DÍAS -->
           <div class="space-y-4">
-            <h2 class="text-xl font-bold text-white flex items-center gap-2">
-              <i class="fas fa-calendar-alt text-indigo-400"></i>
-              Resumen Consolidado de Ventas por Fecha
-            </h2>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-calendar-alt text-indigo-400"></i>
+                Resumen Consolidado de Ventas por Fecha
+              </h2>
+              <button (click)="openGastoModal()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-red-600/20 text-sm active:scale-95">
+                <i class="fas fa-minus-circle"></i> Registrar Gasto / Egreso
+              </button>
+            </div>
           
           @if (cierresDiarios().length === 0) {
             <div class="text-center py-10 text-gray-500 bg-gray-800 rounded-xl border border-gray-700">
@@ -776,9 +801,17 @@
                       <p class="text-gray-400 text-sm mt-1">{{ cierre.totalVentas }} pedidos completados</p>
                     </div>
                   </div>
-                  <div class="p-4 flex-1 flex flex-col justify-center">
-                    <p class="text-gray-400 text-sm uppercase tracking-widest font-bold mb-1">Total Ingresos</p>
-                    <p class="text-2xl font-black text-green-400">{{ cierre.ingresoTotal | currency }}</p>
+                  <div class="p-4 flex-1 flex flex-col justify-center space-y-2">
+                    <div>
+                      <p class="text-gray-400 text-xs uppercase tracking-widest font-bold mb-0.5">Ingresos Brutos</p>
+                      <p class="text-2xl font-black text-green-400">{{ cierre.ingresoBruto | currency }}</p>
+                    </div>
+                    @if (cierre.totalGastos > 0) {
+                      <div class="flex items-center justify-between pt-2 border-t border-gray-700/70 text-xs">
+                        <span class="text-red-400 font-bold">Egresos (-): -{{ cierre.totalGastos | currency }}</span>
+                        <span class="text-emerald-300 font-black">Neto: {{ cierre.ingresoNeto | currency }}</span>
+                      </div>
+                    }
                   </div>
                   <div class="p-4 bg-gray-900/50 border-t border-gray-700">
                     <button (click)="verDetalles(cierre)" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">

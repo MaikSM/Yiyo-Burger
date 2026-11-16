@@ -1645,6 +1645,7 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
         impuesto_valor: this.checkoutImpuestoMonto(),
         propina_valor: this.checkoutPropinaMonto(),
         total: this.checkoutTotal(),
+        autoPrint: false,
         items: items.map((i: any) => ({
           id: String(i.id),
           nombre: i.nombre,
@@ -1662,16 +1663,15 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
         next: (created: any) => {
           this.loadActiveOrders(true);
           const tieneEfectivo = this.checkoutMetodoPago() === 'Efectivo' || (esMixto && this.montoEfectivoMixto() > 0);
-          if (tieneEfectivo) {
-            this._mesasService.abrirCaja().subscribe({
-              next: (res: any) => console.log('Caja abierta:', res),
-              error: (err: any) => console.error('Error al abrir caja:', err)
-            });
-          }
           if (imprimir) {
             this._mesasService.imprimirFactura(created).subscribe({
               next: () => console.log('Factura de venta rápida impresa'),
               error: (err: any) => console.error('Error al imprimir factura:', err)
+            });
+          } else if (tieneEfectivo) {
+            this._mesasService.abrirCaja().subscribe({
+              next: (res: any) => console.log('Caja abierta:', res),
+              error: (err: any) => console.error('Error al abrir caja:', err)
             });
           }
           this.isQuickOrderMode.set(false);
@@ -1729,14 +1729,20 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
 
     if (currentId) {
       const newItems = this.calculateNewItems(this.originalOrderItems(), formattedItems);
-      this._pedidosService.update(currentId, payload).subscribe({
-        next: (order: any) => {
-          this.onPagoExitosoYLiberar(mesa, order, formattedItems, newItems, mesaNombre, esBarra, imprimir, true);
-        },
-        error: (err: any) => alert(err.error?.message || 'Error al registrar el pago')
-      });
+      this._pedidosService
+        .update(currentId, {
+          ...payload,
+          autoPrint: newItems.length > 0,
+          newItemsToPrint: newItems,
+        })
+        .subscribe({
+          next: (order: any) => {
+            this.onPagoExitosoYLiberar(mesa, order, formattedItems, newItems, mesaNombre, esBarra, imprimir, true);
+          },
+          error: (err: any) => alert(err.error?.message || 'Error al registrar el pago')
+        });
     } else {
-      this._pedidosService.createPedido(payload).subscribe({
+      this._pedidosService.createPedido({ ...payload, autoPrint: true }).subscribe({
         next: (created: any) => {
           this.activeOrderId.set(created.id);
           this.onPagoExitosoYLiberar(mesa, created, formattedItems, formattedItems, mesaNombre, esBarra, imprimir, false);
@@ -1759,32 +1765,16 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
     this.loadActiveOrders(true);
 
     const tieneEfectivo = this.checkoutMetodoPago() === 'Efectivo' || (this.checkoutMetodoPago() === 'Pago Mixto' && this.montoEfectivoMixto() > 0);
-    if (tieneEfectivo) {
-      this._mesasService.abrirCaja().subscribe({
-        next: (res: any) => console.log('Caja abierta por pago en efectivo:', res),
-        error: (err: any) => console.error('Error al abrir caja registradora:', err)
-      });
-    }
-
-    if (newItemsToPrint && newItemsToPrint.length > 0) {
-      const pedidoInfo = {
-        id: order.id,
-        orderNumber: order.orderNumber,
-        mesa: mesaNombre,
-        ubicacion: mesa.ubicacion || 'Salón',
-        tipo: esBarra ? 'Barra' : 'Mesa',
-        esAdicion: isUpdate
-      };
-      this._mesasService.confirmarPedido(pedidoInfo, newItemsToPrint).subscribe({
-        next: (res: any) => console.log('Comanda de adición enviada a impresión:', res),
-        error: (err: any) => console.error('Error al imprimir comanda:', err)
-      });
-    }
 
     if (imprimir) {
       this._mesasService.imprimirFactura(order).subscribe({
         next: () => console.log('Factura enviada a impresión'),
         error: (err: any) => console.error('Error al imprimir factura', err)
+      });
+    } else if (tieneEfectivo) {
+      this._mesasService.abrirCaja().subscribe({
+        next: (res: any) => console.log('Caja abierta por pago en efectivo:', res),
+        error: (err: any) => console.error('Error al abrir caja registradora:', err)
       });
     }
 
@@ -1825,6 +1815,8 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
     if (!order) return;
     const pedidoInfo = {
       id: order.id,
+      orderNumber: order.orderNumber,
+      domicilioNumber: order.domicilioNumber,
       tipo: order.tipo || 'Mesa',
       mesa: order.mesa || 'Barra',
       cliente_nombre: order.cliente_nombre || order.cliente || 'Cliente Mesa',
@@ -1855,6 +1847,82 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
     });
   }
 
+  reimprimirComandaCocina(order: any, mesa?: Mesa) {
+    if (!order) return;
+    const rawItems = Array.isArray(order.items) ? order.items : [];
+    if (rawItems.length === 0) {
+      alert('No hay platillos en este pedido para reimprimir la comanda de cocina.');
+      return;
+    }
+
+    const platosCatalog = this.menuPlatos();
+    const categoriasCatalog = this.todasLasCategorias();
+
+    const enrichedItems = rawItems.map((i: any) => {
+      const rawId = String(i.id || '').trim();
+      const baseId = parseInt(rawId.split('-')[0], 10);
+      const foundPlato =
+        (!isNaN(baseId) ? platosCatalog.find((p) => Number(p.plato_id) === baseId) : undefined) ||
+        platosCatalog.find(
+          (p) => p.nombre && i.nombre && p.nombre.trim().toLowerCase() === String(i.nombre).trim().toLowerCase()
+        );
+      const categoria = i.categoria || foundPlato?.categoria || '';
+      const foundCat = categoriasCatalog.find((c) => c.nombre === categoria);
+      const seccion = i.seccion || foundCat?.seccion || '';
+
+      return {
+        id: String(i.id || ''),
+        nombre: i.nombre,
+        precio: Number(i.precio) || 0,
+        qty: Number(i.qty) || 1,
+        seccion: seccion || categoria,
+        categoria: categoria || seccion,
+        tipoEntrega: i.tipoEntrega || (mesa?.ubicacion === 'Barra' ? 'llevar' : 'mesa'),
+        notas: i.notas || '',
+      };
+    });
+
+    const esBarra =
+      mesa?.ubicacion === 'Barra' ||
+      order.ubicacion === 'Barra' ||
+      String(order.mesa || '').toLowerCase().includes('barra') ||
+      order.tipo === 'Barra';
+    const mesaNombre = mesa
+      ? esBarra
+        ? `BARRA ${mesa.numero}`
+        : mesa.numero.toString()
+      : order.mesa || 'Mesa';
+
+    const pedidoInfo = {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      mesa: mesaNombre,
+      ubicacion: mesa?.ubicacion || order.ubicacion || 'Salón',
+      tipo: esBarra ? 'Barra' : order.tipo || 'Mesa',
+      subtotal: order.subtotal || 0,
+      total: order.total || 0,
+      cliente_nombre: order.cliente_nombre || (esBarra ? `Cliente ${mesaNombre}` : 'Cliente Mesa'),
+      mesero: order.mesero || this._authService.user()?.name || 'Administrador',
+      fecha: order.fecha || order.created_at || order.createdAt,
+      esAdicion: false,
+      esReimpresion: true,
+    };
+
+    this._mesasService.confirmarPedido(pedidoInfo, enrichedItems).subscribe({
+      next: (res: any) => {
+        const destinos: string[] = [];
+        if (res?.shouldPrintPizza) destinos.push('Pizzas');
+        if (res?.shouldPrintParrilla) destinos.push('Parrilla');
+        const destinoLabel = destinos.length > 0 ? destinos.join(' y ') : 'Cocina';
+        alert(`✅ Comanda de ${mesaNombre} enviada a reimpresión en la impresora de ${destinoLabel}.`);
+      },
+      error: (err: any) => {
+        console.error('Error al reimprimir comanda en cocina:', err);
+        alert(err.error?.message || 'Error al reimprimir la comanda en la impresora de cocina');
+      },
+    });
+  }
+
   reimprimirTicketMesaDesdeMapa(mesa: Mesa, event?: Event) {
     if (event) event.stopPropagation();
     const activeOrder = (this.activeOrdersList() || []).find((pedido: any) =>
@@ -1863,9 +1931,9 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
       pedido.estado !== 'Cancelado'
     );
     if (activeOrder) {
-      this.imprimirTicketFactura(activeOrder);
+      this.reimprimirComandaCocina(activeOrder, mesa);
     } else {
-      this._pedidosService.getActive().subscribe({
+      this._pedidosService.getActive(true).subscribe({
         next: (pedidos) => {
           this.activeOrdersList.set(pedidos || []);
           const found = (pedidos || []).find((p: any) =>
@@ -1874,12 +1942,12 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
             p.estado !== 'Cancelado'
           );
           if (found) {
-            this.imprimirTicketFactura(found);
+            this.reimprimirComandaCocina(found, mesa);
           } else {
             alert('No se encontró un pedido activo en esta mesa para reimprimir ticket.');
           }
         },
-        error: (err) => alert('Error al consultar los pedidos activos de las mesas.')
+        error: () => alert('Error al consultar los pedidos activos de las mesas.')
       });
     }
   }
@@ -1892,18 +1960,29 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
       pedido.estado !== 'Completado' &&
       pedido.estado !== 'Cancelado'
     );
+    const itemsActuales = this.orderItems();
     if (activeOrder) {
-      this.imprimirTicketFactura(activeOrder);
-    } else if (this.activeOrderId()) {
+      this.reimprimirComandaCocina(
+        {
+          ...activeOrder,
+          items: itemsActuales.length > 0 ? itemsActuales : activeOrder.items,
+        },
+        mesa
+      );
+    } else if (this.activeOrderId() || itemsActuales.length > 0) {
       const orderId = this.activeOrderId();
-      this.imprimirTicketFactura({
-        id: orderId,
-        mesa: mesa.numero,
-        tipo: mesa.ubicacion === 'Barra' ? 'Barra' : 'Mesa',
-        items: this.orderItems(),
-        subtotal: this.orderSubtotal(),
-        total: this.orderTotal()
-      });
+      this.reimprimirComandaCocina(
+        {
+          id: orderId,
+          mesa: mesa.numero,
+          ubicacion: mesa.ubicacion || 'Salón',
+          tipo: mesa.ubicacion === 'Barra' ? 'Barra' : 'Mesa',
+          items: itemsActuales,
+          subtotal: this.orderSubtotal(),
+          total: this.orderTotal(),
+        },
+        mesa
+      );
     } else {
       alert('No hay un pedido activo registrado para esta mesa.');
     }

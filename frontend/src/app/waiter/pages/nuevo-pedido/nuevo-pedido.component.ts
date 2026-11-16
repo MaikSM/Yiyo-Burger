@@ -297,8 +297,16 @@ export class NuevoPedidoComponent implements OnInit {
     this.isSubmitting = true;
 
     if (existingOrder) {
-      // ADICIÓN DE PLATOS AL PEDIDO EXISTENTE
-      const mergedItems = [...(existingOrder.items || []), ...formattedItems];
+      // ADICIÓN DE PLATOS AL PEDIDO EXISTENTE (consolidando cantidades por ID)
+      const mergedItems = (existingOrder.items || []).map((i: any) => ({ ...i }));
+      for (const inc of formattedItems) {
+        const match = mergedItems.find((ex: any) => String(ex.id) === String(inc.id));
+        if (match) {
+          match.qty = (Number(match.qty) || 0) + (Number(inc.qty) || 1);
+        } else {
+          mergedItems.push({ ...inc });
+        }
+      }
       const newSubtotal = (existingOrder.subtotal || 0) + this.order.subtotal;
       const newTotal = (existingOrder.total || 0) + this.order.total;
 
@@ -307,6 +315,8 @@ export class NuevoPedidoComponent implements OnInit {
         subtotal: newSubtotal,
         total: newTotal,
         notas: (existingOrder.notas ? existingOrder.notas + ' | ' : '') + (notasVal ? 'Adición: ' + notasVal : ''),
+        newItemsToPrint: formattedItems,
+        autoPrint: true,
       };
 
       this.pedidosService.update(existingOrder.id, updatePayload).subscribe({
