@@ -11,6 +11,7 @@ import { ClientesService } from '@admin/services/clientes.service';
 import { BarriosService, BarrioTarifa } from '@admin/services/barrios.service';
 import { AuthService } from '@auth/services/auth.service';
 import { firstValueFrom, forkJoin, Subscription } from 'rxjs';
+import { normalizePhone, findClienteByPhone, MIN_PHONE_DIGITS } from '@admin/utils/cliente-match.util';
 import { finalize } from 'rxjs/operators';
 
 interface OrderItem {
@@ -79,7 +80,7 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
   activeOrderId = signal<string | number | null>(null);
   activeOrdersList = signal<any[]>([]);
   originalOrderItems = signal<any[]>([]);
-  
+
   showHistoryModal = signal(false);
   orderHistory = signal<any[]>([]);
   historyFilterDate = signal<string>('');
@@ -130,7 +131,7 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
     const current = this.selectedMesa();
     return allMesas.filter(m => m.estado === 'libre' && (!current || m.mesa_id !== current.mesa_id));
   });
-  
+
   menuPlatos = signal<Plato[]>([]);
   todasLasCategorias = signal<Categoria[]>([]);
   categories = signal<string[]>(['Todos']);
@@ -144,7 +145,7 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
       el.scrollLeft += event.deltaY;
     }
   }
-  
+
   orderItems = signal<OrderItem[]>([]);
   orderSubtotal = signal(0);
   orderTax = signal(0);
@@ -188,7 +189,7 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
   checkoutEntrega = signal<number>(0);
 
   checkoutSubtotal = computed(() => this.orderSubtotal());
-  
+
   checkoutImpuestoMonto = computed(() => {
     return this.checkoutSubtotal() * (this.checkoutImpuesto() / 100);
   });
@@ -309,9 +310,9 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
         firstValueFrom(this._categoriasService.getAll('menu'))
       ]);
       this.menuPlatos.set(platos || []);
-      
+
       this.todasLasCategorias.set(categoriasRes.data || []);
-      
+
       // Extract unique categories
       const uniqueCategories = new Set(
         (platos || [])
@@ -335,7 +336,7 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
     const isParrilla = seccion === 'Parrilla';
     const isPizzas = seccion === 'Pizzas';
     const isBebidas = seccion === 'Bebidas';
-    
+
     const validCategories = allCats
       .filter(c => isParrilla ? (c.seccion === 'Parrilla' || !c.seccion) : (isPizzas ? c.seccion === 'Pizzas' : c.seccion === 'Bebidas'))
       .map(c => c.nombre);
@@ -346,20 +347,20 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
   get filteredPlatos(): Plato[] {
     const currentCategory = this.selectedCategory();
     const term = this.searchTerm().toLowerCase();
-    
+
     let filtered = this.menuPlatos();
     const validCategoryNames = this.filteredCategories;
-    
+
     if (currentCategory !== 'Todos') {
       filtered = filtered.filter(p => p.categoria === currentCategory);
     } else if (this.activeSeccion() !== 'Todos') {
       filtered = filtered.filter(p => p.categoria && validCategoryNames.includes(p.categoria));
     }
-    
+
     if (term) {
       filtered = filtered.filter(p => p.nombre.toLowerCase().includes(term));
     }
-    
+
     return filtered;
   }
 
@@ -449,7 +450,7 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
 
   async onSubmit() {
     if (this.mesaForm.invalid) return;
-    
+
     this.isSubmitting.set(true);
     try {
       const data: CreateMesa = this.mesaForm.value;
@@ -610,23 +611,21 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
 
   searchClientByPhone(event: Event) {
     const input = event.target as HTMLInputElement;
-    const telefono = input.value.trim();
+    const telefono = normalizePhone(input.value);
 
     if (this._searchTimeout) clearTimeout(this._searchTimeout);
 
-    if (!telefono || telefono.length < 3) return;
+    if (telefono.length < MIN_PHONE_DIGITS) return;
 
     this._searchTimeout = setTimeout(() => {
       this._clientesService.getClientes().subscribe(clientes => {
-        const cliente = clientes.find((c: any) => {
-          if (!c.telefono) return false;
-          const stored = c.telefono.replace(/\D/g, '');
-          return stored === telefono || stored.endsWith(telefono) || telefono.endsWith(stored);
-        });
+        if (normalizePhone(this.migrarForm.get('cliente_telefono')?.value) !== telefono) return;
+        // Coincidencia EXACTA del teléfono (evita traer la dirección de otro cliente)
+        const cliente: any = findClienteByPhone(clientes, telefono);
         if (cliente) {
           this.migrarForm.patchValue({
-            cliente_nombre: cliente.nombre,
-            cliente_direccion: cliente.direccion,
+            cliente_nombre: cliente.nombre || '',
+            cliente_direccion: cliente.direccion || '',
             cliente_barrio: cliente.barrio || ''
           });
         }
@@ -664,7 +663,7 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
       direccion: clientData.cliente_direccion,
       barrio: clientData.cliente_barrio || ''
     }).subscribe({
-      next: () => {},
+      next: () => { },
       error: (err: any) => console.error('Error guardando cliente frecuente:', err)
     });
 
@@ -978,9 +977,9 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
   get filteredOrderHistory(): any[] {
     const history = this.orderHistory();
     const filterDate = this.historyFilterDate();
-    
+
     if (!filterDate) return history;
-    
+
     return history.filter(pedido => {
       const d = new Date(pedido.fecha);
       if (isNaN(d.getTime())) return false;
@@ -1001,7 +1000,7 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
     if (!metodoRaw) return 'Efectivo';
     const raw = String(metodoRaw).trim();
     const m = raw.toLowerCase();
-    
+
     if (m === 'efectivo' || m === 'efec') return 'Efectivo';
     if (m === 'tarjeta' || m === 'datafono' || m === 'datáfono' || m === 'pos') return 'Tarjeta';
     if (m === 'nequi') return 'Nequi';
@@ -1070,14 +1069,14 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
     this.editingHistoryOrder.set(pedido);
     this.editingHistoryTotal.set(Number(pedido.total) || 0);
     this.editingHistorySubtotal.set(Number(pedido.subtotal) || Number(pedido.total) || 0);
-    
+
     const metodo = this.getMetodoPagoValue(pedido.metodo_pago);
     this.editingHistoryMetodoPago.set(metodo);
 
     let rawMixtos: any[] = [];
     if (Array.isArray(pedido.pagos_mixtos)) rawMixtos = pedido.pagos_mixtos;
     else if (typeof pedido.pagos_mixtos === 'string') {
-      try { rawMixtos = JSON.parse(pedido.pagos_mixtos); } catch(e) {}
+      try { rawMixtos = JSON.parse(pedido.pagos_mixtos); } catch (e) { }
     }
 
     if (rawMixtos.length > 0) {
@@ -1173,21 +1172,21 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
     if (!pedido) return 'Pedido';
     const nombre = (pedido.cliente_nombre || '').trim();
     const mesa = (pedido.mesa || '').trim();
-    
+
     if (nombre && (pedido.tipo === 'Domicilio' || !mesa || mesa.toLowerCase() === 'domicilio')) {
       return nombre;
     }
-    
+
     if (!mesa) {
       if (nombre) return nombre;
       if (pedido.tipo) return pedido.tipo;
       return 'Pedido';
     }
-    
+
     if (/^mesa/i.test(mesa)) {
       return mesa;
     }
-    
+
     if (/^barra/i.test(mesa)) {
       return `Mesa ${mesa}`;
     }
@@ -1236,15 +1235,15 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
   addPizzaWithSize(plato: Plato, size: string, event?: Event) {
     if (event) event.stopPropagation();
     if (!plato.disponible) return;
-    
+
     const price = this.getPizzaPrice(plato, size);
     const cleanedName = this.cleanPizzaName(plato.nombre);
     const name = `${cleanedName} (${size})`;
-    
+
     const items = [...this.orderItems()];
     const id = `${plato.plato_id}-${size}`;
     const existing = items.find(i => i.id === id);
-    
+
     const categoriaDef = this.todasLasCategorias().find(c => c.nombre === plato.categoria);
     const seccion = categoriaDef?.seccion || 'Pizzas';
 
@@ -1276,16 +1275,16 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
     const f2 = this.selectedFlavor2();
     const size = this.selectedHalfSize();
     if (!f1 || !f2) return;
-    
+
     const price = this.halfAndHalfPrice();
     const cleanedName1 = this.cleanPizzaName(f1.nombre);
     const cleanedName2 = this.cleanPizzaName(f2.nombre);
     const name = `Mitad ${cleanedName1} / Mitad ${cleanedName2} (${size})`;
-    
+
     const items = [...this.orderItems()];
     const id = `half-${f1.plato_id}-${f2.plato_id}-${size}`;
     const existing = items.find(i => i.id === id);
-    
+
     if (existing) {
       existing.qty += 1;
     } else {
@@ -1310,7 +1309,7 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
     const items = [...this.orderItems()];
     const targetId = String(plato.plato_id);
     const existing = items.find(i => String(i.id) === targetId);
-    
+
     // Buscar la seccion a partir de la categoria del plato
     const categoriaDef = this.todasLasCategorias().find(c => c.nombre === plato.categoria);
     const seccion = categoriaDef?.seccion || 'Parrilla';

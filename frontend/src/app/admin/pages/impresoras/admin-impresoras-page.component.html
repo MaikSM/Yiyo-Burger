@@ -199,6 +199,85 @@
       </div>
     </div>
 
+    <!-- Sección de Conexión de Tablets (Red Wi-Fi Local + QR) -->
+    <div class="mt-8 bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg relative overflow-hidden group hover:border-cyan-500 transition-colors">
+      <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-blue-500"></div>
+
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="flex-1 space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-cyan-500/20 text-cyan-400 rounded-lg flex items-center justify-center text-xl flex-shrink-0">
+              <i class="fas fa-tablet-alt"></i>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-white">Conexión de Tablets (Red Wi-Fi Local)</h3>
+              <p class="text-xs text-gray-400 mt-0.5">Escanea este código QR desde la app de la tablet o ingresa la IP del servidor de caja.</p>
+            </div>
+          </div>
+
+          @if (networkInfo(); as net) {
+            <div class="bg-gray-900/80 border border-gray-700 rounded-xl p-4 space-y-2.5">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span class="text-[11px] uppercase tracking-wider text-gray-400 font-bold block">IP del Servidor de Caja</span>
+                  <span class="text-2xl font-mono font-black text-cyan-400">{{ net.ip_principal }}</span>
+                  <span class="text-sm font-mono text-gray-400 ml-1">:{{ net.puerto }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    (click)="copyServerUrl(net.ip_principal)"
+                    class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-3.5 rounded-lg text-xs transition-colors flex items-center gap-1.5"
+                  >
+                    <i class="fas" [class.fa-check]="copiedUrl()" [class.fa-copy]="!copiedUrl()"></i>
+                    {{ copiedUrl() ? 'Copiada' : 'Copiar IP' }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="loadNetworkInfo()"
+                    [disabled]="isLoadingNetwork()"
+                    class="bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold py-2 px-3 rounded-lg text-xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    title="Volver a detectar IP local"
+                  >
+                    <i class="fas fa-sync-alt" [class.fa-spin]="isLoadingNetwork()"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="text-xs text-gray-400 pt-1 border-t border-gray-800 flex flex-wrap gap-x-4 gap-y-1">
+                <span><strong class="text-gray-300">URL directa:</strong> <code class="text-cyan-300">{{ net.url_principal }}</code></span>
+                <span><strong class="text-gray-300">Equipo:</strong> {{ net.hostname }}</span>
+              </div>
+
+              @if (net.direcciones.length > 1) {
+                <div class="text-[11px] text-gray-400 pt-1">
+                  <span class="font-semibold text-gray-300">Otras interfaces detectadas:</span>
+                  @for (d of net.direcciones; track d.ip) {
+                    <span class="inline-block ml-2 px-2 py-0.5 rounded bg-gray-800 border border-gray-700 font-mono text-gray-300">{{ d.interfaz }}: {{ d.ip }}</span>
+                  }
+                </div>
+              }
+            </div>
+            <p class="text-xs text-amber-300/90 flex items-start gap-1.5">
+              <i class="fas fa-lightbulb mt-0.5 shrink-0"></i>
+              <span><strong>Recomendación:</strong> Reserva la IP <code class="font-mono text-amber-200">{{ net.ip_principal }}</code> para este PC en tu router Wi-Fi (Reserva DHCP) para que nunca cambie al reiniciar.</span>
+            </p>
+          } @else {
+            <div class="text-sm text-gray-400 py-3">
+              <i class="fas fa-spinner fa-spin mr-2"></i> Detectando dirección IP de red local...
+            </div>
+          }
+        </div>
+
+        @if (tabletQrDataUrl(); as qrUrl) {
+          <div class="flex flex-col items-center bg-white p-3 rounded-xl shadow-lg shrink-0 self-center md:self-auto">
+            <img [src]="qrUrl" alt="Código QR de conexión para tablet" class="w-40 h-40 object-contain" />
+            <span class="text-[11px] font-bold text-gray-800 mt-1.5 uppercase tracking-wide">Escanear con Tablet</span>
+          </div>
+        }
+      </div>
+    </div>
+
     <!-- Sección de Copias de Seguridad de Base de Datos -->
     <div class="mt-8 bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg relative overflow-hidden group hover:border-emerald-500 transition-colors">
       <div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div>

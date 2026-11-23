@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#111827" />
+  <title>Yiyo Burger POS - Conexión</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(circle at top, #1f2937 0%, #0b1120 70%);
+      color: #f3f4f6; display: flex; align-items: center; justify-content: center;
+      padding: 24px; -webkit-tap-highlight-color: transparent;
+    }
+    .card {
+      width: 100%; max-width: 460px; background: rgba(17, 24, 39, 0.92);
+      border: 1px solid #374151; border-radius: 24px; padding: 28px 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); text-align: center;
+    }
+    .logo { width: 84px; height: 84px; border-radius: 20px; object-fit: contain; margin: 0 auto 12px; display: block; }
+    h1 { font-size: 22px; font-weight: 900; color: #fb923c; }
+    .sub { font-size: 13px; color: #9ca3af; margin-top: 4px; }
+    .status {
+      margin: 20px 0 16px; padding: 12px 14px; border-radius: 14px; font-size: 14px; font-weight: 600;
+      background: #1f2937; border: 1px solid #374151; color: #d1d5db; display: flex; align-items: center; gap: 10px; text-align: left;
+    }
+    .status.ok { background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.4); color: #6ee7b7; }
+    .status.err { background: rgba(244, 63, 94, 0.12); border-color: rgba(244, 63, 94, 0.4); color: #fda4af; }
+    .spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.15); border-top-color: #fb923c; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    label { display: block; text-align: left; font-size: 12px; font-weight: 700; color: #9ca3af; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+    input {
+      width: 100%; background: #111827; border: 1px solid #4b5563; color: #fff; border-radius: 12px;
+      padding: 14px; font-size: 18px; font-weight: 700; text-align: center; letter-spacing: .04em; outline: none;
+    }
+    input:focus { border-color: #fb923c; box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.3); }
+    .hint { font-size: 11px; color: #6b7280; margin-top: 6px; text-align: left; }
+    .btn {
+      width: 100%; border: none; border-radius: 14px; padding: 14px; font-size: 15px; font-weight: 800;
+      cursor: pointer; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: transform .1s, opacity .2s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: .5; }
+    .btn-primary { background: linear-gradient(90deg, #ea580c, #f97316); color: #fff; margin-top: 14px; }
+    .btn-secondary { background: #374151; color: #e5e7eb; }
+    .btn-ghost { background: transparent; color: #9ca3af; border: 1px dashed #4b5563; }
+    .row { display: flex; gap: 10px; }
+    .row .btn { flex: 1; }
+    .found { margin-top: 12px; text-align: left; }
+    .found button { width: 100%; text-align: left; background: #1f2937; border: 1px solid #10b981; color: #d1fae5; border-radius: 12px; padding: 12px; margin-top: 8px; font-size: 14px; font-weight: 700; }
+    .progress { height: 6px; background: #1f2937; border-radius: 999px; overflow: hidden; margin-top: 10px; display: none; }
+    .progress > div { height: 100%; width: 0; background: #fb923c; transition: width .2s; }
+    .footer { margin-top: 18px; font-size: 11px; color: #6b7280; line-height: 1.5; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="logo.png" alt="Yiyo Burger" class="logo" onerror="this.style.display='none'" />
+    <h1>Yiyo Burger POS</h1>
+    <p class="sub">Conexión con el servidor de la caja</p>
+
+    <div id="status" class="status"><div class="spinner"></div><span id="statusText">Iniciando...</span></div>
+
+    <div id="form" class="hidden">
+      <label for="host">IP del PC de caja</label>
+      <input id="host" type="text" inputmode="decimal" placeholder="192.168.1.50" autocomplete="off" />
+      <p class="hint">La encuentras en el PC de caja: Configuración de Impresoras → "Conexión de Tablets".</p>
+
+      <button id="btnConnect" class="btn btn-primary">Conectar</button>
+      <div class="row">
+        <button id="btnScan" class="btn btn-secondary">Buscar en la red</button>
+        <button id="btnQr" class="btn btn-secondary hidden">Escanear QR</button>
+      </div>
+      <div class="progress" id="progress"><div id="progressBar"></div></div>
+      <div id="found" class="found"></div>
+    </div>
+
+    <button id="btnCancel" class="btn btn-ghost hidden">Cancelar y configurar manualmente</button>
+
+    <p class="footer">La tablet y el PC de caja deben estar conectados a la <b>misma red Wi-Fi</b>.<br />El programa Yiyo Burger POS debe estar abierto en el PC.</p>
+  </div>
+
+  <script>
+    (function () {
+      var PORT = 4003;
+      var STORAGE_KEY = 'yiyo_server_host';
+      var HEALTH_PATH = '/api/v1/system-security/network-info';
+      var COMMON_SUBNETS = ['192.168.1', '192.168.0', '192.168.18', '192.168.100', '192.168.10', '192.168.20', '192.168.2', '192.168.3', '192.168.50', '192.168.88', '10.0.0', '10.0.1', '172.20.10'];
+
+      var $ = function (id) { return document.getElementById(id); };
+      var cancelled = false;
+      var scanning = false;
+
+      function setStatus(text, kind, loading) {
+        var el = $('status');
+        el.className = 'status' + (kind ? ' ' + kind : '');
+        el.innerHTML = (loading ? '<div class="spinner"></div>' : '') + '<span>' + text + '</span>';
+      }
+
+      function showForm() {
+        $('form').classList.remove('hidden');
+        $('btnCancel').classList.add('hidden');
+      }
+
+      function cleanHost(value) {
+        var v = String(value || '').trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+        v = v.replace(/:\d+$/, '');
+        return v;
+      }
+
+      function isValidIp(v) {
+        return /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(v) && v.split('.').every(function (n) { return Number(n) <= 255; });
+      }
+
+      function probe(host, timeoutMs) {
+        return new Promise(function (resolve) {
+          var done = false;
+          var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+          var timer = setTimeout(function () { if (!done) { done = true; if (ctrl) ctrl.abort(); resolve(null); } }, timeoutMs);
+          fetch('http://' + host + ':' + PORT + HEALTH_PATH + '?t=' + Date.now(), { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) {
+              if (done) return; done = true; clearTimeout(timer);
+              resolve(data && data.app === 'yiyo-burger-pos' ? data : null);
+            })
+            .catch(function () { if (!done) { done = true; clearTimeout(timer); resolve(null); } });
+        });
+      }
+
+      function openServer(host) {
+        localStorage.setItem(STORAGE_KEY, host);
+        setStatus('Conectado a ' + host + '. Abriendo sistema...', 'ok', true);
+        setTimeout(function () { window.location.replace('http://' + host + ':' + PORT + '/'); }, 300);
+      }
+
+      function connect(host) {
+        host = cleanHost(host);
+        if (!isValidIp(host)) {
+          setStatus('Escribe una IP válida, por ejemplo 192.168.1.50', 'err');
+          return Promise.resolve(false);
+        }
+        setStatus('Conectando con ' + host + '...', '', true);
+        return probe(host, 3500).then(function (info) {
+          if (info) { openServer(host); return true; }
+          setStatus('No se encontró el servidor en ' + host + '. Revisa que el PC esté encendido, el programa abierto y en la misma red Wi-Fi.', 'err');
+          return false;
+        });
+      }
+
+      function scanSubnet(prefix, onProgress) {
+        var hosts = [];
+        for (var i = 1; i <= 254; i++) hosts.push(prefix + '.' + i);
+        var idx = 0, found = null, BATCH = 48;
+        return new Promise(function (resolve) {
+          function next() {
+            if (found || cancelled || idx >= hosts.length) return resolve(found);
+            var batch = hosts.slice(idx, idx + BATCH);
+            idx += BATCH;
+            Promise.all(batch.map(function (h) { return probe(h, 1500).then(function (ok) { if (ok && !found) found = h; }); }))
+              .then(function () { onProgress(Math.min(idx, hosts.length) / hosts.length); next(); });
+          }
+          next();
+        });
+      }
+
+      function scanNetwork() {
+        if (scanning) return;
+        scanning = true; cancelled = false;
+        var saved = localStorage.getItem(STORAGE_KEY);
+        var typed = cleanHost($('host').value);
+        var subnets = [];
+        [typed, saved].forEach(function (h) {
+          var parts = String(h || '').split('.');
+          if (parts.length >= 3 && parts.slice(0, 3).every(function (p) { return /^\d+$/.test(p); })) subnets.push(parts.slice(0, 3).join('.'));
+        });
+        COMMON_SUBNETS.forEach(function (s) { if (subnets.indexOf(s) === -1) subnets.push(s); });
+
+        $('btnScan').disabled = true; $('btnConnect').disabled = true;
+        $('progress').style.display = 'block';
+        $('found').innerHTML = '';
+
+        var i = 0;
+        (function loop() {
+          if (cancelled || i >= subnets.length) {
+            finish(null); return;
+          }
+          var s = subnets[i];
+          setStatus('Buscando el servidor en la red ' + s + '.x (' + (i + 1) + '/' + subnets.length + ')...', '', true);
+          scanSubnet(s, function (p) { $('progressBar').style.width = Math.round(((i + p) / subnets.length) * 100) + '%'; })
+            .then(function (host) { if (host) finish(host); else { i++; loop(); } });
+        })();
+
+        function finish(host) {
+          scanning = false;
+          $('btnScan').disabled = false; $('btnConnect').disabled = false;
+          $('progress').style.display = 'none';
+          if (host) {
+            $('host').value = host;
+            openServer(host);
+          } else if (!cancelled) {
+            setStatus('No se encontró el servidor automáticamente. Escribe la IP que aparece en el PC de caja.', 'err');
+          }
+        }
+      }
+
+      function getScanner() {
+        var cap = window.Capacitor;
+        return cap && cap.Plugins && cap.Plugins.BarcodeScanner ? cap.Plugins.BarcodeScanner : null;
+      }
+
+      function scanQr() {
+        var scanner = getScanner();
+        if (!scanner) return;
+        var ensureModule = Promise.resolve();
+        if (scanner.isGoogleBarcodeScannerModuleAvailable) {
+          ensureModule = scanner.isGoogleBarcodeScannerModuleAvailable().then(function (r) {
+            if (r && r.available === false && scanner.installGoogleBarcodeScannerModule) {
+              setStatus('Instalando lector de QR (requiere internet la primera vez)...', '', true);
+              return scanner.installGoogleBarcodeScannerModule();
+            }
+          }).catch(function () {});
+        }
+        ensureModule
+          .then(function () { return scanner.scan({ formats: ['QR_CODE'] }); })
+          .then(function (res) {
+            var raw = res && res.barcodes && res.barcodes[0] ? (res.barcodes[0].rawValue || res.barcodes[0].displayValue) : '';
+            if (!raw) { setStatus('No se leyó ningún código QR.', 'err'); return; }
+            var host = cleanHost(raw);
+            $('host').value = host;
+            connect(host);
+          })
+          .catch(function (e) {
+            setStatus('No se pudo usar la cámara para leer el QR. Escribe la IP manualmente.', 'err');
+            console.warn(e);
+          });
+      }
+
+      $('btnConnect').addEventListener('click', function () { connect($('host').value); });
+      $('host').addEventListener('keydown', function (e) { if (e.key === 'Enter') connect($('host').value); });
+      $('btnScan').addEventListener('click', scanNetwork);
+      $('btnQr').addEventListener('click', scanQr);
+      $('btnCancel').addEventListener('click', function () { cancelled = true; setStatus('Configura la conexión con el servidor.', ''); showForm(); });
+      if (getScanner()) $('btnQr').classList.remove('hidden');
+
+      // Arranque: reconectar automáticamente al último servidor (salvo que se pida cambiarlo)
+      var params = new URLSearchParams(window.location.search);
+      var saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) $('host').value = saved;
+
+      if (saved && !params.has('cambiar')) {
+        $('btnCancel').classList.remove('hidden');
+        var attempts = 0;
+        (function retry() {
+          if (cancelled) return;
+          attempts++;
+          setStatus('Conectando con la caja (' + saved + ')... intento ' + attempts + '/5', '', true);
+          probe(saved, 3000).then(function (info) {
+            if (cancelled) return;
+            if (info) { openServer(saved); return; }
+            if (attempts < 5) { setTimeout(retry, 1500); return; }
+            setStatus('No hay conexión con ' + saved + '. Verifica el Wi-Fi y que el programa esté abierto en el PC, o busca el servidor de nuevo.', 'err');
+            showForm();
+          });
+        })();
+      } else {
+        setStatus(params.has('cambiar') ? 'Elige o confirma el servidor de la caja.' : 'Primera configuración: conecta la tablet con el PC de caja.', '');
+        showForm();
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -9,6 +9,20 @@ export interface PosConfig {
   printer_parrilla_ip: string;
 }
 
+export interface NetworkInfoResponse {
+  app: string;
+  hostname: string;
+  puerto: number;
+  ip_principal: string;
+  url_principal: string;
+  direcciones: {
+    interfaz: string;
+    ip: string;
+    tipo: 'wifi' | 'ethernet' | 'otra';
+    url: string;
+  }[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -61,5 +75,9 @@ export class ConfigService {
 
   retryAllPrintJobs(): Observable<{ success: boolean; count: number; message: string }> {
     return this.http.post<{ success: boolean; count: number; message: string }>(`${environment.apiUrl}/impresion/retry-all`, {});
+  }
+
+  getNetworkInfo(): Observable<NetworkInfoResponse> {
+    return this.http.get<NetworkInfoResponse>(`${environment.apiUrl}/system-security/network-info`);
   }
 }

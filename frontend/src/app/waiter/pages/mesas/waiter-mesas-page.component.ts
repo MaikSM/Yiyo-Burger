@@ -11,6 +11,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { firstValueFrom, forkJoin } from 'rxjs';
+import { normalizePhone, findClienteByPhone, MIN_PHONE_DIGITS } from '@admin/utils/cliente-match.util';
 import { MesasService, Mesa } from '../../../admin/services/mesas.service';
 import { PlatosService, Plato } from '../../../admin/services/platos.service';
 import { CategoriasService, Categoria } from '../../../admin/services/categorias.service';
@@ -1061,26 +1062,20 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
 
   searchClientByPhone(event: Event) {
     const input = event.target as HTMLInputElement;
-    const telefono = input.value.trim();
+    const telefono = normalizePhone(input.value);
 
     if (this._searchTimeout) clearTimeout(this._searchTimeout);
-    if (!telefono || telefono.length < 3) return;
+    if (telefono.length < MIN_PHONE_DIGITS) return;
 
     this._searchTimeout = setTimeout(() => {
       this._clientesService.getClientes().subscribe((clientes) => {
-        const cliente = clientes.find((c: any) => {
-          if (!c.telefono) return false;
-          const stored = c.telefono.replace(/\D/g, '');
-          return (
-            stored === telefono ||
-            stored.endsWith(telefono) ||
-            telefono.endsWith(stored)
-          );
-        });
+        if (normalizePhone(this.migrarForm.get('cliente_telefono')?.value) !== telefono) return;
+        // Coincidencia EXACTA del teléfono (evita traer la dirección de otro cliente)
+        const cliente: any = findClienteByPhone(clientes, telefono);
         if (cliente) {
           this.migrarForm.patchValue({
-            cliente_nombre: cliente.nombre,
-            cliente_direccion: cliente.direccion,
+            cliente_nombre: cliente.nombre || '',
+            cliente_direccion: cliente.direccion || '',
             cliente_barrio: cliente.barrio || '',
           });
           this.cdr.detectChanges();

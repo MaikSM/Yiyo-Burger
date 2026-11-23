@@ -82,6 +82,8 @@
       "package.json",
       "backend/dist/**/*",
       "frontend/dist/**/*",
+      "frontend/public/icon.ico",
+      "frontend/public/icon-192.png",
       "node_modules/**/*"
     ],
     "win": {
@@ -91,9 +93,11 @@
     },
     "nsis": {
       "oneClick": false,
-      "perMachine": false,
+      "perMachine": true,
+      "allowElevation": true,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "Yiyo Burger POS"
+      "shortcutName": "Yiyo Burger POS",
+      "include": "build/installer.nsh"
     }
   }
 }

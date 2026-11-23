@@ -18,8 +18,48 @@ export class ClientesService {
     return this.clienteRepository.findOneBy({ cliente_id: id });
   }
 
+  /** Deja solo dígitos y quita el indicativo de Colombia (57) si viene incluido. */
+  private normalizePhone(value: unknown): string {
+    let digits = String(value ?? '').replace(/\D/g, '');
+    if (digits.length === 12 && digits.startsWith('57')) digits = digits.slice(2);
+    return digits;
+  }
+
+  private cleanText(value: unknown): string {
+    return String(value ?? '').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  /** Busca un cliente cuyo teléfono coincida EXACTAMENTE (tras normalizar, mínimo 7 dígitos). */
+  async findByPhone(telefono: unknown): Promise<ClienteEntity | null> {
+    const target = this.normalizePhone(telefono);
+    if (target.length < 7) return null;
+    const clientes = await this.clienteRepository.find();
+    return clientes.find(c => this.normalizePhone(c.telefono) === target) || null;
+  }
+
+  /**
+   * Crea un cliente o, si ya existe uno con el mismo teléfono, lo ACTUALIZA
+   * (evita clientes duplicados al registrar domicilios o migrar mesas a domicilio).
+   */
   async create(createClienteDto: CreateClienteDto): Promise<ClienteEntity> {
-    const newCliente = this.clienteRepository.create(createClienteDto);
+    const data: any = {
+      ...createClienteDto,
+      nombre: this.cleanText(createClienteDto.nombre),
+      telefono: createClienteDto.telefono !== undefined ? this.cleanText(createClienteDto.telefono) : undefined,
+      direccion: createClienteDto.direccion !== undefined ? this.cleanText(createClienteDto.direccion) : undefined,
+      barrio: createClienteDto.barrio !== undefined ? this.cleanText(createClienteDto.barrio) : undefined,
+    };
+
+    const existing = await this.findByPhone(data.telefono);
+    if (existing) {
+      // Solo se sobrescriben los campos que vienen con valor (no se borra info existente)
+      for (const key of ['nombre', 'telefono', 'direccion', 'barrio']) {
+        if (data[key]) (existing as any)[key] = data[key];
+      }
+      return this.clienteRepository.save(existing);
+    }
+
+    const newCliente = this.clienteRepository.create(data as Partial<ClienteEntity>);
     return this.clienteRepository.save(newCliente);
   }
 

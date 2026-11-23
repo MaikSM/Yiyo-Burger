@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ConfigService, PosConfig } from '../../services/config.service';
+import { ConfigService, PosConfig, NetworkInfoResponse } from '../../services/config.service';
 import { PedidosService } from '../../services/pedidos.service';
 import { firstValueFrom, Subscription } from 'rxjs';
+import QRCode from 'qrcode';
 
 @Component({
   selector: 'admin-impresoras-page',
@@ -47,6 +48,12 @@ export class AdminImpresorasPageComponent implements OnInit, OnDestroy {
   isRetryingJob = signal<string | null>(null);
   isRetryingAll = signal(false);
 
+  // Conexión de Tablets (Red Wi-Fi Local + QR)
+  networkInfo = signal<NetworkInfoResponse | null>(null);
+  tabletQrDataUrl = signal<string | null>(null);
+  isLoadingNetwork = signal(false);
+  copiedUrl = signal(false);
+
   private queueInterval?: any;
   private sseSub?: Subscription;
 
@@ -54,6 +61,7 @@ export class AdminImpresorasPageComponent implements OnInit, OnDestroy {
     this.loadConfig();
     this.scanSystemPrinters();
     this.loadPrintQueue();
+    this.loadNetworkInfo();
 
     // Actualización periódica en vivo de la cola cada 4 segundos
     this.queueInterval = setInterval(() => {
@@ -306,6 +314,36 @@ export class AdminImpresorasPageComponent implements OnInit, OnDestroy {
     const mins = String(d.getMinutes()).padStart(2, '0');
     const secs = String(d.getSeconds()).padStart(2, '0');
     return `${hours}:${mins}:${secs}`;
+  }
+
+  async loadNetworkInfo() {
+    this.isLoadingNetwork.set(true);
+    try {
+      const info = await firstValueFrom(this.configService.getNetworkInfo());
+      this.networkInfo.set(info);
+      if (info?.url_principal) {
+        const qr = await QRCode.toDataURL(info.url_principal, {
+          width: 220,
+          margin: 2,
+          color: { dark: '#111827', light: '#ffffff' },
+        });
+        this.tabletQrDataUrl.set(qr);
+      }
+    } catch (err) {
+      console.error('Error al obtener información de red local:', err);
+    } finally {
+      this.isLoadingNetwork.set(false);
+    }
+  }
+
+  async copyServerUrl(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      this.copiedUrl.set(true);
+      setTimeout(() => this.copiedUrl.set(false), 2000);
+    } catch {
+      alert(`Dirección del servidor: ${text}`);
+    }
   }
 }
 

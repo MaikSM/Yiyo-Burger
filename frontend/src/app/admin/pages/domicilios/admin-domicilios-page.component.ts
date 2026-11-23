@@ -12,6 +12,14 @@ import { CierreCajaService } from '@admin/services/cierre-caja.service';
 import { AuthService } from '@auth/services/auth.service';
 import { iUser } from '@auth/interfaces';
 import { firstValueFrom, Subscription } from 'rxjs';
+import {
+  normalizePhone,
+  phonesMatch,
+  findClienteByPhone,
+  findBarrioByName,
+  cleanFreeText,
+  MIN_PHONE_DIGITS,
+} from '@admin/utils/cliente-match.util';
 
 interface OrderItem {
   id: any;
@@ -127,7 +135,11 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
   });
 
   despachoTarifaDomicilio = computed(() => {
-    return Number(this.despachoBarrioSeleccionado()?.precio) || 0;
+    const barrio = this.despachoBarrioSeleccionado();
+    if (barrio) return Number(barrio.precio) || 0;
+    // Sin barrio seleccionado: conservar la tarifa ya guardada en el pedido (si existe)
+    const domicilio = this.selectedDomicilioDespacho();
+    return Number(domicilio?.costo_domicilio) || Number(domicilio?.tarifa_domicilio) || 0;
   });
 
   despachoImpuestoMonto = computed(() => {
@@ -153,12 +165,9 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
       return currentTotal;
     }
 
-    const barrioNombre = (domicilio.cliente_barrio || domicilio.barrio || '').toLowerCase().trim();
-    if (barrioNombre) {
-      const foundBarrio = this.barrios().find(b => b.nombre.toLowerCase().trim() === barrioNombre);
-      if (foundBarrio && Number(foundBarrio.precio) > 0) {
-        return subtotal + Number(foundBarrio.precio);
-      }
+    const foundBarrio = findBarrioByName(this.barrios(), domicilio.cliente_barrio || domicilio.barrio);
+    if (foundBarrio && Number(foundBarrio.precio) > 0) {
+      return subtotal + Number(foundBarrio.precio);
     }
 
     return currentTotal || subtotal;
@@ -174,12 +183,9 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
       return Number(barrioModal.precio);
     }
 
-    const barrioNombre = (domicilio.cliente_barrio || domicilio.barrio || '').toLowerCase().trim();
-    if (barrioNombre) {
-      const foundBarrio = this.barrios().find(b => b.nombre.toLowerCase().trim() === barrioNombre);
-      if (foundBarrio && Number(foundBarrio.precio) > 0) {
-        return Number(foundBarrio.precio);
-      }
+    const foundBarrio = findBarrioByName(this.barrios(), domicilio.cliente_barrio || domicilio.barrio);
+    if (foundBarrio && Number(foundBarrio.precio) > 0) {
+      return Number(foundBarrio.precio);
     }
 
     const subtotal = Number(domicilio.subtotal) || 0;
@@ -496,6 +502,7 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
     this.showForm.set(false);
 
     this.clienteForm.reset({}, { emitEvent: false });
+    this._autofilledPhone = null;
     this.orderItems.set([]);
     this.originalOrderItems.set([]);
     this.orderSubtotal.set(0);
@@ -710,39 +717,40 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
   }
 
   private _searchTimeout: any;
+  /** Teléfono (normalizado) del cliente cuyos datos se autocompletaron en el formulario. */
+  private _autofilledPhone: string | null = null;
 
   searchClientByPhone(event: Event) {
-    const rawTelefono = (event.target as HTMLInputElement).value;
-    // Normalizar: quitar todo lo que no sea dígito
-    const telefono = rawTelefono.replace(/\D/g, '');
-    
-    if (telefono.length > 5) {
-      if (this._searchTimeout) clearTimeout(this._searchTimeout);
-      
-      this._searchTimeout = setTimeout(() => {
-        this._clientesService.getClientes().subscribe(clientes => {
-          // Normalizar ambos lados: quitar todo lo que no sea dígito
-          const cliente = clientes.find((c: Cliente) => {
-            if (!c.telefono) return false;
-            const stored = c.telefono.replace(/\D/g, '');
-            // Comparar directo o sin prefijo de país (57)
-            return stored === telefono 
-              || stored.endsWith(telefono) 
-              || telefono.endsWith(stored);
-          });
-          if (cliente) {
-            this.clienteForm.patchValue({
-              cliente_nombre: cliente.nombre,
-              cliente_direccion: cliente.direccion,
-              cliente_barrio: cliente.barrio || ''
-            });
-            console.log(`[Domicilio] Cliente encontrado por teléfono: ${cliente.nombre}`);
-          } else {
-            console.log(`[Domicilio] No se encontró cliente con teléfono: ${telefono} (total clientes: ${clientes.length})`);
-          }
-        });
-      }, 300); // Debounce de 300ms
+    const telefono = normalizePhone((event.target as HTMLInputElement).value);
+    if (this._searchTimeout) clearTimeout(this._searchTimeout);
+
+    // Si el número cambió respecto al cliente autocompletado, limpiar sus datos para
+    // no arrastrar la dirección/barrio de OTRO cliente al nuevo pedido.
+    if (this._autofilledPhone && this._autofilledPhone !== telefono) {
+      this.clienteForm.patchValue({ cliente_nombre: '', cliente_direccion: '', cliente_barrio: '' });
+      this._autofilledPhone = null;
     }
+
+    if (telefono.length < MIN_PHONE_DIGITS) return;
+
+    this._searchTimeout = setTimeout(() => {
+      this._clientesService.getClientes().subscribe(clientes => {
+        // Evitar respuestas tardías: el teléfono pudo cambiar mientras llegaba la respuesta
+        if (normalizePhone(this.clienteForm.get('cliente_telefono')?.value) !== telefono) return;
+
+        // Coincidencia EXACTA (sin coincidencias parciales por terminación del número)
+        const cliente = findClienteByPhone(clientes, telefono);
+        if (cliente) {
+          const barrioCanonico = findBarrioByName(this.barrios(), cliente.barrio)?.nombre || cliente.barrio || '';
+          this.clienteForm.patchValue({
+            cliente_nombre: cliente.nombre || '',
+            cliente_direccion: cliente.direccion || '',
+            cliente_barrio: barrioCanonico
+          });
+          this._autofilledPhone = telefono;
+        }
+      });
+    }, 300); // Debounce de 300ms
   }
 
   openNewDomicilio() {
@@ -761,30 +769,38 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
 
   onSubmitCliente() {
     if (this.clienteForm.invalid) return;
-    
-    const clientData = this.clienteForm.value;
 
-    // Save or update client in backend
-    const normalizedPhone = clientData.cliente_telefono?.replace(/\D/g, '') || '';
-    this._clientesService.getClientes().subscribe(clientes => {
-      const existing = clientes.find((c: Cliente) => {
-        if (!c.telefono) return false;
-        const stored = c.telefono.replace(/\D/g, '');
-        return stored === normalizedPhone || stored.endsWith(normalizedPhone) || normalizedPhone.endsWith(stored);
+    // Limpiar textos y llevar el barrio a su nombre oficial (ignorando tildes/mayúsculas/espacios)
+    const raw = this.clienteForm.value;
+    const barrioCanonico = findBarrioByName(this.barrios(), raw.cliente_barrio)?.nombre || cleanFreeText(raw.cliente_barrio);
+    this.clienteForm.patchValue({
+      cliente_nombre: cleanFreeText(raw.cliente_nombre),
+      cliente_telefono: cleanFreeText(raw.cliente_telefono),
+      cliente_direccion: cleanFreeText(raw.cliente_direccion),
+      cliente_barrio: barrioCanonico,
+    }, { emitEvent: false });
+    const clientData = { ...this.clienteForm.value };
+    this._autofilledPhone = null;
+
+    // Guardar o actualizar el cliente SOLO si el teléfono coincide exactamente
+    // (antes una coincidencia parcial podía sobrescribir la dirección de OTRO cliente)
+    if (normalizePhone(clientData.cliente_telefono).length >= MIN_PHONE_DIGITS) {
+      this._clientesService.getClientes().subscribe(clientes => {
+        const existing = findClienteByPhone(clientes, clientData.cliente_telefono);
+        const payload = {
+          nombre: clientData.cliente_nombre,
+          telefono: clientData.cliente_telefono,
+          direccion: clientData.cliente_direccion,
+          barrio: clientData.cliente_barrio
+        };
+
+        if (existing) {
+          this._clientesService.updateCliente(existing.cliente_id, payload).subscribe();
+        } else {
+          this._clientesService.createCliente(payload).subscribe();
+        }
       });
-      const payload = {
-        nombre: clientData.cliente_nombre,
-        telefono: clientData.cliente_telefono,
-        direccion: clientData.cliente_direccion,
-        barrio: clientData.cliente_barrio
-      };
-      
-      if (existing) {
-        this._clientesService.updateCliente(existing.cliente_id, payload).subscribe();
-      } else {
-        this._clientesService.createCliente(payload).subscribe();
-      }
-    });
+    }
 
     this.showForm.set(false);
     
@@ -1327,16 +1343,10 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
     const initialDomi = domicilio.domiciliario || (domisList.length > 0 ? `${domisList[0].name} ${domisList[0].surname}` : '');
     this.despachoDomiciliario.set(initialDomi);
 
-    const clientBarrioName = domicilio.cliente_barrio || domicilio.barrio || '';
-    const barriosList = this.barrios();
-    const foundBarrio = barriosList.find(b => b.nombre.toLowerCase() === clientBarrioName.toLowerCase());
-    if (foundBarrio) {
-      this.despachoBarrioSeleccionado.set(foundBarrio);
-    } else if (barriosList.length > 0) {
-      this.despachoBarrioSeleccionado.set(barriosList[0]);
-    } else {
-      this.despachoBarrioSeleccionado.set(null);
-    }
+    // Preseleccionar SOLO el barrio que coincide con el del cliente.
+    // Antes, si no coincidía exactamente, se asignaba el PRIMER barrio de la lista (barrio y tarifa incorrectos).
+    const foundBarrio = findBarrioByName(this.barrios(), domicilio.cliente_barrio || domicilio.barrio);
+    this.despachoBarrioSeleccionado.set(foundBarrio || null);
 
     this.showDespachoModal.set(true);
   }
@@ -1439,8 +1449,18 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
     }
 
     const items = this.orderItems();
-    const clientData = this.activeOrderClientData() || {};
+    // Al despachar desde la tarjeta (sin modal de pedido abierto) usar SOLO los datos del propio domicilio,
+    // nunca los datos de cliente de otro pedido que hubieran quedado en memoria.
+    const clientData = this.showOrderModal() ? (this.activeOrderClientData() || {}) : {};
     const barrio = this.despachoBarrioSeleccionado();
+
+    const barrioOriginal = cleanFreeText(clientData.cliente_barrio || domicilio.cliente_barrio || domicilio.barrio || '');
+    if (!barrio && this.barrios().length > 0 && !this.isCompletingMode()) {
+      const msg = barrioOriginal
+        ? `El barrio "${barrioOriginal}" no está en la lista de tarifas.\n\n¿Deseas continuar SIN tarifa de barrio? (Cancelar para seleccionar el barrio correcto)`
+        : 'No has seleccionado el barrio del domicilio.\n\n¿Deseas continuar SIN tarifa de barrio? (Cancelar para seleccionarlo)';
+      if (!confirm(msg)) return;
+    }
     const chosenDomi = this.despachoDomiciliario() || clientData.domiciliario || domicilio.domiciliario || '';
     const isCompleting = this.isCompletingMode();
     const isAlreadyCreated = !!(domicilio.id && domicilio.estado && domicilio.estado !== 'Nuevo');
@@ -1475,7 +1495,8 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
       ? formattedItems.reduce((s: number, i: any) => s + (Number(i.precio) || 0) * (Number(i.qty) || 1), 0)
       : (this.showOrderModal() ? this.despachoSubtotal() : (Number(domicilio.subtotal) || Number(domicilio.total) || 0));
 
-    const costoEnvioCalc = this.getDomicilioCostoEnvio(domicilio);
+    // La tarifa cobrada debe ser EXACTAMENTE la del barrio seleccionado en el modal (la que ve el cajero)
+    const costoEnvioCalc = barrio ? (Number(barrio.precio) || 0) : this.despachoTarifaDomicilio();
     const totalCalc = subtotalCalc + costoEnvioCalc + this.despachoImpuestoMonto();
 
     const entregado = esMixto ? (this.despachoMontoEfectivoMixto() > 0 ? (Number(this.despachoEntrega()) || 0) : 0) : (this.despachoMetodoPago() === 'Efectivo' ? (Number(this.despachoEntrega()) || 0) : 0);
@@ -1494,10 +1515,10 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
       metodo_pago: this.despachoMetodoPago(),
       monto_entregado: entregado,
       vuelto: cambio,
-      cliente_nombre: clientData.cliente_nombre || domicilio.cliente_nombre || 'Cliente Domicilio',
-      cliente_telefono: clientData.cliente_telefono || domicilio.cliente_telefono || '',
-      cliente_direccion: clientData.cliente_direccion || domicilio.cliente_direccion || '',
-      cliente_barrio: barrio ? barrio.nombre : (clientData.cliente_barrio || domicilio.cliente_barrio || ''),
+      cliente_nombre: cleanFreeText(clientData.cliente_nombre || domicilio.cliente_nombre) || 'Cliente Domicilio',
+      cliente_telefono: cleanFreeText(clientData.cliente_telefono || domicilio.cliente_telefono),
+      cliente_direccion: cleanFreeText(clientData.cliente_direccion || domicilio.cliente_direccion),
+      cliente_barrio: barrio ? barrio.nombre : barrioOriginal,
       domiciliario: chosenDomi,
       mesero: currentUserName,
       usuario_id: currentUser?.id,
@@ -1589,11 +1610,7 @@ export class AdminDomiciliosPageComponent implements OnInit, OnDestroy {
 
     const clientPhone = payload.cliente_telefono || order.cliente_telefono;
     if (clientPhone) {
-      const normPhone = String(clientPhone).replace(/\D/g, '');
-      const matchingDraft = this.borradoresList().find(b => {
-        const p = String(b.cliente?.cliente_telefono || '').replace(/\D/g, '');
-        return p && normPhone && (p === normPhone || p.endsWith(normPhone) || normPhone.endsWith(p));
-      });
+      const matchingDraft = this.borradoresList().find(b => phonesMatch(b.cliente?.cliente_telefono, clientPhone));
       if (matchingDraft) {
         this.limpiarBorradorSinConfirmar(matchingDraft.id);
       }
