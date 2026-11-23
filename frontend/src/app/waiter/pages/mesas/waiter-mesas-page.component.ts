@@ -11,7 +11,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { firstValueFrom, forkJoin } from 'rxjs';
-import { normalizePhone, findClienteByPhone, MIN_PHONE_DIGITS } from '@admin/utils/cliente-match.util';
+import { normalizePhone, findClienteByPhone, findBarrioByName, cleanFreeText, MIN_PHONE_DIGITS } from '@admin/utils/cliente-match.util';
 import { MesasService, Mesa } from '../../../admin/services/mesas.service';
 import { PlatosService, Plato } from '../../../admin/services/platos.service';
 import { CategoriasService, Categoria } from '../../../admin/services/categorias.service';
@@ -1046,8 +1046,11 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
     });
   }
 
+  private _autofilledMigrarPhone: string | null = null;
+
   openMigrarADomicilioModal() {
     this.showHeaderActionsMenu.set(false);
+    this._autofilledMigrarPhone = null;
     this.migrarForm.reset();
     this.loadBarrios();
     this.showMigrarADomicilioModal.set(true);
@@ -1055,6 +1058,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
   }
 
   closeMigrarADomicilioModal() {
+    this._autofilledMigrarPhone = null;
     this.showMigrarADomicilioModal.set(false);
     this.migrarForm.reset();
     this.cdr.detectChanges();
@@ -1065,19 +1069,27 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
     const telefono = normalizePhone(input.value);
 
     if (this._searchTimeout) clearTimeout(this._searchTimeout);
+
+    if (this._autofilledMigrarPhone && this._autofilledMigrarPhone !== telefono) {
+      this.migrarForm.patchValue({ cliente_nombre: '', cliente_direccion: '', cliente_barrio: '' });
+      this._autofilledMigrarPhone = null;
+      this.cdr.detectChanges();
+    }
+
     if (telefono.length < MIN_PHONE_DIGITS) return;
 
     this._searchTimeout = setTimeout(() => {
       this._clientesService.getClientes().subscribe((clientes) => {
         if (normalizePhone(this.migrarForm.get('cliente_telefono')?.value) !== telefono) return;
-        // Coincidencia EXACTA del teléfono (evita traer la dirección de otro cliente)
         const cliente: any = findClienteByPhone(clientes, telefono);
         if (cliente) {
+          const barrioCanonico = findBarrioByName(this.barrios(), cliente.barrio)?.nombre || cliente.barrio || '';
           this.migrarForm.patchValue({
             cliente_nombre: cliente.nombre || '',
             cliente_direccion: cliente.direccion || '',
-            cliente_barrio: cliente.barrio || '',
+            cliente_barrio: barrioCanonico,
           });
+          this._autofilledMigrarPhone = telefono;
           this.cdr.detectChanges();
         }
       });
@@ -1128,7 +1140,14 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
 
     const orderId = this.activeOrderId();
     const currentMesa = this.selectedMesa();
-    const clientData = this.migrarForm.value;
+    const rawClient = this.migrarForm.value;
+    const clientData = {
+      cliente_nombre: cleanFreeText(rawClient.cliente_nombre),
+      cliente_telefono: cleanFreeText(rawClient.cliente_telefono),
+      cliente_direccion: cleanFreeText(rawClient.cliente_direccion),
+      cliente_barrio: findBarrioByName(this.barrios(), rawClient.cliente_barrio)?.nombre || cleanFreeText(rawClient.cliente_barrio),
+      notas: cleanFreeText(rawClient.notas),
+    };
     const mesaLabel = currentMesa
       ? currentMesa.ubicacion === 'Barra'
         ? `Barra B${currentMesa.numero}`
@@ -1146,7 +1165,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
         nombre: clientData.cliente_nombre,
         telefono: clientData.cliente_telefono,
         direccion: clientData.cliente_direccion,
-        barrio: clientData.cliente_barrio || '',
+        barrio: clientData.cliente_barrio,
       })
       .subscribe({
         next: () => {},
@@ -1159,6 +1178,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
 
     if (orderId) {
       // CASO 1: El pedido ya existía en la base de datos
+      // El backend libera automáticamente la mesa anterior al cambiar mesa -> 'Domicilio'
       const payload: Partial<Order> = {
         tipo: 'Domicilio',
         mesa: 'Domicilio',
@@ -1166,8 +1186,8 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
         cliente_nombre: clientData.cliente_nombre,
         cliente_telefono: clientData.cliente_telefono,
         cliente_direccion: clientData.cliente_direccion,
-        cliente_barrio: clientData.cliente_barrio || '',
-        notas: clientData.notas || '',
+        cliente_barrio: clientData.cliente_barrio,
+        notas: clientData.notas,
         items: formattedItems,
         subtotal: subtotal,
         total: subtotal,
@@ -1176,32 +1196,15 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
       this._pedidosService.update(String(orderId), payload).subscribe({
         next: () => {
           if (currentMesa) {
-            this._mesasService.cambiarEstado(currentMesa.mesa_id, 'libre').subscribe({
-              next: () => {
-                this.isSubmitting.set(false);
-                this.closeMigrarADomicilioModal();
-                this.closeOrderModal();
-                this.loadData(false);
-                toast.success(
-                  `🛵 Pedido migrado exitosamente a DOMICILIO para ${clientData.cliente_nombre}. ${mesaLabel} ha sido LIBERADA.`,
-                );
-              },
-              error: (err: any) => {
-                this.isSubmitting.set(false);
-                console.error('Error liberando mesa:', err);
-                toast.success('Pedido migrado a domicilio.');
-                this.closeMigrarADomicilioModal();
-                this.closeOrderModal();
-                this.loadData(false);
-              },
-            });
-          } else {
-            this.isSubmitting.set(false);
-            this.closeMigrarADomicilioModal();
-            this.closeOrderModal();
-            this.loadData(false);
-            toast.success(`🛵 Pedido migrado exitosamente a DOMICILIO.`);
+            this.clearDraftForMesa(currentMesa.mesa_id);
           }
+          this.isSubmitting.set(false);
+          this.closeMigrarADomicilioModal();
+          this.closeOrderModal();
+          this.loadData(false);
+          toast.success(
+            `🛵 Pedido migrado exitosamente a DOMICILIO para ${clientData.cliente_nombre}. ${mesaLabel} ha sido LIBERADA.`,
+          );
         },
         error: (err: any) => {
           this.isSubmitting.set(false);
@@ -1224,7 +1227,7 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
         cliente_nombre: clientData.cliente_nombre,
         cliente_telefono: clientData.cliente_telefono,
         cliente_direccion: clientData.cliente_direccion,
-        cliente_barrio: clientData.cliente_barrio || '',
+        cliente_barrio: clientData.cliente_barrio,
         estado: 'Recibido',
         mesero: currentUserName,
         usuario_id: currentUserId,
@@ -1233,11 +1236,14 @@ export class WaiterMesasPageComponent implements OnInit, OnDestroy {
         propina_valor: 0,
         total: subtotal,
         items: formattedItems,
-        notas: clientData.notas || '',
+        notas: clientData.notas,
       };
 
       this._pedidosService.createPedido(payload).subscribe({
         next: () => {
+          if (currentMesa) {
+            this.clearDraftForMesa(currentMesa.mesa_id);
+          }
           this.isSubmitting.set(false);
           this.closeMigrarADomicilioModal();
           this.closeOrderModal();

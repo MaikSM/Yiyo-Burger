@@ -674,276 +674,305 @@
 
       <!-- ================= TAB: CIERRES DIARIOS ================= -->
       @if (activeTab() === 'cierres') {
-        <div class="max-w-6xl mx-auto space-y-8 animate-fade-in">
-          
-          <!-- SECCIÓN: REGISTROS OFICIALES DE CIERRES EN BASE DE DATOS -->
-          <div class="bg-gray-800/80 border border-gray-700 rounded-2xl p-6 shadow-xl space-y-4">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 pb-4 border-b border-gray-700">
-              <div>
-                <h2 class="text-xl font-black text-white flex items-center gap-2">
-                  <i class="fas fa-cash-register text-orange-500"></i>
-                  Auditoría Oficial de Turnos de Caja (Base de Datos)
-                </h2>
-                <p class="text-xs text-gray-400 mt-0.5">Historial de aperturas, cierres físicos, bases iniciales y arqueos contados por los cajeros.</p>
-              </div>
-              <button (click)="cargarHistorialCierres()" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5">
-                <i class="fas fa-sync-alt"></i> Actualizar
-              </button>
-            </div>
-
-            @if (historialCierresBD().length === 0) {
-              <div class="text-center py-8 text-gray-400 text-sm">
-                No hay registros oficiales de turnos de caja almacenados en la base de datos.
-              </div>
-            } @else {
-              <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr class="bg-gray-900/60 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-700 font-bold">
-                      <th class="py-3 px-4">Turno #</th>
-                      <th class="py-3 px-4">Apertura / Cierre</th>
-                      <th class="py-3 px-4">Cajero</th>
-                      <th class="py-3 px-4 text-right">Base Inicial</th>
-                      <th class="py-3 px-4 text-right">Ventas Efectivo</th>
-                      <th class="py-3 px-4 text-right">Egresos Efectivo (-)</th>
-                      <th class="py-3 px-4 text-right">Ventas Tarjeta/Transf.</th>
-                      <th class="py-3 px-4 text-right">Efectivo Esperado</th>
-                      <th class="py-3 px-4 text-right">Físico Contado</th>
-                      <th class="py-3 px-4 text-center">Diferencia</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-700/50 font-mono text-xs">
-                    @for (c of historialCierresBD(); track c.id) {
-                      <tr class="hover:bg-gray-700/30 transition-colors">
-                        <td class="py-3 px-4 font-bold text-white">#{{ c.id }}</td>
-                        <td class="py-3 px-4 font-sans text-gray-300">
-                          <span class="block text-white font-medium">{{ c.fecha_apertura | date:'shortDate' }}</span>
-                          <span class="block text-[11px] text-gray-400">{{ c.fecha_apertura | date:'shortTime' }} - {{ (c.fecha_cierre | date:'shortTime') || 'En Turno' }}</span>
-                        </td>
-                        <td class="py-3 px-4 font-sans text-gray-300">{{ c.usuario_nombre }}</td>
-                        <td class="py-3 px-4 text-right text-gray-300">{{ c.monto_inicial | currency }}</td>
-                        <td class="py-3 px-4 text-right text-green-400 font-bold">{{ c.ventas_efectivo | currency }}</td>
-                        <td class="py-3 px-4 text-right text-red-400 font-bold">
-                          @if ((c.gastos_efectivo || 0) > 0) {
-                            -{{ (c.gastos_efectivo || 0) | currency }}
-                          } @else {
-                            <span class="text-gray-500">$0</span>
-                          }
-                        </td>
-                        <td class="py-3 px-4 text-right text-blue-400">{{ (c.ventas_tarjeta + c.ventas_transferencia) | currency }}</td>
-                        <td class="py-3 px-4 text-right text-orange-400 font-bold">{{ c.total_esperado_efectivo | currency }}</td>
-                        <td class="py-3 px-4 text-right text-white font-bold">
-                          @if (c.monto_real_contado !== null && c.monto_real_contado !== undefined) {
-                            {{ c.monto_real_contado | currency }}
-                          } @else {
-                            <span class="text-gray-500 font-sans italic">Pendiente</span>
-                          }
-                        </td>
-                        <td class="py-3 px-4 text-center font-sans">
-                          @if (c.estado === 'Abierto') {
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                              En Curso
-                            </span>
-                          } @else {
-                            @if (c.diferencia === 0) {
-                              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500/20 text-green-400 border border-green-500/30">
-                                Cuadrado ($0)
-                              </span>
-                            } @else if (c.diferencia > 0) {
-                              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                                Sobrante (+{{ c.diferencia | currency }})
-                              </span>
-                            } @else {
-                              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
-                                Faltante ({{ c.diferencia | currency }})
-                              </span>
-                            }
-                          }
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            }
-          </div>
+        <div class="max-w-7xl mx-auto space-y-6 animate-fade-in">
 
           <!-- SECCIÓN: RESUMEN CONSOLIDADO POR DÍAS -->
           <div class="space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-3">
-              <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                <i class="fas fa-calendar-alt text-indigo-400"></i>
-                Resumen Consolidado de Ventas por Fecha
-              </h2>
-              <button (click)="openGastoModal()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-red-600/20 text-sm active:scale-95">
+              <div>
+                <h2 class="text-xl md:text-2xl font-black text-white flex items-center gap-2.5">
+                  <i class="fas fa-calendar-alt text-indigo-400"></i>
+                  Resumen Consolidado de Ventas por Fecha
+                </h2>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  Consulta ventas reales, conteo de pizzas por tamaño, gastos del día y productos por estación. (Los turnos físicos de caja ahora están en <strong>Auditoría Caja</strong> en la barra superior).
+                </p>
+              </div>
+              <button (click)="openGastoModal()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-red-600/20 text-sm active:scale-95">
                 <i class="fas fa-minus-circle"></i> Registrar Gasto / Egreso
               </button>
             </div>
           
           @if (cierresDiarios().length === 0) {
-            <div class="text-center py-10 text-gray-500 bg-gray-800 rounded-xl border border-gray-700">
-              No hay cierres disponibles para este rango de fechas.
+            <div class="text-center py-12 text-gray-400 bg-gray-800 rounded-2xl border border-gray-700">
+              <i class="fas fa-calendar-times text-4xl text-gray-600 mb-3"></i>
+              <p class="font-medium">No hay cierres disponibles para este rango de fechas.</p>
             </div>
           }
           
           @if (!selectedCierre()) {
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               @for (cierre of cierresDiarios(); track cierre.fecha) {
-                <div class="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden flex flex-col hover:border-indigo-500/50 transition-colors">
-                  <div class="bg-gray-700/50 p-4 border-b border-gray-600 flex items-center gap-4">
-                    <div class="w-12 h-12 bg-indigo-500/20 text-indigo-400 rounded-lg flex items-center justify-center text-xl shrink-0">
+                <div class="bg-gray-800 rounded-2xl border border-gray-700 shadow-lg overflow-hidden flex flex-col hover:border-indigo-500/60 transition-all">
+                  <div class="bg-gray-900/60 p-4 border-b border-gray-700 flex items-center gap-3.5">
+                    <div class="w-11 h-11 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-xl flex items-center justify-center text-lg shrink-0">
                       <i class="fas fa-calendar-check"></i>
                     </div>
-                    <div>
-                      <h3 class="text-lg font-bold text-white leading-tight">
+                    <div class="min-w-0 flex-1">
+                      <h3 class="text-base font-black text-white leading-tight truncate">
                         {{ cierre.fechaFormateada }}
                       </h3>
-                      <p class="text-gray-400 text-sm mt-1">{{ cierre.totalVentas }} pedidos completados</p>
+                      <div class="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-400">
+                        <span>{{ cierre.totalVentas }} pedidos</span>
+                        @if (cierre.resumenEstaciones.pizzas.qty > 0) {
+                          <span class="px-2 py-0.5 rounded-full bg-red-500/15 text-red-300 border border-red-500/30 font-bold text-[11px]">
+                            🍕 {{ cierre.resumenEstaciones.pizzas.qty }} pizzas
+                          </span>
+                        }
+                      </div>
                     </div>
                   </div>
-                  <div class="p-4 flex-1 flex flex-col justify-center space-y-2">
-                    <div>
-                      <p class="text-gray-400 text-xs uppercase tracking-widest font-bold mb-0.5">Ingresos Brutos</p>
-                      <p class="text-2xl font-black text-green-400">{{ cierre.ingresoBruto | currency }}</p>
+                  <div class="p-4 flex-1 flex flex-col justify-center space-y-2.5">
+                    <div class="flex items-end justify-between">
+                      <div>
+                        <p class="text-gray-400 text-[11px] uppercase tracking-wider font-bold">Ingresos Brutos</p>
+                        <p class="text-2xl font-black text-emerald-400 font-mono">{{ cierre.ingresoBruto | currency }}</p>
+                      </div>
+                      <div class="text-right text-[11px] text-gray-400">
+                        <span class="block">Mesas: <strong class="text-gray-200">{{ cierre.ventasMesasCant }}</strong></span>
+                        <span class="block">Domis: <strong class="text-gray-200">{{ cierre.ventasDomiciliosCant }}</strong></span>
+                      </div>
                     </div>
                     @if (cierre.totalGastos > 0) {
                       <div class="flex items-center justify-between pt-2 border-t border-gray-700/70 text-xs">
-                        <span class="text-red-400 font-bold">Egresos (-): -{{ cierre.totalGastos | currency }}</span>
+                        <span class="text-red-400 font-bold">Egresos: -{{ cierre.totalGastos | currency }}</span>
                         <span class="text-emerald-300 font-black">Neto: {{ cierre.ingresoNeto | currency }}</span>
                       </div>
                     }
                   </div>
-                  <div class="p-4 bg-gray-900/50 border-t border-gray-700">
-                    <button (click)="verDetalles(cierre)" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
-                      <i class="fas fa-eye"></i> Ver Detalles
+                  <div class="p-3.5 bg-gray-900/50 border-t border-gray-700">
+                    <button (click)="verDetalles(cierre)" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-md">
+                      <i class="fas fa-chart-pie"></i> Ver Detalles Completos
                     </button>
                   </div>
                 </div>
               }
             </div>
           } @else {
-            <div class="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden mb-6 animate-fade-in">
-              <!-- Header del cierre detallado -->
+            <!-- VISTA REDISEÑADA DE DETALLES DEL CIERRE DIARIO -->
+            <div class="space-y-6 animate-fade-in">
               @if (activeSelectedCierre(); as cierre) {
-                <div class="bg-gray-700/50 p-4 md:p-6 border-b border-gray-600 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative">
-                  
+                <!-- Header Principal -->
+                <div class="bg-gradient-to-r from-gray-800 via-gray-800 to-gray-900 rounded-2xl border border-gray-700 p-5 shadow-xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                   <div class="flex items-center gap-4">
-                    <button (click)="volverCierres()" class="w-10 h-10 bg-gray-800 hover:bg-gray-600 text-gray-300 rounded-full flex items-center justify-center transition-colors shadow-md border border-gray-600" title="Volver a los cierres">
+                    <button (click)="volverCierres()" class="w-10 h-10 bg-gray-900 hover:bg-gray-700 text-gray-200 rounded-xl flex items-center justify-center transition-colors border border-gray-600 shrink-0" title="Volver a los cierres">
                       <i class="fas fa-arrow-left"></i>
                     </button>
                     <div>
-                      <h3 class="text-2xl font-black text-white flex items-center gap-3">
-                        <i class="fas fa-calendar-day text-indigo-400"></i> {{ cierre.fechaFormateada }}
+                      <span class="text-[11px] font-bold uppercase tracking-widest text-indigo-400">Resumen Consolidado del Día</span>
+                      <h3 class="text-xl md:text-2xl font-black text-white leading-tight mt-0.5">
+                        {{ cierre.fechaFormateada }}
                       </h3>
-                      <p class="text-indigo-400 font-bold mt-1 tracking-wide">{{ cierre.totalVentas }} pedidos completados en este día</p>
                     </div>
                   </div>
-                  
-                  <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-                    <!-- Balance Summary Badges -->
-                    <div class="flex items-center gap-3 bg-gray-900/90 px-4 py-2 rounded-xl border border-gray-700 shadow-inner">
-                      <div>
-                        <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">Ingreso Bruto</p>
-                        <p class="text-lg font-black text-emerald-400">{{ cierre.ingresoBruto | currency }}</p>
-                      </div>
-                      @if (cierre.totalGastos > 0) {
-                        <div class="border-l border-gray-700 pl-3">
-                          <p class="text-xs text-red-400 font-bold uppercase tracking-wider">Egresos (-)</p>
-                          <p class="text-lg font-black text-red-400">-{{ cierre.totalGastos | currency }}</p>
-                        </div>
-                        <div class="border-l border-gray-700 pl-3">
-                          <p class="text-xs text-indigo-300 font-bold uppercase tracking-wider">Neto Caja</p>
-                          <p class="text-xl font-black text-green-400">{{ cierre.ingresoNeto | currency }}</p>
-                        </div>
-                      }
-                    </div>
 
-                    <!-- Action Buttons -->
-                    <button (click)="openGastoModal()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-red-600/20 active:scale-95">
-                      <i class="fas fa-minus-circle"></i> Registrar Gasto / Egreso
+                  <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
+                    <button (click)="openGastoModal()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-red-600/20 text-sm active:scale-95">
+                      <i class="fas fa-minus-circle"></i> Registrar Gasto
                     </button>
-
-                    <button (click)="exportCierreToPDF(cierre)" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/20 active:scale-95">
+                    <button (click)="exportCierreToPDF(cierre)" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/20 text-sm active:scale-95">
                       <i class="fas fa-file-pdf"></i> Exportar PDF
                     </button>
                   </div>
                 </div>
-                
-                <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                <!-- 4 Tarjetas KPI Financieras y Operativas -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                  <!-- KPI 1: Ingreso Bruto -->
+                  <div class="bg-gray-800 border border-emerald-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Ingreso Bruto Total</span>
+                      <span class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center"><i class="fas fa-coins"></i></span>
+                    </div>
+                    <p class="text-3xl font-black text-emerald-400 font-mono">{{ cierre.ingresoBruto | currency }}</p>
+                    <div class="mt-2 pt-2 border-t border-gray-700/70 text-[11px] text-gray-400 flex flex-wrap gap-x-3 gap-y-0.5">
+                      <span>Productos: <strong class="text-gray-200">{{ cierre.subtotalProductos | currency }}</strong></span>
+                      @if (cierre.totalEnvios > 0) {
+                        <span>Envíos: <strong class="text-cyan-300">{{ cierre.totalEnvios | currency }}</strong></span>
+                      }
+                      @if (cierre.totalPropinas > 0) {
+                        <span>Propinas: <strong class="text-amber-300">{{ cierre.totalPropinas | currency }}</strong></span>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- KPI 2: Egresos del Día -->
+                  <div class="bg-gray-800 border border-red-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Gastos y Egresos (-)</span>
+                      <span class="w-9 h-9 rounded-xl bg-red-500/15 text-red-400 flex items-center justify-center"><i class="fas fa-arrow-trend-down"></i></span>
+                    </div>
+                    <p class="text-3xl font-black text-red-400 font-mono">-{{ cierre.totalGastos | currency }}</p>
+                    <p class="mt-2 pt-2 border-t border-gray-700/70 text-[11px] text-gray-400">
+                      {{ cierre.gastos.length }} {{ cierre.gastos.length === 1 ? 'egreso registrado' : 'egresos registrados' }} en esta fecha
+                    </p>
+                  </div>
+
+                  <!-- KPI 3: Balance Neto -->
+                  <div class="bg-gray-800 border border-indigo-500/40 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-xs font-bold uppercase tracking-wider text-indigo-300">Balance Neto Real</span>
+                      <span class="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center"><i class="fas fa-scale-balanced"></i></span>
+                    </div>
+                    <p class="text-3xl font-black text-white font-mono">{{ cierre.ingresoNeto | currency }}</p>
+                    <p class="mt-2 pt-2 border-t border-gray-700/70 text-[11px] text-gray-400">
+                      Ticket promedio: <strong class="text-indigo-300">{{ cierre.ticketPromedio | currency }}</strong>
+                    </p>
+                  </div>
+
+                  <!-- KPI 4: Canales de Venta -->
+                  <div class="bg-gray-800 border border-orange-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Pedidos Completados</span>
+                      <span class="w-9 h-9 rounded-xl bg-orange-500/15 text-orange-400 flex items-center justify-center"><i class="fas fa-receipt"></i></span>
+                    </div>
+                    <p class="text-3xl font-black text-orange-400 font-mono">{{ cierre.totalVentas }}</p>
+                    <div class="mt-2 pt-2 border-t border-gray-700/70 text-[11px] text-gray-400 flex items-center justify-between">
+                      <span><i class="fas fa-chair text-amber-400 mr-1"></i>Mesas/Barra: <strong class="text-gray-200">{{ cierre.ventasMesasCant }}</strong> ({{ cierre.ventasMesasTotal | currency }})</span>
+                    </div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">
+                      <span><i class="fas fa-motorcycle text-cyan-400 mr-1"></i>Domicilios: <strong class="text-gray-200">{{ cierre.ventasDomiciliosCant }}</strong> ({{ cierre.ventasDomiciliosTotal | currency }})</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- BLOQUE DEDICADO: CONTEO EXACTO DE PIZZAS DEL DÍA POR TAMAÑO -->
+                <div class="bg-gradient-to-br from-red-950/40 via-gray-800 to-gray-800 border border-red-500/30 rounded-2xl p-5 shadow-xl">
+                  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-700/80">
+                    <div class="flex items-center gap-3">
+                      <div class="w-11 h-11 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center text-xl">
+                        🍕
+                      </div>
+                      <div>
+                        <h4 class="text-lg font-black text-white">Conteo Oficial de Pizzas del Día</h4>
+                        <p class="text-xs text-gray-400">Incluye pizzas enteras, mitad y mitad, y porciones clasificadas desde la estación Pizzas.</p>
+                      </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                      <div class="bg-gray-900/80 border border-gray-700 px-4 py-2 rounded-xl text-center">
+                        <span class="text-[10px] uppercase font-bold text-gray-400 block">Pizzas Enteras</span>
+                        <span class="text-xl font-black text-red-400 font-mono">{{ cierre.resumenEstaciones.pizzas.enteras }}</span>
+                      </div>
+                      <div class="bg-gray-900/80 border border-gray-700 px-4 py-2 rounded-xl text-center">
+                        <span class="text-[10px] uppercase font-bold text-gray-400 block">Porciones</span>
+                        <span class="text-xl font-black text-amber-400 font-mono">{{ cierre.resumenEstaciones.pizzas.porciones }}</span>
+                      </div>
+                      <div class="bg-gray-900/80 border border-red-500/30 px-4 py-2 rounded-xl text-center">
+                        <span class="text-[10px] uppercase font-bold text-gray-400 block">Total Pizzería</span>
+                        <span class="text-xl font-black text-emerald-400 font-mono">{{ cierre.resumenEstaciones.pizzas.total | currency }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  @if (cierre.pizzasPorTamano.length === 0) {
+                    <p class="text-sm text-gray-400 pt-4 text-center">No se registraron ventas de pizzas en esta fecha.</p>
+                  } @else {
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 pt-4">
+                      @for (sz of cierre.pizzasPorTamano; track sz.tamano) {
+                        <div class="bg-gray-900/80 border border-gray-700 hover:border-red-500/50 rounded-xl p-3 text-center transition-colors">
+                          <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block truncate">{{ sz.tamano }}</span>
+                          <span class="text-2xl font-black text-white font-mono block my-1">{{ sz.qty }}</span>
+                          <span class="text-[11px] font-bold text-emerald-400 font-mono">{{ sz.total | currency }}</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+
+                <!-- Grid 2 Columnas: Métodos de Pago + Gastos y Egresos -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <!-- Métodos de Pago -->
-                  <div class="bg-gray-900/40 p-6 rounded-2xl border border-gray-700/50 flex flex-col justify-between">
-                    <div>
-                      <h4 class="text-white font-bold mb-6 flex items-center gap-3 border-b border-gray-700 pb-4 text-xl">
-                        <div class="w-10 h-10 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center">
+                  <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-lg flex flex-col">
+                    <div class="flex items-center justify-between border-b border-gray-700 pb-4 mb-5">
+                      <h4 class="text-white font-black flex items-center gap-3 text-lg">
+                        <div class="w-9 h-9 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center">
                           <i class="fas fa-wallet"></i>
                         </div>
                         Desglose por Método de Pago
                       </h4>
-                      <div class="space-y-4">
+                      <span class="text-xs font-bold text-gray-400">{{ cierre.metodosPago.length }} medios</span>
+                    </div>
+
+                    @if (cierre.metodosPago.length === 0) {
+                      <div class="text-center py-10 text-gray-500 text-sm">Sin movimientos de pago en esta fecha.</div>
+                    } @else {
+                      <div class="space-y-3.5">
                         @for (metodo of cierre.metodosPago; track metodo.nombre) {
-                          <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-gray-500 transition-colors shadow-sm flex justify-between items-center">
-                            <div>
-                              <span class="text-gray-200 font-bold text-lg flex items-center gap-2">
-                                <i class="fas fa-money-check-alt text-gray-400"></i> {{ metodo.nombre }}
-                              </span>
-                              @if (metodo.gastos > 0) {
-                                <p class="text-xs text-gray-400 mt-0.5">
-                                  Bruto: <span class="text-gray-300 font-semibold">{{ metodo.bruto | currency }}</span> 
-                                  | Restado: <span class="text-red-400 font-semibold">-{{ metodo.gastos | currency }}</span>
+                          <div class="bg-gray-900/70 p-4 rounded-xl border border-gray-700/80 hover:border-orange-500/40 transition-colors">
+                            <div class="flex justify-between items-start gap-2 mb-2">
+                              <div>
+                                <span class="text-white font-bold text-base flex items-center gap-2">
+                                  <i class="fas fa-money-check-alt text-orange-400 text-sm"></i> {{ metodo.nombre }}
+                                </span>
+                                <p class="text-[11px] text-gray-400 mt-0.5">
+                                  Bruto: <strong class="text-gray-200">{{ metodo.bruto | currency }}</strong>
+                                  @if (metodo.gastos > 0) {
+                                    <span class="mx-1.5 text-gray-600">|</span>
+                                    Egresos: <strong class="text-red-400">-{{ metodo.gastos | currency }}</strong>
+                                  }
                                 </p>
-                              }
+                              </div>
+                              <div class="text-right">
+                                <span class="text-emerald-400 font-black text-xl font-mono block">{{ metodo.neto | currency }}</span>
+                                <span class="text-[10px] font-bold text-gray-400">
+                                  {{ (cierre.ingresoBruto > 0 ? (metodo.bruto / cierre.ingresoBruto) * 100 : 0) | number:'1.0-1' }}% del bruto
+                                </span>
+                              </div>
                             </div>
-                            <div class="text-right">
-                              <span class="text-green-400 font-black text-xl">{{ metodo.neto | currency }}</span>
+                            <div class="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
+                              <div
+                                class="h-full rounded-full bg-gradient-to-r from-orange-500 to-emerald-400 transition-all"
+                                [style.width.%]="cierre.ingresoBruto > 0 ? Math.min(100, (metodo.bruto / cierre.ingresoBruto) * 100) : 0"
+                              ></div>
                             </div>
                           </div>
                         }
                       </div>
-                    </div>
+                    }
                   </div>
-                  
+
                   <!-- Gastos y Egresos del Día -->
-                  <div class="bg-gray-900/40 p-6 rounded-2xl border border-gray-700/50">
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-4 mb-6">
-                      <h4 class="text-white font-bold flex items-center gap-3 text-xl">
-                        <div class="w-10 h-10 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center">
+                  <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-lg flex flex-col">
+                    <div class="flex justify-between items-center border-b border-gray-700 pb-4 mb-5">
+                      <h4 class="text-white font-black flex items-center gap-3 text-lg">
+                        <div class="w-9 h-9 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center">
                           <i class="fas fa-receipt"></i>
                         </div>
                         Gastos y Egresos del Día
                       </h4>
-                      <span class="bg-red-500/10 text-red-400 border border-red-500/20 font-black px-3 py-1 rounded-lg text-sm">
-                        {{ cierre.gastos.length }} egresos registrados
+                      <span class="bg-red-500/15 text-red-400 border border-red-500/30 font-black px-3 py-1 rounded-lg text-xs">
+                        {{ cierre.gastos.length }} {{ cierre.gastos.length === 1 ? 'egreso' : 'egresos' }}
                       </span>
                     </div>
 
                     @if (cierre.gastos.length === 0) {
-                      <div class="text-center py-10 bg-gray-800/40 rounded-xl border border-dashed border-gray-700">
-                        <i class="fas fa-check-circle text-4xl text-gray-600 mb-3"></i>
-                        <p class="text-gray-400 font-medium">No se han registrado gastos o egresos en este día.</p>
-                        <button (click)="openGastoModal()" class="mt-4 text-xs font-bold text-red-400 hover:text-red-300 underline inline-flex items-center gap-1">
+                      <div class="flex-1 flex flex-col items-center justify-center text-center py-10 bg-gray-900/40 rounded-xl border border-dashed border-gray-700">
+                        <i class="fas fa-check-circle text-4xl text-emerald-500/40 mb-3"></i>
+                        <p class="text-gray-300 font-semibold text-sm">No se han registrado gastos o egresos en este día.</p>
+                        <button (click)="openGastoModal()" class="mt-4 px-4 py-2 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 text-xs font-bold transition-colors inline-flex items-center gap-1.5">
                           <i class="fas fa-plus"></i> Registrar el primer gasto
                         </button>
                       </div>
                     } @else {
-                      <div class="max-h-[500px] overflow-y-auto no-scrollbar pr-2 space-y-3">
+                      <div class="max-h-[380px] overflow-y-auto pr-1 space-y-2.5">
                         @for (gasto of cierre.gastos; track gasto.id) {
-                          <div class="bg-gray-800 p-4 rounded-xl border border-gray-700/80 hover:border-gray-500 transition-colors shadow-sm flex justify-between items-center gap-3">
-                            <div class="flex-1">
-                              <div class="flex items-center gap-2 mb-1">
-                                <span class="text-xs font-bold px-2 py-0.5 rounded-md bg-red-500/20 text-red-400 border border-red-500/30 uppercase tracking-wider">
+                          <div class="bg-gray-900/70 p-3.5 rounded-xl border border-gray-700/80 hover:border-red-500/40 transition-colors flex justify-between items-center gap-3">
+                            <div class="flex-1 min-w-0">
+                              <div class="flex flex-wrap items-center gap-1.5 mb-1">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30 uppercase">
                                   {{ gasto.categoria }}
                                 </span>
-                                <span class="text-xs font-bold px-2 py-0.5 rounded-md bg-gray-700 text-gray-300">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-700 text-gray-200">
                                   {{ gasto.metodoPago }}
                                 </span>
-                                <span class="text-xs text-gray-500 ml-auto">{{ gasto.fechaRegistro }}</span>
+                                <span class="text-[11px] text-gray-500 ml-auto font-mono">{{ gasto.fechaRegistro }}</span>
                               </div>
-                              <p class="text-white font-bold text-base leading-snug">{{ gasto.motivo }}</p>
+                              <p class="text-white font-semibold text-sm leading-snug break-words">{{ gasto.motivo }}</p>
                             </div>
-                            <div class="flex items-center gap-3">
-                              <span class="text-red-400 font-black text-xl whitespace-nowrap">-{{ gasto.monto | currency }}</span>
-                              <button (click)="eliminarGasto(gasto.id)" class="text-gray-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-gray-700 transition-colors" title="Eliminar registro">
-                                <i class="fas fa-trash-alt"></i>
+                            <div class="flex items-center gap-2 shrink-0">
+                              <span class="text-red-400 font-black text-lg font-mono whitespace-nowrap">-{{ gasto.monto | currency }}</span>
+                              <button (click)="eliminarGasto(gasto.id)" class="text-gray-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-gray-800 transition-colors" title="Eliminar registro">
+                                <i class="fas fa-trash-alt text-xs"></i>
                               </button>
                             </div>
                           </div>
@@ -951,29 +980,139 @@
                       </div>
                     }
                   </div>
+                </div>
 
-                  <!-- Productos Vendidos (Fila Completa) -->
-                  <div class="lg:col-span-2 bg-gray-900/40 p-6 rounded-2xl border border-gray-700/50">
-                    <h4 class="text-white font-bold mb-6 flex items-center gap-3 border-b border-gray-700 pb-4 text-xl">
-                      <div class="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                <!-- RESUMEN DE PRODUCTOS VENDIDOS POR ESTACIÓN (FILTRABLE Y BUSCABLE) -->
+                <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl space-y-5">
+                  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-gray-700 pb-4">
+                    <h4 class="text-white font-black flex items-center gap-3 text-lg">
+                      <div class="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
                         <i class="fas fa-utensils"></i>
                       </div>
-                      Resumen de Productos Vendidos
+                      Resumen de Productos Vendidos ({{ cierre.productosVendidos.length }} referencias)
                     </h4>
-                    <div class="max-h-[400px] overflow-y-auto no-scrollbar pr-2 space-y-3">
-                      @for (producto of cierre.productosVendidos; track producto.nombre) {
-                        <div class="flex justify-between items-center bg-gray-800 p-4 rounded-xl border border-gray-700 hover:border-gray-500 transition-colors shadow-sm">
-                          <div class="flex items-center gap-4">
-                            <span class="w-12 h-12 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center font-black text-xl border border-blue-500/30 shadow-inner">
-                              {{ producto.qty }}
-                            </span>
-                            <span class="text-gray-200 font-bold text-lg">{{ producto.nombre }}</span>
-                          </div>
-                          <span class="text-gray-400 font-bold text-lg">{{ producto.total | currency }}</span>
-                        </div>
-                      }
+
+                    <div class="relative w-full lg:w-72">
+                      <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                      <input
+                        type="text"
+                        [ngModel]="cierreProductSearch()"
+                        (ngModelChange)="cierreProductSearch.set($event)"
+                        placeholder="Filtrar producto o categoría..."
+                        class="w-full bg-gray-900 border border-gray-700 text-white pl-9 pr-3 py-2 rounded-xl text-sm focus:border-blue-500 focus:outline-none"
+                      />
                     </div>
                   </div>
+
+                  <!-- Pestañas de Estación con Conteos Reales -->
+                  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <button
+                      type="button"
+                      (click)="cierreProductFilter.set('Todos')"
+                      [ngClass]="cierreProductFilter() === 'Todos' ? 'bg-blue-600/25 border-blue-400 text-white' : 'bg-gray-900/70 border-gray-700 text-gray-300 hover:border-gray-500'"
+                      class="p-3.5 rounded-xl border text-left transition-all"
+                    >
+                      <span class="text-[11px] font-bold uppercase tracking-wider text-blue-300 block">Todos los Productos</span>
+                      <div class="flex items-baseline justify-between mt-1">
+                        <span class="text-xl font-black font-mono">{{ cierre.resumenEstaciones.pizzas.qty + cierre.resumenEstaciones.parrilla.qty + cierre.resumenEstaciones.bebidas.qty }} uds</span>
+                        <span class="text-xs font-bold text-emerald-400 font-mono">{{ cierre.subtotalProductos | currency }}</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="cierreProductFilter.set('Pizzas')"
+                      [ngClass]="cierreProductFilter() === 'Pizzas' ? 'bg-red-600/25 border-red-400 text-white' : 'bg-gray-900/70 border-gray-700 text-gray-300 hover:border-gray-500'"
+                      class="p-3.5 rounded-xl border text-left transition-all"
+                    >
+                      <span class="text-[11px] font-bold uppercase tracking-wider text-red-300 block">🍕 Pizzas</span>
+                      <div class="flex items-baseline justify-between mt-1">
+                        <span class="text-xl font-black font-mono">{{ cierre.resumenEstaciones.pizzas.qty }} uds</span>
+                        <span class="text-xs font-bold text-emerald-400 font-mono">{{ cierre.resumenEstaciones.pizzas.total | currency }}</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="cierreProductFilter.set('Parrilla')"
+                      [ngClass]="cierreProductFilter() === 'Parrilla' ? 'bg-orange-600/25 border-orange-400 text-white' : 'bg-gray-900/70 border-gray-700 text-gray-300 hover:border-gray-500'"
+                      class="p-3.5 rounded-xl border text-left transition-all"
+                    >
+                      <span class="text-[11px] font-bold uppercase tracking-wider text-orange-300 block">🔥 Parrilla / Platos</span>
+                      <div class="flex items-baseline justify-between mt-1">
+                        <span class="text-xl font-black font-mono">{{ cierre.resumenEstaciones.parrilla.qty }} uds</span>
+                        <span class="text-xs font-bold text-emerald-400 font-mono">{{ cierre.resumenEstaciones.parrilla.total | currency }}</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="cierreProductFilter.set('Bebidas')"
+                      [ngClass]="cierreProductFilter() === 'Bebidas' ? 'bg-cyan-600/25 border-cyan-400 text-white' : 'bg-gray-900/70 border-gray-700 text-gray-300 hover:border-gray-500'"
+                      class="p-3.5 rounded-xl border text-left transition-all"
+                    >
+                      <span class="text-[11px] font-bold uppercase tracking-wider text-cyan-300 block">🥤 Bebidas</span>
+                      <div class="flex items-baseline justify-between mt-1">
+                        <span class="text-xl font-black font-mono">{{ cierre.resumenEstaciones.bebidas.qty }} uds</span>
+                        <span class="text-xs font-bold text-emerald-400 font-mono">{{ cierre.resumenEstaciones.bebidas.total | currency }}</span>
+                      </div>
+                    </button>
+                  </div>
+
+                  <!-- Lista Detallada de Productos -->
+                  @if (filteredCierreProducts().length === 0) {
+                    <div class="text-center py-10 text-gray-500 text-sm bg-gray-900/40 rounded-xl border border-dashed border-gray-700">
+                      No hay productos que coincidan con el filtro seleccionado.
+                    </div>
+                  } @else {
+                    <div class="overflow-x-auto max-h-[460px] overflow-y-auto rounded-xl border border-gray-700">
+                      <table class="w-full text-left text-sm border-collapse">
+                        <thead class="sticky top-0 bg-gray-900 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-700">
+                          <tr>
+                            <th class="py-3 px-4">Producto</th>
+                            <th class="py-3 px-4">Estación / Categoría</th>
+                            <th class="py-3 px-4 text-center">Unidades</th>
+                            <th class="py-3 px-4 text-right">Recaudado</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-700/60">
+                          @for (producto of filteredCierreProducts(); track producto.key) {
+                            <tr class="hover:bg-gray-700/35 transition-colors">
+                              <td class="py-3 px-4">
+                                <span class="text-white font-bold block">{{ producto.nombre }}</span>
+                                @if (producto.tamanoPizza) {
+                                  <span class="text-[10px] font-bold text-red-300 uppercase">Tamaño: {{ producto.tamanoPizza }}</span>
+                                }
+                              </td>
+                              <td class="py-3 px-4">
+                                <span
+                                  class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border"
+                                  [ngClass]="
+                                    producto.seccion === 'Pizzas'
+                                      ? 'bg-red-500/15 text-red-300 border-red-500/30'
+                                      : producto.seccion === 'Bebidas'
+                                        ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+                                        : 'bg-orange-500/15 text-orange-300 border-orange-500/30'
+                                  "
+                                >
+                                  {{ producto.seccion }}
+                                </span>
+                                <span class="text-xs text-gray-400 ml-2">{{ producto.categoria }}</span>
+                              </td>
+                              <td class="py-3 px-4 text-center">
+                                <span class="inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-300 border border-blue-500/30 font-black font-mono">
+                                  {{ producto.qty }}
+                                </span>
+                              </td>
+                              <td class="py-3 px-4 text-right font-mono font-black text-emerald-400">
+                                {{ producto.total | currency }}
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
                 </div>
               }
             </div>

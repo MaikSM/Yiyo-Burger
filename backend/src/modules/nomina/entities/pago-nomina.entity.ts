@@ -23,6 +23,12 @@ export class PagoNominaEntity extends BaseEntity {
   @Column({ type: 'int', default: 1 })
   dias_pagados: number;
 
+  @Column({ type: 'varchar', length: 30, default: 'pago' })
+  tipo: 'pago' | 'adelanto' | 'bono';
+
+  @Column({ type: 'simple-json', nullable: true })
+  fechas_pagadas?: string[];
+
   @Column({ type: 'float', nullable: false })
   monto: number;
 

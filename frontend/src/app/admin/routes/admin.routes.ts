@@ -151,6 +151,12 @@ export const adminRoutes: Routes = [
         loadComponent: () => 
           import('@admin/pages/reportes/admin-reportes-page.component'),
       },
+      {
+        path: 'auditoria-caja',
+        title: 'Auditoría de Caja',
+        loadComponent: () =>
+          import('@admin/pages/auditoria-caja/admin-auditoria-caja-page.component'),
+      },
 
       {
         path: 'impresoras',

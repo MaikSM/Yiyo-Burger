@@ -11,7 +11,7 @@ import { ClientesService } from '@admin/services/clientes.service';
 import { BarriosService, BarrioTarifa } from '@admin/services/barrios.service';
 import { AuthService } from '@auth/services/auth.service';
 import { firstValueFrom, forkJoin, Subscription } from 'rxjs';
-import { normalizePhone, findClienteByPhone, MIN_PHONE_DIGITS } from '@admin/utils/cliente-match.util';
+import { normalizePhone, findClienteByPhone, findBarrioByName, cleanFreeText, MIN_PHONE_DIGITS } from '@admin/utils/cliente-match.util';
 import { finalize } from 'rxjs/operators';
 
 interface OrderItem {
@@ -597,23 +597,32 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
   }
 
   openMigrarADomicilioModal() {
+    this._autofilledMigrarPhone = null;
     this.migrarForm.reset();
     this.loadBarrios();
     this.showMigrarADomicilioModal.set(true);
   }
 
   closeMigrarADomicilioModal() {
+    this._autofilledMigrarPhone = null;
     this.showMigrarADomicilioModal.set(false);
     this.migrarForm.reset();
   }
 
   private _searchTimeout: any;
+  private _autofilledMigrarPhone: string | null = null;
 
   searchClientByPhone(event: Event) {
     const input = event.target as HTMLInputElement;
     const telefono = normalizePhone(input.value);
 
     if (this._searchTimeout) clearTimeout(this._searchTimeout);
+
+    // Si cambió el número respecto al cliente autocompletado, limpiar para no mezclar direcciones
+    if (this._autofilledMigrarPhone && this._autofilledMigrarPhone !== telefono) {
+      this.migrarForm.patchValue({ cliente_nombre: '', cliente_direccion: '', cliente_barrio: '' });
+      this._autofilledMigrarPhone = null;
+    }
 
     if (telefono.length < MIN_PHONE_DIGITS) return;
 
@@ -623,11 +632,13 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
         // Coincidencia EXACTA del teléfono (evita traer la dirección de otro cliente)
         const cliente: any = findClienteByPhone(clientes, telefono);
         if (cliente) {
+          const barrioCanonico = findBarrioByName(this.barrios(), cliente.barrio)?.nombre || cliente.barrio || '';
           this.migrarForm.patchValue({
             cliente_nombre: cliente.nombre || '',
             cliente_direccion: cliente.direccion || '',
-            cliente_barrio: cliente.barrio || ''
+            cliente_barrio: barrioCanonico
           });
+          this._autofilledMigrarPhone = telefono;
         }
       });
     }, 300);
@@ -647,21 +658,40 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
 
     const orderId = this.activeOrderId();
     const currentMesa = this.selectedMesa();
-    const clientData = this.migrarForm.value;
+    const rawClient = this.migrarForm.value;
+    const clientData = {
+      cliente_nombre: cleanFreeText(rawClient.cliente_nombre),
+      cliente_telefono: cleanFreeText(rawClient.cliente_telefono),
+      cliente_direccion: cleanFreeText(rawClient.cliente_direccion),
+      cliente_barrio: findBarrioByName(this.barrios(), rawClient.cliente_barrio)?.nombre || cleanFreeText(rawClient.cliente_barrio),
+    };
     const mesaLabel = currentMesa ? (currentMesa.ubicacion === 'Barra' ? `Barra B${currentMesa.numero}` : `Mesa ${currentMesa.numero}`) : 'Mesa';
 
     if (!confirm(`¿Deseas migrar los platillos del pedido de ${mesaLabel} a Domicilio para ${clientData.cliente_nombre}?`)) {
       return;
     }
 
-    const subtotal = currentItems.reduce((sum, item) => sum + item.precio * item.qty, 0);
+    // Formatear todos los ítems como 'llevar' para que el ticket de domicilio no salga como MESA
+    const formattedItems = currentItems.map((i: any) => ({
+      id: String(i.id || ''),
+      nombre: i.nombre || '',
+      precio: Number(i.precio) || 0,
+      qty: Number(i.qty) || 1,
+      seccion: i.seccion || i.categoria || '',
+      categoria: i.categoria || i.seccion || '',
+      tipoEntrega: 'llevar' as const,
+      paraLlevar: true,
+      notas: i.notas || i.observaciones || '',
+    }));
 
-    // Guardar/Crear cliente frecuente
+    const subtotal = formattedItems.reduce((sum, item) => sum + item.precio * item.qty, 0);
+
+    // Guardar/Actualizar cliente frecuente (el backend ya evita duplicados por teléfono)
     this._clientesService.createCliente({
       nombre: clientData.cliente_nombre,
       telefono: clientData.cliente_telefono,
       direccion: clientData.cliente_direccion,
-      barrio: clientData.cliente_barrio || ''
+      barrio: clientData.cliente_barrio
     }).subscribe({
       next: () => { },
       error: (err: any) => console.error('Error guardando cliente frecuente:', err)
@@ -669,6 +699,7 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
 
     if (orderId) {
       // CASO 1: El pedido ya existía en BD backend
+      // El backend libera automáticamente la mesa anterior al cambiar mesa -> 'Domicilio'
       const payload: any = {
         tipo: 'Domicilio',
         mesa: 'Domicilio',
@@ -676,8 +707,8 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
         cliente_nombre: clientData.cliente_nombre,
         cliente_telefono: clientData.cliente_telefono,
         cliente_direccion: clientData.cliente_direccion,
-        cliente_barrio: clientData.cliente_barrio || '',
-        items: currentItems,
+        cliente_barrio: clientData.cliente_barrio,
+        items: formattedItems,
         subtotal: subtotal,
         total: subtotal
       };
@@ -685,25 +716,13 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
       this._pedidosService.update(String(orderId), payload).subscribe({
         next: () => {
           if (currentMesa) {
-            this._mesasService.cambiarEstado(currentMesa.mesa_id, 'libre').subscribe({
-              next: () => {
-                this.mesasResource.reload();
-                this.loadActiveOrders(true);
-                this.closeMigrarADomicilioModal();
-                this.closeOrderModal();
-                alert(`✅ Pedido migrado exitosamente a DOMICILIO. ${mesaLabel} ha sido liberada.`);
-              },
-              error: (err: any) => {
-                console.error('Error liberando mesa:', err);
-                alert('El pedido se migró a domicilio pero hubo un inconveniente al liberar la mesa.');
-              }
-            });
-          } else {
-            this.loadActiveOrders(true);
-            this.closeMigrarADomicilioModal();
-            this.closeOrderModal();
-            alert(`✅ Pedido migrado exitosamente a DOMICILIO.`);
+            this.clearDraftForMesa(currentMesa.mesa_id);
           }
+          this.mesasResource.reload();
+          this.loadActiveOrders(true);
+          this.closeMigrarADomicilioModal();
+          this.closeOrderModal();
+          alert(`✅ Pedido migrado exitosamente a DOMICILIO para ${clientData.cliente_nombre}. ${mesaLabel} ha sido liberada.`);
         },
         error: (err: any) => {
           console.error('Error migrando pedido a domicilio:', err);
@@ -712,7 +731,6 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
       });
     } else {
       // CASO 2: El pedido NO existía aún en BD backend (se estaba armando en el carrito de la mesa)
-      // Lo guardamos como Borrador en localStorage ('restausync_domicilios_borradores')
       const BORRADORES_KEY = 'restausync_domicilios_borradores';
       const draftId = `draft_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
@@ -720,13 +738,13 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
         id: draftId,
         fechaCreacion: new Date().toISOString(),
         cliente: {
-          cliente_nombre: clientData.cliente_nombre || '',
-          cliente_telefono: clientData.cliente_telefono || '',
-          cliente_direccion: clientData.cliente_direccion || '',
-          cliente_barrio: clientData.cliente_barrio || '',
+          cliente_nombre: clientData.cliente_nombre,
+          cliente_telefono: clientData.cliente_telefono,
+          cliente_direccion: clientData.cliente_direccion,
+          cliente_barrio: clientData.cliente_barrio,
           domiciliario: ''
         },
-        items: currentItems,
+        items: formattedItems,
         subtotal: subtotal,
         total: subtotal
       };
@@ -744,6 +762,9 @@ export class AdminMesasPageComponent implements OnInit, OnDestroy {
         console.error('Error guardando borrador de domicilio en localStorage:', e);
       }
 
+      if (currentMesa) {
+        this.clearDraftForMesa(currentMesa.mesa_id);
+      }
       this.closeMigrarADomicilioModal();
       this.closeOrderModal();
       alert(`✅ Los platillos de ${mesaLabel} se migraron como borrador de DOMICILIO para ${clientData.cliente_nombre}. Puedes completar el pedido en el módulo de Domicilios.`);

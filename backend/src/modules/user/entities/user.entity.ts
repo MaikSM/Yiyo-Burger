@@ -64,6 +64,14 @@ export class UserEntity extends BaseEntity {
   })
   photo: string;
 
+  // Tarifa diaria de nómina del trabajador (COP por día trabajado)
+  @Column({
+    type: 'float',
+    nullable: true,
+    default: 0,
+  })
+  tarifa_diaria?: number;
+
   // Columna para activar o desactivar al usuario.
   @Column({
     type: 'boolean',

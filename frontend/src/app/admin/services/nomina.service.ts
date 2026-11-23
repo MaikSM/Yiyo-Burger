@@ -9,6 +9,8 @@ export interface PagoNomina {
   empleado_nombre: string;
   fecha: string; // YYYY-MM-DD
   dias_pagados: number;
+  tipo?: 'pago' | 'adelanto' | 'bono';
+  fechas_pagadas?: string[];
   monto: number;
   metodo_pago: string;
   observaciones?: string;
@@ -51,10 +53,16 @@ export class NominaService {
     return this.http.get<Record<string, { user_id: number; nombre: string; hora_entrada?: string }[]>>(`${this.apiUrl}/asistencias`);
   }
 
-  saveAsistenciasDia(fecha: string, empleadosPresentes: { user_id: number; nombre: string; hora_entrada?: string }[]): Observable<any> {
+  saveAsistenciasDia(fecha: string, empleadosPresentes: { user_id: number; nombre?: string; hora_entrada?: string }[]): Observable<any> {
     return this.http.post(`${this.apiUrl}/asistencias`, {
       fecha,
       empleadosPresentes
+    });
+  }
+
+  updateTarifaEmpleado(userId: number, tarifa_diaria: number): Observable<{ id: number; tarifa_diaria: number }> {
+    return this.http.patch<{ id: number; tarifa_diaria: number }>(`${this.apiUrl}/tarifa/${userId}`, {
+      tarifa_diaria,
     });
   }
 }

@@ -18,5 +18,6 @@ export class NominaRoutes {
 
     this.router.get('/asistencias', this.controller.getAsistencias.bind(this.controller));
     this.router.post('/asistencias', this.controller.saveAsistenciasDia.bind(this.controller));
+    this.router.patch('/tarifa/:userId', this.controller.updateTarifaEmpleado.bind(this.controller));
   }
 }

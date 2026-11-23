@@ -62,4 +62,19 @@ export class NominaController {
       res.status(500).json({ message: 'Error al guardar asistencias', error: error.message });
     }
   }
+
+  public async updateTarifaEmpleado(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = Number(req.params.userId);
+      const tarifaDiaria = Number(req.body?.tarifa_diaria);
+      if (!userId || isNaN(tarifaDiaria) || tarifaDiaria < 0) {
+        res.status(400).json({ message: 'Empleado y tarifa diaria válida son requeridos' });
+        return;
+      }
+      const updated = await this.nominaService.updateTarifaEmpleado(userId, tarifaDiaria);
+      res.status(200).json({ id: updated.id, tarifa_diaria: (updated as any).tarifa_diaria });
+    } catch (error: any) {
+      res.status(500).json({ message: 'Error al actualizar tarifa diaria', error: error.message });
+    }
+  }
 }

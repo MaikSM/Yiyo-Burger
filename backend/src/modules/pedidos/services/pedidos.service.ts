@@ -360,11 +360,18 @@ export class PedidosService {
 
     const migratedToDomicilio = previousTipo !== 'Domicilio' && result.tipo === 'Domicilio';
 
-    // Si el pedido fue migrado de Mesa/Barra a Domicilio, imprimir comanda de domicilio completa
+    // Si el pedido fue migrado de Mesa/Barra a Domicilio, asegurar que `result` tenga los datos
+    // exactos recién guardados y forzar impresión de la comanda de domicilio (evita bloqueos de deduplicación
+    // con la comanda previa de mesa).
     if (autoPrint && migratedToDomicilio && result.estado !== 'Cancelado' && result.items && result.items.length > 0) {
       console.log(`[PedidosService] Encolando comanda de migración a domicilio para pedido #${result.orderNumber || result.id}`);
+      const migratedItems = result.items.map((it: any) => ({
+        ...it,
+        tipoEntrega: 'llevar',
+        paraLlevar: true,
+      }));
       this.impresionService
-        .encolarComandaDomicilio(result, result.items, false)
+        .encolarComandaDomicilio({ ...result, mesa: 'Domicilio', esReimpresion: true }, migratedItems, false)
         .catch((err) => console.error('[PedidosService] Error encolando migración domicilio:', err.message));
     } else if (
       autoPrint &&

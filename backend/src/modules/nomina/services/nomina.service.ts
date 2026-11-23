@@ -18,10 +18,22 @@ export class NominaBackendService {
     this.gastosService = new GastosService();
   }
 
+  private getLocalDateStr(dateInput?: Date): string {
+    const d = dateInput || new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   async getPagos(): Promise<PagoNominaEntity[]> {
     return await this.pagoRepo.find({
       order: { fecha: 'DESC', created_at: 'DESC' },
     });
+  }
+
+  async updateTarifaEmpleado(userId: number, tarifaDiaria: number): Promise<UserEntity> {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new Error('Empleado no encontrado');
+    (user as any).tarifa_diaria = Math.max(0, Number(tarifaDiaria) || 0);
+    return await this.userRepo.save(user);
   }
 
   async createPago(data: Partial<PagoNominaEntity>, registrarComoEgreso: boolean = true): Promise<PagoNominaEntity> {
@@ -30,13 +42,24 @@ export class NominaBackendService {
     }
 
     const id = data.id || `pago-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const tipo: 'pago' | 'adelanto' | 'bono' =
+      data.tipo === 'adelanto' || data.tipo === 'bono' ? data.tipo : 'pago';
+    const fechasPagadas = Array.isArray(data.fechas_pagadas)
+      ? Array.from(new Set(data.fechas_pagadas.map((f) => String(f).trim()).filter(Boolean))).sort()
+      : [];
+    const diasPagados =
+      tipo === 'pago'
+        ? (fechasPagadas.length > 0 ? fechasPagadas.length : Math.max(1, Number(data.dias_pagados) || 1))
+        : 0;
 
     const nuevoPago = this.pagoRepo.create({
       id,
-      user_id: data.user_id,
+      user_id: Number(data.user_id),
       empleado_nombre: data.empleado_nombre || 'Empleado',
-      fecha: data.fecha || new Date().toISOString().split('T')[0],
-      dias_pagados: data.dias_pagados || 1,
+      fecha: data.fecha || this.getLocalDateStr(),
+      dias_pagados: diasPagados,
+      tipo,
+      fechas_pagadas: fechasPagadas.length > 0 ? fechasPagadas : undefined,
       monto: Number(data.monto),
       metodo_pago: data.metodo_pago || 'Efectivo',
       observaciones: data.observaciones || '',
@@ -47,11 +70,17 @@ export class NominaBackendService {
 
     if (registrarComoEgreso) {
       try {
+        const motivoGasto =
+          tipo === 'adelanto'
+            ? `Adelanto Nómina: ${guardado.empleado_nombre}`
+            : tipo === 'bono'
+              ? `Bono Nómina: ${guardado.empleado_nombre}`
+              : `Nómina: ${guardado.empleado_nombre} (${guardado.dias_pagados} ${guardado.dias_pagados === 1 ? 'día' : 'días'})`;
         await this.gastosService.create({
           fecha: guardado.fecha,
           monto: guardado.monto,
           metodo_pago: guardado.metodo_pago,
-          motivo: `Nómina: ${guardado.empleado_nombre} (${guardado.dias_pagados} días)`,
+          motivo: motivoGasto,
           categoria: 'Nómina',
           usuario_nombre: 'Sistema de Nómina',
         });

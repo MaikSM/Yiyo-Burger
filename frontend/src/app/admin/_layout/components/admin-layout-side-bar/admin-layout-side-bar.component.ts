@@ -106,6 +106,7 @@ export class AdminLayoutSideBarComponent implements OnInit, OnDestroy, AfterView
     { path: '/admin/menu', label: 'Menú', icon: 'fas fa-utensils' },
     { path: '/admin/inventario', label: 'Inventario', icon: 'fas fa-boxes' },
     { path: '/admin/reportes', label: 'Reportes', icon: 'fas fa-chart-bar' },
+    { path: '/admin/auditoria-caja', label: 'Auditoría Caja', icon: 'fas fa-cash-register' },
     { path: '/admin/impresoras', label: 'Impresoras', icon: 'fas fa-print' },
     { path: '/admin/nomina', label: 'Nómina', icon: 'fas fa-calendar-alt' },
     { path: '/admin/profile', label: 'Perfil', icon: 'fas fa-user-cog' },

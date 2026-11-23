@@ -19,16 +19,43 @@ export interface GastoDiario {
 
 import { CierreCajaService } from '../../services/cierre-caja.service';
 
+export type ProductStation = 'Pizzas' | 'Parrilla' | 'Bebidas';
+
+export interface ProductoVendidoResumen {
+  key: string;
+  nombre: string;
+  qty: number;
+  total: number;
+  seccion: ProductStation;
+  categoria: string;
+  tamanoPizza?: string;
+}
+
 interface CierreDiario {
   fecha: string;
   fechaFormateada: string;
   totalVentas: number;
+  ventasMesasCant: number;
+  ventasMesasTotal: number;
+  ventasDomiciliosCant: number;
+  ventasDomiciliosTotal: number;
+  subtotalProductos: number;
+  totalEnvios: number;
+  totalPropinas: number;
+  totalImpuestos: number;
+  ticketPromedio: number;
   ingresoBruto: number;
   totalGastos: number;
   ingresoNeto: number;
   ingresoTotal: number;
   metodosPago: { nombre: string; bruto: number; gastos: number; neto: number; total: number }[];
-  productosVendidos: { nombre: string; qty: number; total: number }[];
+  productosVendidos: ProductoVendidoResumen[];
+  resumenEstaciones: {
+    pizzas: { qty: number; enteras: number; porciones: number; total: number };
+    parrilla: { qty: number; total: number };
+    bebidas: { qty: number; total: number };
+  };
+  pizzasPorTamano: { tamano: string; qty: number; total: number }[];
   gastos: GastoDiario[];
 }
 
@@ -53,6 +80,8 @@ export class AdminReportesPageComponent implements OnInit, OnDestroy {
   activeTab = signal<'finanzas' | 'menu' | 'historial' | 'cierres'>('finanzas');
   selectedCierre = signal<CierreDiario | null>(null);
   selectedOrder = signal<Order | null>(null);
+  cierreProductFilter = signal<'Todos' | ProductStation>('Todos');
+  cierreProductSearch = signal<string>('');
   
   allOrders = signal<Order[]>([]);
   gastosStorage = signal<Record<string, GastoDiario[]>>({});
@@ -134,16 +163,67 @@ export class AdminReportesPageComponent implements OnInit, OnDestroy {
 
   private isOrderPaid(p: any): boolean {
     if (!p || p.estado === 'Cancelado') return false;
+    if (p.estado === 'Completado' || p.estado === 'Pagado') return true;
     if (p.tipo === 'Domicilio') {
-      return (
-        (p.estado === 'Completado' ||
-          p.estado === 'Pagado' ||
-          p.estado === 'Enviado' ||
-          p.estado === 'En camino') &&
-        Boolean(p.metodo_pago)
-      );
+      return (p.estado === 'Enviado' || p.estado === 'En camino') && Boolean(p.metodo_pago);
     }
-    return p.estado === 'Completado' || p.estado === 'Pagado';
+    return false;
+  }
+
+  /**
+   * Clasifica un producto en su estación real ('Pizzas' | 'Parrilla' | 'Bebidas').
+   * Prioriza `seccion` y `categoria` guardados en el ítem (porque muchas pizzas como
+   * "Hawaiana (Personal)" o "Mitad Criolla / Mitad Pollo..." no contienen la palabra "pizza").
+   */
+  private classifyProductStation(item: any): ProductStation {
+    const seccion = String(item?.seccion || '').trim().toLowerCase();
+    const categoria = String(item?.categoria || '').trim().toLowerCase();
+    const nombre = String(item?.nombre || '').trim().toLowerCase();
+    const idStr = String(item?.id || '').trim().toLowerCase();
+
+    if (seccion.includes('pizza') || categoria.includes('pizza') || idStr.startsWith('half-')) {
+      return 'Pizzas';
+    }
+    if (
+      seccion.includes('bebida') ||
+      categoria.includes('bebida') ||
+      categoria.includes('gaseosa') ||
+      categoria.includes('jugo')
+    ) {
+      // Nota: si un plato de "Jugos y Dulces" es comida (ej. Empanadas, Deditos, Crepe) pero tiene seccion Bebidas, respetar solo bebidas reales
+      if (/empanad|dedito|crepe|waffle|postre|brownie/i.test(nombre)) {
+        return 'Parrilla';
+      }
+      return 'Bebidas';
+    }
+    if (
+      /gaseosa|coca|postobon|postobón|hit|jugo|limonada|agua|cerveza|refresco|soda|malteada|bebida|mr\s*tea|hatsu|bretaña|colombiana|manzana|sprite|pepsi/i.test(
+        nombre
+      )
+    ) {
+      return 'Bebidas';
+    }
+    if (
+      !/arepa|hamburguesa|burger|perro|patacon|patacón|empana|salchipapa|desgranado|mazorca|chuzo|alita|costilla|sandwich|sándwich|lasaña|lasagna/i.test(
+        nombre
+      ) &&
+      (/pizza|mitad\s+.*\/\s*mitad|\((personal|mediana|grande|extragrande|familiar|gigante)\)/i.test(nombre))
+    ) {
+      return 'Pizzas';
+    }
+    return 'Parrilla';
+  }
+
+  private extractPizzaSize(nombre: string): string {
+    const n = (nombre || '').toLowerCase();
+    if (/porci[oó]n/i.test(n)) return 'Porción';
+    if (/extragrande|extra\s*grande/i.test(n)) return 'Extragrande';
+    if (/personal/i.test(n)) return 'Personal';
+    if (/mediana/i.test(n)) return 'Mediana';
+    if (/familiar/i.test(n)) return 'Familiar';
+    if (/gigante/i.test(n)) return 'Gigante';
+    if (/grande/i.test(n)) return 'Grande';
+    return 'Estándar';
   }
   
   ngOnInit() {
@@ -603,12 +683,27 @@ export class AdminReportesPageComponent implements OnInit, OnDestroy {
           fecha,
           fechaFormateada: this.formatDateHeading(fecha),
           totalVentas: 0,
+          ventasMesasCant: 0,
+          ventasMesasTotal: 0,
+          ventasDomiciliosCant: 0,
+          ventasDomiciliosTotal: 0,
+          subtotalProductos: 0,
+          totalEnvios: 0,
+          totalPropinas: 0,
+          totalImpuestos: 0,
+          ticketPromedio: 0,
           ingresoBruto: 0,
           totalGastos: 0,
           ingresoNeto: 0,
           ingresoTotal: 0,
           metodosPago: [],
           productosVendidos: [],
+          resumenEstaciones: {
+            pizzas: { qty: 0, enteras: 0, porciones: 0, total: 0 },
+            parrilla: { qty: 0, total: 0 },
+            bebidas: { qty: 0, total: 0 },
+          },
+          pizzasPorTamano: [],
           gastos: []
         };
       }
@@ -622,9 +717,21 @@ export class AdminReportesPageComponent implements OnInit, OnDestroy {
         : this.getLocalDateStr(fechaObj);
       
       const day = ensureDay(fecha);
+      const orderTotal = Number(order.total) || 0;
       day.totalVentas++;
-      day.ingresoBruto += (Number(order.total) || 0);
+      day.ingresoBruto += orderTotal;
       day.ingresoTotal = day.ingresoBruto;
+      day.totalEnvios += Number((order as any).costo_domicilio) || 0;
+      day.totalPropinas += Number(order.propina_valor) || 0;
+      day.totalImpuestos += Number(order.impuesto_valor) || 0;
+
+      if (order.tipo === 'Domicilio') {
+        day.ventasDomiciliosCant++;
+        day.ventasDomiciliosTotal += orderTotal;
+      } else {
+        day.ventasMesasCant++;
+        day.ventasMesasTotal += orderTotal;
+      }
       
       // Desglosar métodos de pago (incluyendo Pago Mixto)
       const paymentParts = this.extractOrderPayments(order);
@@ -639,22 +746,62 @@ export class AdminReportesPageComponent implements OnInit, OnDestroy {
         methodObj.total = methodObj.neto;
       }
       
-      // Products
+      // Productos vendidos con clasificación real por estación y tamaño de pizza
       let rawItems = order.items || [];
       if (typeof rawItems === 'string') {
         try { rawItems = JSON.parse(rawItems); } catch(e) { rawItems = []; }
       }
       if (Array.isArray(rawItems)) {
         rawItems.forEach(item => {
-          const itemNombre = item.nombre || 'Producto';
-          const prodIndex = day.productosVendidos.findIndex(p => p.nombre === itemNombre);
-          const qty = Number(item.qty) || 1;
-          const total = (Number(item.precio) || 0) * qty;
+          const itemNombre = String(item?.nombre || 'Producto').replace(/\s+/g, ' ').trim();
+          const seccion = this.classifyProductStation(item);
+          const categoria = String((item as any)?.categoria || seccion).trim();
+          const tamanoPizza = seccion === 'Pizzas' ? this.extractPizzaSize(itemNombre) : undefined;
+          const normKey = `${seccion}::${itemNombre.toLowerCase()}`;
+          const qty = Number(item?.qty) || 1;
+          const total = (Number(item?.precio) || 0) * qty;
+
+          day.subtotalProductos += total;
+
+          const prodIndex = day.productosVendidos.findIndex(p => p.key === normKey);
           if (prodIndex >= 0) {
             day.productosVendidos[prodIndex].qty += qty;
             day.productosVendidos[prodIndex].total += total;
           } else {
-            day.productosVendidos.push({ nombre: itemNombre, qty, total });
+            day.productosVendidos.push({
+              key: normKey,
+              nombre: itemNombre,
+              qty,
+              total,
+              seccion,
+              categoria,
+              tamanoPizza,
+            });
+          }
+
+          // Acumular totales por estación
+          if (seccion === 'Pizzas') {
+            day.resumenEstaciones.pizzas.qty += qty;
+            day.resumenEstaciones.pizzas.total += total;
+            if (tamanoPizza === 'Porción') {
+              day.resumenEstaciones.pizzas.porciones += qty;
+            } else {
+              day.resumenEstaciones.pizzas.enteras += qty;
+            }
+            const sizeKey = tamanoPizza || 'Estándar';
+            let sizeObj = day.pizzasPorTamano.find(z => z.tamano === sizeKey);
+            if (!sizeObj) {
+              sizeObj = { tamano: sizeKey, qty: 0, total: 0 };
+              day.pizzasPorTamano.push(sizeObj);
+            }
+            sizeObj.qty += qty;
+            sizeObj.total += total;
+          } else if (seccion === 'Bebidas') {
+            day.resumenEstaciones.bebidas.qty += qty;
+            day.resumenEstaciones.bebidas.total += total;
+          } else {
+            day.resumenEstaciones.parrilla.qty += qty;
+            day.resumenEstaciones.parrilla.total += total;
           }
         });
       }
@@ -668,12 +815,15 @@ export class AdminReportesPageComponent implements OnInit, OnDestroy {
     }
 
     // Incorporar Gastos/Egresos registrados para cada día
+    const sizeOrder = ['Porción', 'Personal', 'Mediana', 'Grande', 'Extragrande', 'Familiar', 'Gigante', 'Estándar'];
     Object.keys(grouped).forEach(fecha => {
       const day = grouped[fecha];
+      day.ticketPromedio = day.totalVentas > 0 ? day.ingresoBruto / day.totalVentas : 0;
       const dayGastos = allGastos[fecha] || [];
       day.gastos = dayGastos;
       day.totalGastos = dayGastos.reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
       day.ingresoNeto = day.ingresoBruto - day.totalGastos;
+      day.pizzasPorTamano.sort((a, b) => sizeOrder.indexOf(a.tamano) - sizeOrder.indexOf(b.tamano));
 
       // Restar gastos del método de pago correspondiente (normalizado)
       dayGastos.forEach(gasto => {
@@ -705,7 +855,23 @@ export class AdminReportesPageComponent implements OnInit, OnDestroy {
     return this.cierresDiarios().find(c => c.fecha === sel.fecha) || sel;
   });
 
+  filteredCierreProducts = computed(() => {
+    const cierre = this.activeSelectedCierre();
+    if (!cierre) return [];
+    const station = this.cierreProductFilter();
+    const term = this.cierreProductSearch().trim().toLowerCase();
+    return (cierre.productosVendidos || []).filter((p) => {
+      if (station !== 'Todos' && p.seccion !== station) return false;
+      if (term && !p.nombre.toLowerCase().includes(term) && !p.categoria.toLowerCase().includes(term)) {
+        return false;
+      }
+      return true;
+    });
+  });
+
   verDetalles(cierre: CierreDiario) {
+    this.cierreProductFilter.set('Todos');
+    this.cierreProductSearch.set('');
     this.selectedCierre.set(cierre);
   }
 
@@ -813,19 +979,32 @@ export class AdminReportesPageComponent implements OnInit, OnDestroy {
       currentY = (doc as any).lastAutoTable.finalY + 10;
     }
 
-    // Clasificación de Productos Vendidos (Pizzas, Parrilla, Bebidas, Otros)
-    const isPizza = (nombre: string) => {
-      const n = (nombre || '').toLowerCase();
-      if (/arepa|hamburguesa|burger|perro|patacon|patacón|empana|salchipapa|desgranado|mazorca|chuzo|alita|costilla/i.test(n)) return false;
-      return /pizza/i.test(n);
-    };
-    const isBebida = (nombre: string) => /gaseosa|coca|postobon|hit|jugo|limonada|agua|cerveza|refresco|soda|malteada|bebida/i.test(nombre);
-    const isParrilla = (nombre: string) => !isPizza(nombre) && !isBebida(nombre);
-
+    // Clasificación real de Productos Vendidos usando la estación guardada (Pizzas, Parrilla, Bebidas)
     const prods = activeCierre.productosVendidos || [];
-    const pizzas = prods.filter(p => isPizza(p.nombre));
-    const bebidas = prods.filter(p => isBebida(p.nombre));
-    const parrilla = prods.filter(p => isParrilla(p.nombre));
+    const pizzas = prods.filter(p => p.seccion === 'Pizzas');
+    const bebidas = prods.filter(p => p.seccion === 'Bebidas');
+    const parrilla = prods.filter(p => p.seccion === 'Parrilla');
+
+    // Resumen rápido de Pizzas por Tamaño en el PDF
+    if (activeCierre.pizzasPorTamano && activeCierre.pizzasPorTamano.length > 0) {
+      doc.setFontSize(11);
+      doc.setTextColor(220, 38, 38);
+      doc.setFont('helvetica', 'bold');
+      doc.text(
+        `Conteo de Pizzas del Día: ${activeCierre.resumenEstaciones.pizzas.enteras} enteras + ${activeCierre.resumenEstaciones.pizzas.porciones} porciones (${activeCierre.resumenEstaciones.pizzas.qty} uds)`,
+        14,
+        currentY
+      );
+      autoTable(doc, {
+        startY: currentY + 3,
+        head: [['Tamaño', 'Unidades', 'Total Recaudado']],
+        body: activeCierre.pizzasPorTamano.map(z => [z.tamano, `${z.qty} un.`, `$${z.total.toLocaleString('es-CO')}`]),
+        headStyles: { fillColor: [185, 28, 28], fontStyle: 'bold' },
+        bodyStyles: { fontSize: 9 },
+        margin: { left: 14, right: 14 }
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 8;
+    }
 
     doc.setFontSize(13);
     doc.setTextColor(31, 41, 55);

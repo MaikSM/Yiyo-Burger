@@ -66,6 +66,14 @@ __decorate([
 ], UserEntity.prototype, "photo", void 0);
 __decorate([
     (0, typeorm_1.Column)({
+        type: 'float',
+        nullable: true,
+        default: 0,
+    }),
+    __metadata("design:type", Number)
+], UserEntity.prototype, "tarifa_diaria", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
         type: 'boolean',
         default: true, // Por defecto el usuario está activo.
     }),
